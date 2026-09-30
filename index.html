@@ -164,6 +164,7 @@
   .lock-ico::after{top:50%; left:-4px; right:-4px; height:1.5px; transform:translateY(-50%);}
   .func{font-size:14.5px; line-height:1.85; color:var(--text-soft); margin-bottom:22px;}
   .mi-sec{margin-bottom:22px;}
+  .mi-sec-label{font-size:12px; font-weight:500; color:var(--text-faint); margin-bottom:9px;}
   .mi-sec h6{font-size:12px; font-weight:500; color:var(--text-faint); margin-bottom:9px;}
   .inline-list{list-style:none; display:flex; flex-wrap:wrap; gap:6px;}
   .inline-list li{font-size:13px; padding:5px 11px; border:1px solid var(--line-hi); border-radius:6px; color:var(--text);}
@@ -237,6 +238,31 @@
     padding:12px 22px; font-size:14px; opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease;
   }
   .app-toast.show{opacity:1; transform:translate(-50%, 0);}
+
+  /* single-muscle detail */
+  .mdetail{display:grid; grid-template-columns:auto 1fr; gap:7px 14px; font-size:13.5px; line-height:1.65; margin:0;}
+  .mdetail dt{font-size:12px; color:var(--text-faint); padding-top:2px; white-space:nowrap;}
+  .mdetail dd{color:var(--text);}
+
+  /* movement mode */
+  .key{display:inline-block; width:9px; height:9px; border-radius:2px; margin:0 6px 0 2px; vertical-align:0;}
+  .key-p{background:var(--scan);} .key-s{background:#F2A13A;}
+  .ex-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); gap:6px; margin-bottom:22px;}
+  .ex-grid button{text-align:left; font-size:13.5px; font-weight:500; line-height:1.35; padding:9px 11px; background:transparent; border:1px solid var(--line-hi); border-radius:8px; color:var(--text); cursor:pointer; transition:border-color .15s ease, background .15s ease;}
+  .ex-grid button small{display:block; font-size:11px; font-weight:400; color:var(--ice); margin-top:2px;}
+  .ex-grid button:hover{border-color:var(--scan);}
+  .ex-grid button.active{border-color:var(--scan); background:var(--ice-dim);}
+  .ex-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; padding-top:18px; border-top:1px solid var(--line);}
+  .ex-head h3{font-size:22px; font-weight:600; line-height:1.3;}
+  .ex-head .en{margin:0;}
+  .ex-ctrl{display:flex; align-items:center; gap:12px; margin:10px 0 18px; font-size:12px; color:var(--text-faint);}
+  .ex-ctrl button{flex-shrink:0; font-size:13.5px; font-weight:600; color:#fff; background:var(--ice); border:none; border-radius:8px; padding:8px 18px; cursor:pointer;}
+  .ex-note{font-size:12.5px; color:var(--text-faint); margin:8px 0 18px;}
+  .chip-row{display:flex; flex-wrap:wrap; gap:6px;}
+  .chip-row button{font-size:13px; padding:5px 11px; background:transparent; border:1px solid var(--line-hi); border-radius:6px; color:var(--text); cursor:pointer;}
+  .chip-row.p button{border-color:rgba(229,69,27,.6);}
+  .chip-row.s button{border-color:rgba(242,161,58,.55);}
+  .chip-row button:hover{background:rgba(255,255,255,.05);}
 
   /* ---------- immersive desktop ---------- */
   @media (min-width:1080px){
@@ -352,6 +378,7 @@ setTimeout(function(){
     <div class="mode-switch" id="modeSwitch" role="tablist">
       <button data-mode="explore" class="active" role="tab">說明</button>
       <button data-mode="quiz" role="tab">測驗</button>
+      <button data-mode="move" role="tab">動作</button>
       <button data-tab="chat" role="tab">AI 教練</button>
     </div>
 
@@ -605,6 +632,204 @@ Object.assign(muscleData, {
 ['chest','serratus','traps','abs','obliques'].forEach(k=>{ if(muscleData[k]) muscleData[k].category='core'; });
 ['head','neck','shoulders','rotator'].forEach(k=>{ if(muscleData[k]) muscleData[k].category='upper'; });
 muscleData.calf.category = 'lower';
+/* 單條肌肉資料：[起點, 止點, 神經支配, 作用]；肌腱、筋膜類的「起點／止點」為其兩端連接處 */
+const MUSCLE_DETAIL = {
+  linea_alba:['劍突','恥骨聯合','—（結締組織）','兩側腹肌腱膜在正中交織成的白色纖維帶，是腹直肌左右的分界與腹壁的中央錨點'],
+  pyramidalis_muscle:['恥骨前面、恥骨聯合','腹白線下段','肋下神經（T12）','拉緊腹白線；部分人天生沒有這條肌肉'],
+  rectus_abdominis_muscle:['恥骨嵴、恥骨聯合','第5–7肋軟骨、胸骨劍突','肋間神經（T7–T11）、肋下神經（T12）','脊椎前屈（捲腹）、骨盆後傾、增加腹壓'],
+  transversus_abdominis_muscle:['第7–12肋軟骨內面、胸腰筋膜、髂嵴、腹股溝韌帶外側','腹白線、恥骨嵴（經腹直肌鞘）','下位肋間神經、髂腹下與髂腹股溝神經（T7–L1）','收緊腹壁、增加腹內壓、穩定腰椎（天然束腹）'],
+
+  adductor_brevis:['恥骨體、恥骨下支','股骨恥骨肌線、粗線上部','閉孔神經（L2–L4）','髖內收，協助屈髖'],
+  adductor_longus:['恥骨體（恥骨嵴下方）','股骨粗線中1/3','閉孔神經（L2–L4）','髖內收，協助屈髖'],
+  adductor_magnus:['內收部：恥骨下支、坐骨支；膕繩部：坐骨粗隆','內收部：股骨粗線；膕繩部：股骨內收肌結節','內收部：閉孔神經；膕繩部：坐骨神經脛神經部（L2–L4）','髖內收；內收部協助屈髖，膕繩部協助伸髖'],
+  gracilis_muscle:['恥骨體、恥骨下支','脛骨上端內側（鵝足）','閉孔神經（L2–L3）','髖內收、屈膝，屈膝時協助小腿內旋'],
+  pectineus_muscle:['恥骨上支（恥骨梳）','股骨恥骨肌線','股神經（L2–L3），有時兼受閉孔神經','髖內收與屈髖'],
+
+  brachialis_muscle:['肱骨前面下半','尺骨粗隆、冠狀突','肌皮神經（C5–C6），外側少部分受橈神經','屈肘；不論掌心朝向都是主要屈肘肌'],
+  coracobrachialis_muscle:['肩胛骨喙突','肱骨幹內側中段','肌皮神經（C5–C7）','肩屈曲與內收'],
+  long_head_of_biceps_brachii:['肩胛骨盂上結節（肌腱穿過肩關節內）','橈骨粗隆、肱二頭肌腱膜','肌皮神經（C5–C6）','屈肘、前臂旋後、協助肩屈，並穩定肱骨頭'],
+  short_head_of_biceps_brachii:['肩胛骨喙突','橈骨粗隆、肱二頭肌腱膜','肌皮神經（C5–C6）','屈肘、前臂旋後、協助肩屈與內收'],
+
+  calcaneal_tendon:['腓腸肌與比目魚肌匯合處（小腿中段）','跟骨結節後面','—（肌腱）','把小腿三頭肌的力量傳到跟骨，完成踮腳與推蹬'],
+  flexor_digitorum_longus:['脛骨後面中1/3','第2–5趾遠節趾骨底','脛神經（S2–S3）','屈第2–5趾、協助蹠屈與足內翻，支撐足弓'],
+  lateral_head_of_gastrocnemius:['股骨外上髁後面','經跟腱止於跟骨結節','脛神經（S1–S2）','踝蹠屈（踮腳）、協助屈膝'],
+  medial_head_of_gastrocnemius:['股骨內上髁後上方','經跟腱止於跟骨結節','脛神經（S1–S2）','踝蹠屈（踮腳）、協助屈膝'],
+  plantaris_muscle:['股骨外上髁線下端','跟骨結節（跟腱內側）','脛神經（S1–S2）','微弱協助蹠屈與屈膝；約一成的人沒有'],
+  popliteus_muscle:['股骨外上髁外側、外側半月板','脛骨後面比目魚肌線上方','脛神經（L4–S1）','「解鎖」伸直的膝關節（脛骨內旋），協助屈膝'],
+  soleus_muscle:['腓骨頭與腓骨上段後面、脛骨比目魚肌線','經跟腱止於跟骨結節','脛神經（S1–S2）','踝蹠屈（屈膝時最主要），站立時防止身體前傾'],
+  tibialis_posterior_muscle:['脛骨與腓骨後面、骨間膜','舟骨粗隆、楔骨、骰骨、第2–4蹠骨底','脛神經（L4–L5）','足內翻、協助蹠屈，是支撐內側足弓的主力'],
+
+  abdominal_part_of_pectoralis_major_muscle:['腹外斜肌腱膜（腹直肌鞘前層）','肱骨大結節嵴','胸內側神經（C8–T1）','肩內收、由上往下壓手臂（雙槓撐體、下斜推）'],
+  clavicular_head_of_pectoralis_major_muscle:['鎖骨內側半前面','肱骨大結節嵴','胸外側神經（C5–C7）','肩屈曲、水平內收（上斜臥推主練區）'],
+  pectoralis_minor_muscle:['第3–5肋骨前面','肩胛骨喙突','胸內側神經（C8–T1）','肩胛骨前傾、下壓與前伸；太緊容易圓肩'],
+  sternocostal_head_of_pectoralis_major_muscle:['胸骨前面、第1–6肋軟骨','肱骨大結節嵴','胸內、外側神經（C6–T1）','肩內收、水平內收、內旋（平板臥推主力）'],
+  subclavius_muscle:['第1肋骨與肋軟骨交界','鎖骨下面中1/3','鎖骨下肌神經（C5–C6）','穩定並下拉鎖骨'],
+
+  inferior_gemellus_muscle:['坐骨粗隆上緣','經閉孔內肌腱止於股骨大轉子內側','股方肌神經（L4–S1）','髖外旋，屈髖時協助外展'],
+  obturator_internus:['閉孔膜內面與周圍骨緣','股骨大轉子內側面','閉孔內肌神經（L5–S2）','髖外旋，屈髖時協助外展，穩定股骨頭'],
+  piriformis_muscle:['薦骨前面','股骨大轉子上緣','梨狀肌神經（S1–S2）','伸髖時外旋、屈髖時外展；坐骨神經常從它下方穿出'],
+  quadratus_femoris_muscle:['坐骨粗隆外緣','股骨轉子間嵴','股方肌神經（L4–S1）','髖外旋'],
+  superior_gemellus_muscle:['坐骨棘','經閉孔內肌腱止於股骨大轉子內側','閉孔內肌神經（L5–S2）','髖外旋，屈髖時協助外展'],
+
+  iliocostalis_lumborum_muscle:['髂嵴、薦骨、豎脊肌總腱','第7–12肋骨角','脊神經後支（腰段）','雙側收縮伸展腰椎；單側收縮側屈'],
+  iliocostalis_thoracis_muscle:['第7–12肋骨角','第1–6肋骨角、C7 橫突','脊神經後支（胸段）','伸展並側屈胸椎'],
+  longissimus_thoracis_muscle:['豎脊肌總腱、腰椎橫突','胸椎橫突、第3–12肋骨','脊神經後支','伸展脊椎、單側側屈；是豎脊肌中最粗的一條'],
+  posterior_layer_of_thoracolumbar_fascia:['胸、腰、薦椎棘突','髂嵴，並向外延續成背闊肌、腹橫肌、腹內斜肌的腱膜','—（筋膜）','包覆背部肌群，把背闊肌、臀大肌和核心連成一體傳遞力量'],
+  quadratus_lumborum_muscle:['髂嵴後部、髂腰韌帶','第12肋骨、L1–L4 橫突','肋下神經與 L1–L4 腹側支','脊椎側屈、上提同側骨盆，吸氣時固定第12肋'],
+  spinalis_thoracis_muscle:['T11–L2 棘突','T1–T8 棘突','脊神經後支','伸展胸椎'],
+
+  fibularis_brevis_muscle:['腓骨外側面下2/3','第5蹠骨粗隆','腓淺神經（L5–S1）','足外翻、協助蹠屈，防止腳踝往內扭'],
+  fibularis_longus_muscle:['腓骨頭、腓骨外側面上2/3','內側楔骨、第1蹠骨底（繞經足底）','腓淺神經（L5–S1）','足外翻、蹠屈，支撐足橫弓'],
+
+  abductor_digiti_minimi_of_foot:['跟骨結節內、外側突','第5趾近節趾骨底外側','足底外側神經（S2–S3）','外展並屈曲小趾，支撐外側足弓'],
+  abductor_hallucis:['跟骨結節內側突、屈肌支持帶','拇趾近節趾骨底內側','足底內側神經（S2–S3）','外展並屈曲拇趾，支撐內側足弓'],
+  dorsal_interossei_muscles_of_foot:['相鄰兩蹠骨的側面','第2–4趾近節趾骨底','足底外側神經（S2–S3）','外展第2–4趾（以第2趾為軸）'],
+  extensor_digitorum_brevis:['跟骨上外側面','第2–4趾的伸趾長肌腱','腓深神經（L5–S1）','伸第2–4趾'],
+  extensor_hallucis_brevis:['跟骨上外側面','拇趾近節趾骨底背面','腓深神經（L5–S1）','伸拇趾'],
+  flexor_digitorum_brevis:['跟骨結節內側突、足底腱膜','第2–5趾中節趾骨兩側','足底內側神經（S2–S3）','屈第2–5趾，支撐足縱弓'],
+  plantar_aponeurosis:['跟骨結節內側突','五根腳趾的近節趾骨與屈肌腱鞘','—（腱膜）','像弓弦一樣撐住足縱弓，走路時儲存並釋放彈性能量'],
+
+  abductor_pollicis_longus:['尺骨、橈骨後面與骨間膜','第1掌骨底外側','骨間後神經（C7–C8）','外展並伸拇指，協助手腕橈偏'],
+  brachioradialis_muscle:['肱骨外上髁嵴上2/3','橈骨莖突基部','橈神經（C5–C6）','屈肘（半旋前、錘式握法時最有力）'],
+  extensor_carpi_radialis_brevis:['肱骨外上髁（伸肌總腱）','第3掌骨底背面','橈神經深支（C7–C8）','伸腕、橈偏；網球肘最常牽涉的肌腱'],
+  extensor_carpi_radialis_longus:['肱骨外上髁嵴下1/3','第2掌骨底背面','橈神經（C6–C7）','伸腕、橈偏，協助屈肘'],
+  extensor_digiti_minimi:['肱骨外上髁（伸肌總腱）','小指指背腱膜','骨間後神經（C7–C8）','伸小指'],
+  extensor_digitorum:['肱骨外上髁（伸肌總腱）','第2–5指指背腱膜','骨間後神經（C7–C8）','伸第2–5指，協助伸腕'],
+  extensor_indicis:['尺骨後面下段、骨間膜','食指指背腱膜','骨間後神經（C7–C8）','伸食指（讓食指能單獨伸出）'],
+  extensor_pollicis_brevis:['橈骨後面、骨間膜','拇指近節指骨底背面','骨間後神經（C7–C8）','伸拇指掌指關節'],
+  extensor_pollicis_longus:['尺骨後面中1/3、骨間膜','拇指遠節指骨底背面','骨間後神經（C7–C8）','伸拇指指間關節'],
+  extensor_retinaculum_of_wrist:['橈骨遠端外側緣','尺骨莖突、三角骨、豌豆骨','—（支持帶）','把伸肌腱固定在手腕背面，分成六個腱鞘通道'],
+  humeral_head_of_extensor_carpi_ulnaris:['肱骨外上髁（伸肌總腱）','第5掌骨底','骨間後神經（C7–C8）','伸腕、尺偏'],
+  supinator:['肱骨外上髁、橈側副韌帶、尺骨旋後肌嵴','橈骨上1/3外側與後面','骨間後神經（C5–C6）','前臂旋後（手肘伸直時尤其重要）'],
+  ulnar_head_of_extensor_carpi_ulnaris:['尺骨後緣','第5掌骨底','骨間後神經（C7–C8）','伸腕、尺偏'],
+
+  deep_head_of_pronator_teres:['尺骨冠狀突','橈骨外側面中段','正中神經（C6–C7）','前臂旋前、協助屈肘'],
+  flexor_carpi_radialis:['肱骨內上髁（屈肌總腱）','第2–3掌骨底','正中神經（C6–C7）','屈腕、橈偏'],
+  flexor_digitorum_profundus:['尺骨前內側面上3/4、骨間膜','第2–5指遠節指骨底','內側半：尺神經；外側半：骨間前神經（C8–T1）','屈手指末節，是握力主力之一'],
+  flexor_pollicis_longus:['橈骨前面、骨間膜','拇指遠節指骨底','骨間前神經（C7–C8）','屈拇指指間關節'],
+  flexor_retinaculum_of_wrist:['舟骨、大多角骨','豌豆骨、鉤骨鉤','—（支持帶）','構成腕隧道的頂，屈指肌腱與正中神經從它下方通過'],
+  humeral_head_of_flexor_carpi_ulnaris:['肱骨內上髁（屈肌總腱）','豌豆骨、鉤骨、第5掌骨底','尺神經（C7–T1）','屈腕、尺偏'],
+  humero_ulnar_head_of_flexor_digitorum_superficialis:['肱骨內上髁、尺骨冠狀突','第2–5指中節指骨兩側','正中神經（C7–T1）','屈手指中節，協助屈腕'],
+  palmaris_longus_muscle:['肱骨內上髁（屈肌總腱）','屈肌支持帶、掌腱膜','正中神經（C7–C8）','拉緊掌腱膜、協助屈腕；一成多的人沒有'],
+  pronator_quadratus:['尺骨前面下1/4','橈骨前面下1/4','骨間前神經（C7–C8）','前臂旋前的主要肌肉，並把橈尺骨遠端綁緊'],
+  radial_head_of_flexor_digitorum_superficialis:['橈骨前面上半','第2–5指中節指骨兩側','正中神經（C7–T1）','屈手指中節'],
+  superficial_head_of_pronator_teres:['肱骨內上髁（屈肌總腱）','橈骨外側面中段','正中神經（C6–C7）','前臂旋前、協助屈肘'],
+  ulnar_head_of_flexor_carpi_ulnaris:['尺骨鷹嘴內側緣、尺骨後緣上2/3','豌豆骨、鉤骨、第5掌骨底','尺神經（C7–T1）','屈腕、尺偏'],
+
+  gluteus_medius_muscle:['髂骨外面（前、後臀線之間）','股骨大轉子外側面','臀上神經（L4–S1）','髖外展、單腳站立時穩住骨盆'],
+  gluteus_minimus_muscle:['髂骨外面（前、下臀線之間）','股骨大轉子前面','臀上神經（L4–S1）','髖外展、內旋，穩定骨盆'],
+  iliotibial_tract:['髂嵴，並接收闊筋膜張肌與臀大肌纖維','脛骨外髁（Gerdy 結節）','—（筋膜）','穩定大腿外側與膝關節外側，跑步時傳遞力量'],
+  tensor_fasciae_latae:['髂前上棘、髂嵴前部','經髂脛束止於脛骨外髁','臀上神經（L4–S1）','屈髖、外展、內旋，拉緊髂脛束'],
+
+  gluteus_maximus_muscle:['髂骨後外面、薦骨與尾骨後面、薦結節韌帶','股骨臀肌粗隆、髂脛束','臀下神經（L5–S2）','髖伸展（從蹲姿站起、爬樓梯）與外旋'],
+
+  long_head_of_biceps_femoris:['坐骨粗隆','腓骨頭','坐骨神經脛神經部（L5–S2）','屈膝、伸髖，屈膝時小腿外旋'],
+  semimembranosus_muscle:['坐骨粗隆','脛骨內髁後面','坐骨神經脛神經部（L5–S2）','屈膝、伸髖，屈膝時小腿內旋'],
+  semitendinosus_muscle:['坐骨粗隆','脛骨上端內側（鵝足）','坐骨神經脛神經部（L5–S2）','屈膝、伸髖，屈膝時小腿內旋'],
+  short_head_of_biceps_femoris:['股骨粗線外側唇下段','腓骨頭','坐骨神經腓總神經部（L5–S2）','屈膝、小腿外旋（不跨髖關節）'],
+
+  abductor_digiti_minimi_of_hand:['豌豆骨','小指近節指骨底尺側','尺神經深支（C8–T1）','外展小指'],
+  abductor_pollicis_brevis:['屈肌支持帶、舟骨、大多角骨','拇指近節指骨底橈側','正中神經返支（C8–T1）','外展拇指（往掌心前方張開）'],
+  deep_head_of_flexor_pollicis_brevis:['小多角骨、頭狀骨','拇指近節指骨底','尺神經深支（C8–T1）','屈拇指掌指關節'],
+  dorsal_interossei_muscles_of_hand:['相鄰兩掌骨的側面','第2–4指近節指骨底與指背腱膜','尺神經深支（C8–T1）','張開手指（外展）'],
+  flexor_digiti_minimi_of_hand:['鉤骨鉤、屈肌支持帶','小指近節指骨底','尺神經深支（C8–T1）','屈小指掌指關節'],
+  lumbrical_muscles_of_hand:['屈指深肌腱','第2–5指指背腱膜橈側','第1–2條：正中神經；第3–4條：尺神經','屈掌指關節、同時伸直指間關節'],
+  oblique_head_of_adductor_pollicis:['頭狀骨、第2–3掌骨底','拇指近節指骨底尺側','尺神經深支（C8–T1）','內收拇指（捏緊）'],
+  opponens_digiti_minimi_muscle_of_hand:['鉤骨鉤、屈肌支持帶','第5掌骨尺側','尺神經深支（C8–T1）','把小指轉向拇指，協助對掌'],
+  opponens_pollicis_muscle:['屈肌支持帶、大多角骨','第1掌骨橈側','正中神經返支（C8–T1）','拇指對掌（讓拇指碰到其他指尖）'],
+  palmar_aponeurosis:['掌長肌腱、屈肌支持帶','手指屈肌腱鞘、掌指關節附近皮膚','—（腱膜）','保護掌心的肌腱與神經血管，增加抓握穩定'],
+  palmar_interossei_muscles:['第2、4、5掌骨側面','對應手指近節指骨底與指背腱膜','尺神經深支（C8–T1）','併攏手指（內收）'],
+  superficial_head_of_flexor_pollicis_brevis:['屈肌支持帶、大多角骨','拇指近節指骨底','正中神經返支（C8–T1）','屈拇指掌指關節'],
+  transverse_head_of_adductor_pollicis:['第3掌骨前面','拇指近節指骨底尺側','尺神經深支（C8–T1）','內收拇指（捏緊）'],
+
+  bucinator:['上下頜骨臼齒區、翼突下頜縫','口角（融入口輪匝肌）','顏面神經頰支','把臉頰貼緊牙齒，咀嚼時把食物推回齒間、吹氣'],
+  corrugator_supercilii:['額骨眉弓內側','眉毛中段皮膚','顏面神經顳支','把眉毛往內下拉（皺眉）'],
+  depressor_anguli_oris:['下頜骨斜線','口角','顏面神經下頜緣支','把嘴角往下拉'],
+  depressor_labii_inferioris:['下頜骨斜線','下唇皮膚','顏面神經下頜緣支','把下唇往下外拉'],
+  epicranial_aponeurosis:['額肌','枕肌','—（腱膜）','覆蓋頭頂的腱膜（帽狀腱膜），讓額肌與枕肌能拉動頭皮'],
+  frontalis_muscle:['帽狀腱膜','眉毛與前額皮膚','顏面神經顳支','抬眉、產生抬頭紋'],
+  levator_anguli_oris:['上頜骨犬齒窩','口角','顏面神經頰支','上提嘴角'],
+  levator_labii_superioris:['眶下緣（上頜骨）','上唇','顏面神經頰支','上提上唇'],
+  levator_nasolabialis:['上頜骨額突','鼻翼、上唇','顏面神經頰支','上提上唇、張大鼻孔'],
+  mentalis_muscle:['下頜骨切牙窩','下巴皮膚','顏面神經下頜緣支','上提下巴皮膚、噘下唇'],
+  nasalis_muscle:['上頜骨（犬齒與門牙上方）','鼻樑腱膜、鼻翼','顏面神經頰支','收縮或張大鼻孔'],
+  occipitalis_muscle:['枕骨上項線外側2/3','帽狀腱膜','顏面神經耳後支','把頭皮往後拉'],
+  orbicularis_oris_muscle:['口周圍肌肉與上下頜骨','口唇皮膚與黏膜','顏面神經頰支、下頜緣支','閉唇、噘嘴'],
+  orbital_part_of_orbicularis_oculi:['額骨鼻部、上頜骨額突、內眥韌帶','環繞眼眶回到起點','顏面神經顳支、顴支','用力閉眼、瞇眼'],
+  palpebral_part_of_orbicularis_oculi:['內眥韌帶','外眥韌帶','顏面神經顳支、顴支','輕輕閉眼、眨眼'],
+  procerus_muscle:['鼻骨下部','眉間皮膚','顏面神經顳支','把眉間往下拉，形成鼻樑橫紋'],
+  risorius_muscle:['腮腺筋膜、咬肌筋膜','口角','顏面神經頰支','把嘴角往外拉'],
+  superficial_part_of_masseter:['顴弓前2/3下緣','下頜角與下頜支外面','三叉神經下頜支（咬肌神經）','上提下頜（咬緊牙關）'],
+  temporalis_muscle:['顳窩、顳筋膜','下頜骨冠狀突','三叉神經下頜支（顳深神經）','上提下頜；後部纖維把下頜往後拉'],
+  temporoparietalis_muscle:['耳上方顳筋膜','帽狀腱膜外側','顏面神經顳支','拉緊頭皮'],
+  zygomaticus_major_muscle:['顴骨外側面','口角','顏面神經顴支、頰支','把嘴角往外上拉（笑）'],
+  zygomaticus_minor_muscle:['顴骨前面','上唇外側','顏面神經顴支、頰支','上提上唇'],
+
+  iliacus_muscle:['髂窩','股骨小轉子（與腰大肌合腱）','股神經（L2–L3）','屈髖、穩定骨盆'],
+  psoas_major:['T12–L5 椎體側面與橫突','股骨小轉子','腰叢腹側支（L1–L3）','屈髖；單側收縮協助腰椎側屈'],
+  sartorius_muscle:['髂前上棘','脛骨上端內側（鵝足）','股神經（L2–L3）','屈髖、外展、外旋並屈膝（盤腿動作）'],
+
+  latissimus_dorsi_muscle:['T7–L5 棘突、胸腰筋膜、髂嵴、下3–4肋','肱骨結節間溝底','胸背神經（C6–C8）','肩伸展、內收、內旋（下拉、划船主力）'],
+  teres_major_muscle:['肩胛骨下角後面','肱骨結節間溝內側唇','下肩胛下神經（C5–C7）','肩伸展、內收、內旋'],
+
+  anterior_belly_of_digastric_muscle:['下頜骨二腹肌窩','經中間腱繫於舌骨','三叉神經下頜支（下頜舌骨肌神經）','下拉下頜（張嘴）、上提舌骨'],
+  levator_scapulae:['C1–C4 橫突','肩胛骨上角與內側緣上部','肩胛背神經（C5）與 C3–C4','上提肩胛骨；肩頸痠緊的常見來源'],
+  mylohyoid_muscle:['下頜骨內面（下頜舌骨線）','舌骨體','三叉神經下頜支（下頜舌骨肌神經）','構成口底，吞嚥時上提口底與舌骨'],
+  omohyoid_muscle:['肩胛骨上緣（肩胛切跡附近）','舌骨體下緣','頸襻（C1–C3）','下拉舌骨'],
+  posterior_belly_of_digastric_muscle:['顳骨乳突切跡','經中間腱繫於舌骨','顏面神經','上提並後拉舌骨'],
+  scalenus_anterior_muscle:['C3–C6 橫突前結節','第1肋骨（斜角肌結節）','頸神經腹側支（C4–C6）','上提第1肋（輔助吸氣）、頸部側屈'],
+  scalenus_medius_muscle:['C2–C7 橫突後結節','第1肋骨上面','頸神經腹側支（C3–C8）','上提第1肋、頸部側屈'],
+  scalenus_posterior_muscle:['C4–C6 橫突後結節','第2肋骨外面','頸神經腹側支（C6–C8）','上提第2肋、頸部側屈'],
+  splenius_capitis_muscle:['項韌帶下半、C7–T3 棘突','顳骨乳突、枕骨上項線外側','頸神經後支（C3–C4）','雙側：頭頸後伸；單側：轉頭向同側'],
+  sternocleidomastoid_muscle:['胸骨柄、鎖骨內側1/3','顳骨乳突、枕骨上項線外側','副神經（第11對腦神經）、C2–C3','單側：頭側屈並轉向對側；雙側：頸前屈、輔助吸氣'],
+  sternohyoid_muscle:['胸骨柄後面、鎖骨內側端','舌骨體','頸襻（C1–C3）','下拉舌骨'],
+  sternothyroid_muscle:['胸骨柄後面','甲狀軟骨斜線','頸襻（C1–C3）','下拉喉部'],
+  stylohyoid_muscle:['顳骨莖突','舌骨體','顏面神經','吞嚥時上提並後拉舌骨'],
+  thyrohyoid_muscle:['甲狀軟骨斜線','舌骨體與大角','C1（隨舌下神經走行）','下拉舌骨、上提喉部'],
+
+  external_abdominal_oblique_muscle:['第5–12肋骨外面','髂嵴前半、腹白線、恥骨結節（經腱膜）','肋間神經（T7–T11）、肋下神經（T12）','單側：軀幹轉向對側、側屈；雙側：脊椎前屈、增加腹壓'],
+  internal_abdominal_oblique_muscle:['胸腰筋膜、髂嵴前2/3、腹股溝韌帶外側','第10–12肋下緣、腹白線、恥骨梳','肋間神經（T7–T12）、髂腹下與髂腹股溝神經（L1）','單側：軀幹轉向同側、側屈；雙側：脊椎前屈、增加腹壓'],
+
+  rectus_femoris_muscle:['直頭：髂前下棘；反折頭：髖臼上緣','經股四頭肌腱、髕韌帶止於脛骨粗隆','股神經（L2–L4）','伸膝、屈髖（唯一跨髖關節的股四頭肌）'],
+  vastus_intermedius_muscle:['股骨幹前面與外側面上2/3','經股四頭肌腱、髕韌帶止於脛骨粗隆','股神經（L2–L4）','伸膝'],
+  vastus_lateralis_muscle:['股骨大轉子、粗線外側唇','經股四頭肌腱、髕韌帶止於脛骨粗隆','股神經（L2–L4）','伸膝；股四頭肌中體積最大'],
+  vastus_medialis_muscle:['股骨轉子間線、粗線內側唇','經股四頭肌腱、髕韌帶止於脛骨粗隆','股神經（L2–L4）','伸膝；下段斜向纖維幫助髕骨維持在正中'],
+
+  rhomboid_major_muscle:['T2–T5 棘突','肩胛骨內側緣（肩胛棘到下角）','肩胛背神經（C4–C5）','肩胛骨後收（夾背）、下旋'],
+  rhomboid_minor_muscle:['項韌帶下部、C7–T1 棘突','肩胛骨內側緣（肩胛棘根部）','肩胛背神經（C4–C5）','肩胛骨後收、下旋'],
+  serratus_posterior_inferior_muscle:['T11–L2 棘突、胸腰筋膜','第9–12肋骨下緣','肋間神經（T9–T12）','下拉下位肋骨（輔助呼吸）'],
+  serratus_posterior_superior_muscle:['項韌帶、C7–T3 棘突','第2–5肋骨上緣','肋間神經（T2–T5）','上提上位肋骨（輔助吸氣）'],
+
+  infraspinatus_muscle:['肩胛骨棘下窩','肱骨大結節中面','肩胛上神經（C5–C6）','肩外旋、穩定肱骨頭'],
+  subscapularis_muscle:['肩胛下窩（肩胛骨前面）','肱骨小結節','上、下肩胛下神經（C5–C6）','肩內旋、穩定肱骨頭（旋轉肌袖中最大）'],
+  supraspinatus_muscle:['肩胛骨棘上窩','肱骨大結節上面','肩胛上神經（C4–C6）','啟動肩外展、把肱骨頭壓進關節窩'],
+  teres_minor_muscle:['肩胛骨外側緣上2/3','肱骨大結節下面','腋神經（C5–C6）','肩外旋、穩定肱骨頭'],
+
+  external_intercostal_muscles:['上一肋骨下緣','下一肋骨上緣','肋間神經（T1–T11）','上提肋骨、擴大胸廓（吸氣）'],
+  serratus_anterior_muscle:['第1–8肋骨外面','肩胛骨內側緣前面','胸長神經（C5–C7）','肩胛骨前伸與上旋，讓肩胛貼緊胸廓'],
+
+  extensor_digitorum_longus:['脛骨外髁、腓骨前面上3/4、骨間膜','第2–5趾中節與遠節趾骨背面','腓深神經（L5–S1）','伸第2–5趾、踝背屈、足外翻'],
+  extensor_hallucis_longus:['腓骨前面中段、骨間膜','拇趾遠節趾骨底背面','腓深神經（L5–S1）','伸拇趾、踝背屈'],
+  fibularis_tertius_muscle:['腓骨前面下1/3','第5蹠骨底背面','腓深神經（L5–S1）','踝背屈、足外翻'],
+  inferior_extensor_retinaculum_of_ankle:['跟骨上外側面','內踝、足底腱膜內側（呈 Y 形）','—（支持帶）','把伸肌腱固定在腳背，勾腳時肌腱不會彈起'],
+  superior_extensor_retinaculum_of_ankle:['腓骨遠端前緣','脛骨遠端前緣','—（支持帶）','在腳踝上方綁住伸肌腱'],
+  tendon_of_extensor_digitorum_longus:['伸趾長肌肌腹（踝關節前方）','第2–5趾背面','—（肌腱）','把伸趾長肌的力量傳到四根腳趾'],
+  tibialis_anterior_muscle:['脛骨外髁與脛骨外側面上2/3、骨間膜','內側楔骨、第1蹠骨底','腓深神經（L4–L5）','踝背屈（勾腳尖）、足內翻，控制腳掌落地'],
+
+  acromial_part_of_deltoid_muscle:['肩峰外側緣','肱骨三角肌粗隆','腋神經（C5–C6）','肩外展（側平舉主力）'],
+  clavicular_part_of_deltoid_muscle:['鎖骨外側1/3前緣','肱骨三角肌粗隆','腋神經（C5–C6）','肩屈曲、內旋、水平內收（前平舉、推舉）'],
+  scapular_spinal_part_of_deltoid_muscle:['肩胛棘下緣','肱骨三角肌粗隆','腋神經（C5–C6）','肩伸展、外旋、水平外展（反向飛鳥）'],
+
+  ascending_part_of_trapezius_muscle:['T4–T12 棘突','肩胛棘內側端','副神經（第11對腦神經）、C3–C4','肩胛骨下壓、上旋（過頭動作的穩定）'],
+  descending_part_of_trapezius_muscle:['枕骨上項線、項韌帶','鎖骨外側1/3','副神經（第11對腦神經）、C3–C4','上提肩胛骨（聳肩）、上旋'],
+  transverse_part_of_trapezius_muscle:['C7–T3 棘突','肩峰內緣、肩胛棘上緣','副神經（第11對腦神經）、C3–C4','肩胛骨後收（夾背）'],
+
+  anconeus_muscle:['肱骨外上髁後面','尺骨鷹嘴外側、尺骨後面上段','橈神經（C7–C8）','協助伸肘、穩定肘關節'],
+  lateral_head_of_triceps_brachii:['肱骨後面（橈神經溝上方）','尺骨鷹嘴','橈神經（C6–C8）','伸肘（大重量時出力多）'],
+  long_head_of_triceps_brachii:['肩胛骨盂下結節','尺骨鷹嘴','橈神經（C6–C8）','伸肘、協助肩伸展與內收'],
+  medial_head_of_triceps_brachii:['肱骨後面（橈神經溝下方）','尺骨鷹嘴','橈神經（C6–C8）','伸肘（任何負荷下都會參與）']
+};
+
 const muscleOrder = ['head','neck','traps','shoulders','rotator','biceps','triceps','forearmFlex','forearmExt','hand',
   'chest','serratus','abs','obliques','lats','rhomboids','erector',
   'glutes','gluteMed','deepRot','hipflexor','quads','hamstrings','adductors','calf','shin','fibularis','foot'];
@@ -844,6 +1069,8 @@ async function loadAnatomyModels(){
       if(name === '__skeleton__'){
         boneMesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:BONE_COLOR, roughness:0.62, metalness:0, envMapIntensity:0.3}));
         boneMesh.receiveShadow = true;
+        applyPose(boneMesh.material, 0.5);
+        boneMesh.frustumCulled = false;
         modelRoot.add(boneMesh);
       } else {
         const meta = MUSCLE_META[name];
@@ -857,6 +1084,9 @@ async function loadAnatomyModels(){
           });
           const mesh = new THREE.Mesh(geo, mat);
           mesh.name = name; mesh.castShadow = true;
+          applyPose(mat, armModeFor(meta.g));
+          mesh.customDepthMaterial = poseDepthMaterial(armModeFor(meta.g));
+          mesh.frustumCulled = false;
           const part = {id: meta.g, key:name, mesh, group:mesh, material:mat, meta, baseColor: isTendon ? TENDON_COLOR : MUSCLE_RED};
           mesh.userData.part = part;
           clickableParts.push(part);
@@ -908,6 +1138,199 @@ function startAnatomyLoad(){
 }
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ()=> setTimeout(startAnatomyLoad, 30));
 else setTimeout(startAnatomyLoad, 30);
+
+
+/* 動作連動：每個動作列出主要發力(p)與輔助穩定(s)的肌肉；可填肌群 id 或單條肌肉名稱 */
+const EXERCISE_LIB = [
+  {id:'squat', name:'深蹲', en:'Squat', pose:'squat', p:['quads','glutes','adductors'], s:['hamstrings','erector','abs','obliques','calf','gluteMed'],
+    cue:'雙腳約與肩同寬，臀部往後坐、膝蓋對齊腳尖，蹲到大腿約與地面平行，再用腳掌踩地站起。'},
+  {id:'rdl', name:'羅馬尼亞硬舉', en:'Romanian Deadlift', pose:'hinge', p:['hamstrings','glutes','erector'], s:['adductors','lats','traps','rhomboids','forearmFlex','abs'],
+    cue:'膝蓋微彎固定，臀部往後推、背保持平直，感覺大腿後側被拉長後再挺髖站起。'},
+  {id:'calfraise', name:'站姿提踵', en:'Standing Calf Raise', pose:'calf', p:['calf'], s:['fibularis','foot','tibialis_posterior_muscle'],
+    cue:'用前腳掌把身體往上推到最高、停一秒，再慢慢放下；膝蓋伸直時主要練到腓腸肌。'},
+  {id:'frontraise', name:'啞鈴前平舉', en:'Front Raise', pose:'raise', p:['clavicular_part_of_deltoid_muscle'], s:['acromial_part_of_deltoid_muscle','clavicular_head_of_pectoralis_major_muscle','serratus_anterior_muscle','descending_part_of_trapezius_muscle','abs'],
+    cue:'手臂微彎，往前舉到與肩同高，不要聳肩或用身體甩重量。'},
+  {id:'curl', name:'二頭彎舉', en:'Biceps Curl', pose:'curl', p:['biceps'], s:['brachioradialis_muscle','forearmFlex','clavicular_part_of_deltoid_muscle'],
+    cue:'上臂貼近身體固定不動，只彎曲手肘把重量舉起，下放時慢慢控制。'},
+  {id:'lunge', name:'弓箭步', en:'Lunge', p:['quads','glutes'], s:['adductors','gluteMed','hamstrings','calf','abs']},
+  {id:'hipthrust', name:'臀推', en:'Hip Thrust', p:['glutes'], s:['hamstrings','gluteMed','quads','erector','abs']},
+  {id:'pushup', name:'伏地挺身', en:'Push-up', p:['chest','triceps','clavicular_part_of_deltoid_muscle'], s:['serratus','abs','obliques','rotator']},
+  {id:'bench', name:'臥推', en:'Bench Press', p:['sternocostal_head_of_pectoralis_major_muscle','clavicular_head_of_pectoralis_major_muscle','triceps'], s:['clavicular_part_of_deltoid_muscle','serratus_anterior_muscle','lats','forearmFlex']},
+  {id:'ohp', name:'肩推', en:'Overhead Press', p:['clavicular_part_of_deltoid_muscle','acromial_part_of_deltoid_muscle','triceps'], s:['traps','serratus_anterior_muscle','abs','rotator','clavicular_head_of_pectoralis_major_muscle']},
+  {id:'pullup', name:'引體向上', en:'Pull-up', p:['lats'], s:['biceps','rhomboids','traps','forearmFlex','scapular_spinal_part_of_deltoid_muscle','abs']},
+  {id:'row', name:'俯身划船', en:'Bent-over Row', p:['lats','rhomboids','transverse_part_of_trapezius_muscle'], s:['biceps','scapular_spinal_part_of_deltoid_muscle','erector','forearmFlex','hamstrings','glutes']},
+  {id:'plank', name:'棒式', en:'Plank', p:['abs','obliques'], s:['clavicular_part_of_deltoid_muscle','serratus','glutes','quads','erector']},
+  {id:'shrug', name:'聳肩', en:'Shrug', p:['descending_part_of_trapezius_muscle','levator_scapulae'], s:['rhomboids','forearmFlex','hand']}
+];
+/* 示範姿勢：各段在最低點的「世界角度」(度)，正值往前傾；period 是一次來回的秒數 */
+const POSES = {
+  squat:{shank:35, thigh:-85, torso:40, arm:-80, period:2.8, view:0.85},
+  hinge:{shank:6, thigh:-14, torso:78, arm:0, period:3.0, view:1.2},
+  calf:{toe:22, period:2.0, view:0.9},
+  raise:{arm:-90, period:2.6, view:1.05},
+  curl:{elbow:-130, period:2.2, view:1.1}
+};
+const ARM_GROUPS = new Set(['biceps','triceps','forearmFlex','forearmExt','hand']);
+const baseKey = k => k.replace(/_[LRC]$/, '');
+
+/* ---- 關節彎曲：在頂點著色器裡依序轉動 肘→肩→髖→膝→踝→腳趾，讓靜態模型能做動作 ---- */
+const POSE_U = { uPoseA:{value:new THREE.Vector4()}, uPoseB:{value:new THREE.Vector2()} };
+const POSE_GLSL = `
+uniform vec4 uPoseA; /* 腳趾, 踝, 膝, 髖 */
+uniform vec2 uPoseB; /* 肩, 肘 */
+uniform float uArmMode; /* 1=手臂肌肉 0=非手臂 0.5=依位置判斷(骨骼、三角肌) */
+vec3 poseRX(vec3 v, float a){ float c = cos(a), s = sin(a); return vec3(v.x, v.y*c - v.z*s, v.y*s + v.z*c); }
+void poseW(vec3 p, out float wT, out float wA, out float wK, out float wH, out float wS, out float wE){
+  float arm = uArmMode > 0.75 ? 1.0 : (uArmMode < 0.25 ? 0.0 :
+    smoothstep(0.15, 0.17, abs(p.x)) * smoothstep(0.58, 0.62, p.y) * (1.0 - smoothstep(1.40, 1.46, p.y)));
+  wT = max(1.0 - smoothstep(0.05, 0.085, p.z), smoothstep(0.06, 0.12, p.y));
+  wA = smoothstep(0.045, 0.105, p.y);
+  wK = smoothstep(0.45, 0.55, p.y);
+  wH = smoothstep(0.82, 0.96, p.y);
+  wT = mix(wT, 1.0, arm); wA = mix(wA, 1.0, arm); wK = mix(wK, 1.0, arm); wH = mix(wH, 1.0, arm);
+  wS = arm;
+  wE = arm * (1.0 - smoothstep(1.05, 1.11, p.y));
+}
+vec3 poseP(vec3 p){
+  float wT, wA, wK, wH, wS, wE; poseW(p, wT, wA, wK, wH, wS, wE);
+  vec3 q = p, c;
+  c = vec3(0.0, 1.08, -0.03);  q = poseRX(q - c, uPoseB.y * wE) + c;
+  c = vec3(0.0, 1.37, -0.04);  q = poseRX(q - c, uPoseB.x * wS) + c;
+  c = vec3(0.0, 0.89, -0.01);  q = poseRX(q - c, uPoseA.w * wH) + c;
+  c = vec3(0.0, 0.50, -0.02);  q = poseRX(q - c, uPoseA.z * wK) + c;
+  c = vec3(0.0, 0.075, -0.035); q = poseRX(q - c, uPoseA.y * wA) + c;
+  c = vec3(0.0, 0.02, 0.07);   q = poseRX(q - c, uPoseA.x * wT) + c;
+  return q;
+}
+vec3 poseN(vec3 n, vec3 p){
+  float wT, wA, wK, wH, wS, wE; poseW(p, wT, wA, wK, wH, wS, wE);
+  n = poseRX(n, uPoseB.y * wE); n = poseRX(n, uPoseB.x * wS); n = poseRX(n, uPoseA.w * wH);
+  n = poseRX(n, uPoseA.z * wK); n = poseRX(n, uPoseA.y * wA); return poseRX(n, uPoseA.x * wT);
+}
+`;
+function applyPose(material, armMode){
+  material.onBeforeCompile = (shader)=>{
+    shader.uniforms.uPoseA = POSE_U.uPoseA;
+    shader.uniforms.uPoseB = POSE_U.uPoseB;
+    shader.uniforms.uArmMode = {value: armMode};
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\n' + POSE_GLSL)
+      .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n  objectNormal = poseN(objectNormal, position);')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed = poseP(position);');
+  };
+  material.customProgramCacheKey = ()=> 'pose-v1';
+  return material;
+}
+function poseDepthMaterial(armMode){
+  return applyPose(new THREE.MeshDepthMaterial({depthPacking: THREE.RGBADepthPacking}), armMode);
+}
+function armModeFor(group){ return ARM_GROUPS.has(group) ? 1 : (group === 'shoulders' ? 0.5 : 0); }
+
+/* 世界角度 → 各關節相對角度(弧度) */
+function poseRelFor(d){
+  const r = Math.PI/180, t = d.toe||0, sh = d.shank||0, th = d.thigh||0, to = d.torso||0, ar = d.arm||0;
+  return {toe:t*r, ankle:(sh-t)*r, knee:(th-sh)*r, hip:(to-th)*r, shoulder:(ar-to)*r, elbow:(d.elbow||0)*r};
+}
+const ZERO_POSE = {toe:0, ankle:0, knee:0, hip:0, shoulder:0, elbow:0};
+const poseAnim = {rel:null, period:2.6, t:0, playing:false, last:performance.now()};
+let poseActive = false;
+function updatePose(){
+  const now = performance.now(), dt = Math.min(0.05, (now - poseAnim.last)/1000);
+  poseAnim.last = now;
+  let s = 0;
+  if(poseAnim.rel){
+    if(poseAnim.playing) poseAnim.t += dt;
+    s = reduceMotion ? 1 : (1 - Math.cos(2*Math.PI*poseAnim.t/poseAnim.period))/2;
+  }
+  const r = poseAnim.rel || ZERO_POSE, k = 0.22;
+  const A = POSE_U.uPoseA.value, B = POSE_U.uPoseB.value;
+  A.x += (r.toe*s - A.x)*k; A.y += (r.ankle*s - A.y)*k; A.z += (r.knee*s - A.z)*k; A.w += (r.hip*s - A.w)*k;
+  B.x += (r.shoulder*s - B.x)*k; B.y += (r.elbow*s - B.y)*k;
+  poseActive = Math.abs(A.x)+Math.abs(A.y)+Math.abs(A.z)+Math.abs(A.w)+Math.abs(B.x)+Math.abs(B.y) > 0.01;
+}
+
+/* ---- 動作面板 ---- */
+let currentExercise = null;
+function exerciseRole(part, ex){
+  const b = baseKey(part.key), hit = it => it === part.id || it === b;
+  if(ex.p.some(hit)) return 'p';
+  if(ex.s.some(hit)) return 's';
+  return null;
+}
+function paintExercise(ex){
+  const P = new THREE.Color(0xE5451B), Sc = new THREE.Color(0xF2A13A);
+  glowParts = [];
+  clickableParts.forEach(p=>{
+    const m = p.material, role = ex ? exerciseRole(p, ex) : null, isTendon = p.meta.k === 't';
+    _hlColor.setHex(p.baseColor);
+    let emis = 0;
+    if(role === 'p'){ if(!isTendon) _hlColor.lerp(P, 0.9); m.emissive.copy(P); emis = 0.2; glowParts.push(p); }
+    else if(role === 's'){ if(!isTendon) _hlColor.lerp(Sc, 0.92); m.emissive.copy(Sc); emis = 0.12; glowParts.push(p); }
+    else { if(ex) _hlColor.lerp(_ghost, 0.84); m.emissive.setHex(0x000000); }
+    p._baseEmissive = emis; m.color.copy(_hlColor); m.emissiveIntensity = emis;
+  });
+  if(boneMesh) boneMesh.material.color.setHex(BONE_COLOR).multiplyScalar(ex ? 0.5 : 1);
+}
+function exerciseLabel(item){
+  if(muscleData[item]) return muscleData[item].name;
+  const part = clickableParts.find(p=> baseKey(p.key) === item);
+  return part ? part.meta.zh : item;
+}
+function renderMovePanel(){
+  const infoEl = document.getElementById('muscleInfo');
+  infoEl.innerHTML = `
+    <span class="mi-region">動作連動</span>
+    <h2>選一個訓練動作</h2>
+    <p class="func">3D 人體會亮起參與的肌肉：<i class="key key-p"></i>主要發力　<i class="key key-s"></i>輔助穩定。標著「示範」的動作，模型會跟著做一次又一次。</p>
+    <div class="ex-grid">${EXERCISE_LIB.map(e=>`<button data-ex="${e.id}"${e.id===currentExercise?' class="active"':''}>${e.name}${e.pose?'<small>示範</small>':''}</button>`).join('')}</div>
+    <div id="exDetail"></div>`;
+  infoEl.classList.remove('refresh'); void infoEl.offsetWidth; infoEl.classList.add('refresh');
+  infoEl.scrollTop = 0;
+  infoEl.querySelectorAll('[data-ex]').forEach(b=> b.addEventListener('click', ()=> selectExercise(b.dataset.ex)));
+  if(currentExercise) selectExercise(currentExercise, true);
+}
+function selectExercise(id, keepView){
+  const ex = EXERCISE_LIB.find(e=> e.id === id);
+  if(!ex) return;
+  currentExercise = id;
+  userInteracted = true;
+  document.querySelectorAll('.ex-grid button').forEach(b=> b.classList.toggle('active', b.dataset.ex === id));
+  paintExercise(ex);
+  if(ex.pose){
+    const d = POSES[ex.pose];
+    if(!keepView || !poseAnim.rel){ poseAnim.rel = poseRelFor(d); poseAnim.period = d.period; poseAnim.t = 0; poseAnim.playing = true; }
+    if(!keepView){ targetRotY = d.view; targetRotX = 0; }
+  } else {
+    poseAnim.rel = null;
+  }
+  if(!keepView){ focusWholeBody(); if(window.innerWidth < 1080) chamberEl.scrollIntoView({behavior:'smooth', block:'center'}); }
+  const chips = (list, cls)=> `<div class="chip-row ${cls}">${list.map(it=>`<button data-go="${it}">${exerciseLabel(it)}</button>`).join('')}</div>`;
+  const slot = document.getElementById('exDetail');
+  slot.innerHTML = `
+    <div class="ex-head"><h3>${ex.name}</h3><span class="en">${ex.en}</span></div>
+    ${ex.pose
+      ? `<div class="ex-ctrl"><button id="exPlay">${poseAnim.playing ? '暫停' : '播放'}</button><span>模型動作為簡化示意，不是標準姿勢教學</span></div>`
+      : '<p class="ex-note">這個動作暫時沒有模型示範，先看參與的肌肉。</p>'}
+    <section class="mi-sec"><h6><i class="key key-p"></i>主要發力</h6>${chips(ex.p, 'p')}</section>
+    <section class="mi-sec"><h6><i class="key key-s"></i>輔助穩定</h6>${chips(ex.s, 's')}</section>
+    ${ex.cue ? `<p class="tip">${ex.cue}</p>` : ''}
+    <p class="ex-note">點上面的肌肉名稱，可以跳到它的說明。</p>`;
+  const play = document.getElementById('exPlay');
+  if(play) play.addEventListener('click', ()=>{
+    poseAnim.playing = !poseAnim.playing;
+    play.textContent = poseAnim.playing ? '暫停' : '播放';
+  });
+  slot.querySelectorAll('[data-go]').forEach(b=> b.addEventListener('click', ()=>{
+    const it = b.dataset.go;
+    setMode('explore');
+    if(muscleData[it]) selectMuscle(it);
+    else { const part = clickableParts.find(p=> baseKey(p.key) === it); if(part) selectMuscle(part.id, part); }
+  }));
+}
+function stopExercise(){
+  poseAnim.rel = null; poseAnim.playing = false;
+  clearGlow();
+}
 
 /* =========================================================
    3. 互動：旋轉 + 縮放 + 平移 + 點擊選取
@@ -1083,6 +1506,7 @@ document.addEventListener('keydown', (e)=>{
 const raycaster = new THREE.Raycaster();
 const mouseNDC = new THREE.Vector2();
 function handleTap(clientX, clientY){
+  if(currentMode === 'move' || poseActive) return;
   const rect = canvas.getBoundingClientRect();
   mouseNDC.x = ((clientX-rect.left)/rect.width)*2-1;
   mouseNDC.y = -((clientY-rect.top)/rect.height)*2+1;
@@ -1113,7 +1537,7 @@ canvas.addEventListener('pointerleave', ()=>{ hoverPos = null; tooltipEl.classLi
 function updateHover(){
   if(!hoverDirty || !hoverPos || !modelReady) return;
   hoverDirty = false;
-  if(currentMode === 'quiz'){ tooltipEl.classList.remove('show'); canvas.style.cursor = ''; return; }
+  if(currentMode !== 'explore' || poseActive){ tooltipEl.classList.remove('show'); canvas.style.cursor = ''; return; }
   const rect = canvas.getBoundingClientRect();
   mouseNDC.x = (hoverPos.lx/rect.width)*2-1;
   mouseNDC.y = -(hoverPos.ly/rect.height)*2+1;
@@ -1204,7 +1628,7 @@ function updateHighlight(selectedId){
 }
 /* hovering a name in the list lights that muscle group in 3D */
 function previewGroup(id){
-  if(!modelReady || currentMode === 'quiz') return;
+  if(!modelReady || currentMode !== 'explore') return;
   paintHighlight(currentMuscle, id === currentMuscle ? null : id);
 }
 
@@ -1226,13 +1650,22 @@ function renderMuscleInfo(id){
   const d = muscleData[id];
   const infoEl = document.getElementById('muscleInfo');
   const factIdx = Math.floor(Math.random() * d.facts.length);
-  const lock = (currentPart && currentPart.id === id)
+  const specific = currentPart && currentPart.id === id;
+  const det = specific ? MUSCLE_DETAIL[baseKey(currentPart.key)] : null;
+  const lock = specific
     ? `<div class="lock"><i class="lock-ico"></i><span><b>${currentPart.meta.zh}</b><small>${currentPart.meta.en}</small></span></div>` : '';
+  const detailHtml = det ? `
+    <section class="mi-sec">
+      <h6>這條肌肉</h6>
+      <dl class="mdetail"><dt>起點</dt><dd>${det[0]}</dd><dt>止點</dt><dd>${det[1]}</dd><dt>神經</dt><dd>${det[2]}</dd><dt>作用</dt><dd>${det[3]}</dd></dl>
+    </section>
+    <h6 class="mi-sec-label">整個${d.name}</h6>` : '';
   infoEl.innerHTML = `
     <span class="mi-region">${categoryLabels[d.category]}</span>
     <h2>${d.name}</h2>
     <span class="en">${d.en}</span>
     ${lock}
+    ${detailHtml}
     <p class="func">${d.func}</p>
     <section class="mi-sec">
       <h6>常見訓練動作</h6>
@@ -1304,7 +1737,7 @@ function showToast(text){
 
 /* small card over the 3D view: shown on phones and in focus mode, where the info panel is off-screen */
 function updatePeek(){
-  if(!currentMuscle || currentMode === 'quiz'){ peekEl.classList.remove('on'); return; }
+  if(!currentMuscle || currentMode !== 'explore'){ peekEl.classList.remove('on'); return; }
   const d = muscleData[currentMuscle], specific = currentPart && currentPart.id === currentMuscle;
   peekEl.innerHTML = `<div><b>${specific ? currentPart.meta.zh : d.name}</b><span>${specific ? currentPart.meta.en : d.en}</span></div><button id="peekMore">看說明</button>`;
   peekEl.classList.add('on');
@@ -1353,7 +1786,7 @@ function renderLegend(){
       btn.classList.toggle('active', id === currentMuscle);
       btn.addEventListener('click', ()=>{
         if(currentMode === 'quiz') checkQuizAnswer(id);
-        else selectMuscle(id);
+        else { if(currentMode === 'move') setMode('explore'); selectMuscle(id); }
         if(window.innerWidth < 1080) chamberEl.scrollIntoView({behavior:'smooth', block:'center'});
       });
       btn.addEventListener('mouseenter', ()=> previewGroup(id));
@@ -1454,28 +1887,35 @@ function renderQuizResult(){
   if(quizScore === total) showToast('滿分通過肌群小測驗');
 }
 
-/* console tabs: 說明 / 測驗 / AI 教練 */
+/* console tabs: 說明 / 測驗 / 動作 / AI 教練 */
+function setMode(mode){
+  if(mode === currentMode){ setConsoleView('info'); return; }
+  const prev = currentMode;
+  currentMode = mode;
+  if(prev === 'move') stopExercise();
+  const badge = document.getElementById('progressBadge');
+  if(badge) badge.style.visibility = mode === 'explore' ? '' : 'hidden';
+  setConsoleView('info');
+  if(mode === 'quiz'){
+    clearGlow(); focusWholeBody(); updatePeek();
+    startQuiz();
+  } else if(mode === 'move'){
+    clearGlow(); focusWholeBody(); updatePeek();
+    document.querySelectorAll('.legend button').forEach(b=> b.classList.remove('active'));
+    paintExercise(null);
+    renderMovePanel();
+  } else {
+    updateHighlight(currentMuscle);
+    if(currentMuscle){ renderMuscleInfo(currentMuscle); focusOnMuscle(currentMuscle); }
+    else document.getElementById('muscleInfo').innerHTML = PLACEHOLDER_HTML;
+    document.querySelectorAll('.legend button').forEach(b=> b.classList.toggle('active', b.dataset.id === currentMuscle));
+    updatePeek();
+  }
+}
 document.querySelectorAll('.mode-switch button').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     if(btn.dataset.tab === 'chat'){ setConsoleView('chat'); return; }
-    const mode = btn.dataset.mode;
-    if(mode === currentMode){ setConsoleView('info'); return; }
-    currentMode = mode;
-    const badge = document.getElementById('progressBadge');
-    if(currentMode === 'quiz'){
-      if(badge) badge.style.visibility = 'hidden';
-      clearGlow(); focusWholeBody(); updatePeek();
-      setConsoleView('info');
-      startQuiz();
-    } else {
-      if(badge) badge.style.visibility = '';
-      setConsoleView('info');
-      updateHighlight(currentMuscle);
-      if(currentMuscle){ renderMuscleInfo(currentMuscle); focusOnMuscle(currentMuscle); }
-      else document.getElementById('muscleInfo').innerHTML = PLACEHOLDER_HTML;
-      document.querySelectorAll('.legend button').forEach(b=> b.classList.toggle('active', b.dataset.id === currentMuscle));
-      updatePeek();
-    }
+    setMode(btn.dataset.mode);
   });
 });
 
@@ -1561,6 +2001,7 @@ function animate(){
     const pulse = (Math.sin(performance.now() * 0.0018 * 1.8) + 1) / 2;   // 0..1, slow breathing
     glowParts.forEach(p=>{ p.material.emissiveIntensity = (p._baseEmissive || 0) * (0.55 + pulse*0.75); });
   }
+  updatePose();
   updateHover();
   updateBeam();
   if(Math.abs(shiftTarget - shiftCur) > 0.05){ shiftCur += (shiftTarget - shiftCur) * 0.12; applyViewOffset(); }
@@ -1645,7 +2086,8 @@ function appendMessage(role, content, isTyping){
 }
 
 function buildSystemPrompt(){
-  const partInfo = (currentPart && currentPart.id === currentMuscle) ? `，具體點選的肌肉是「${currentPart.meta.zh}（${currentPart.meta.en}）」` : '';
+  const partDet = (currentPart && currentPart.id === currentMuscle) ? MUSCLE_DETAIL[baseKey(currentPart.key)] : null;
+  const partInfo = (currentPart && currentPart.id === currentMuscle) ? `，具體點選的肌肉是「${currentPart.meta.zh}（${currentPart.meta.en}）」` + (partDet ? `（起點：${partDet[0]}；止點：${partDet[1]}；神經：${partDet[2]}；作用：${partDet[3]}）` : '') : '';
   const muscleContext = currentMuscle
     ? `使用者目前在3D人體圖上選取的部位是：${muscleData[currentMuscle].name}（${muscleData[currentMuscle].en}）${partInfo}。請盡量將回答聚焦在此部位，但若使用者問題超出此範圍，也請正常回答。`
     : '使用者目前尚未選取特定部位。';
