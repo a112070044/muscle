@@ -4,10 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>肌肉教練｜333 條肌肉的 3D 解剖與 AI 問答</title>
+<meta name="description" content="333 條肌肉的 3D 解剖、14 個訓練動作示範、體型調整與 AI 教練問答。">
+<meta name="theme-color" content="#0A0A0B">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="肌肉教練">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="vendor/three.min.js"></script>
 
 <style>
   :root{
@@ -44,6 +53,15 @@
   .brand-mark{display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; background:var(--scan); color:#fff; font-weight:800; font-size:15px; flex-shrink:0;}
   .brand h1{font-size:19px; font-weight:700; letter-spacing:.01em; line-height:1.2;}
   .brand-sub{font-size:12.5px; color:var(--text-faint);}
+  .topbar-right{display:flex; align-items:center; gap:12px; flex-shrink:0;}
+  #installBtn{white-space:nowrap;}
+  .install-hint{position:fixed; inset:0; z-index:1100; display:flex; align-items:flex-end; justify-content:center; padding:16px; background:rgba(0,0,0,.55);}
+  .install-hint[hidden]{display:none;}
+  .install-hint .card{width:100%; max-width:420px; background:#12171F; border:1px solid var(--line-hi); border-radius:16px; padding:20px 20px 16px;}
+  .install-hint h3{font-size:17px; font-weight:600; margin-bottom:10px;}
+  .install-hint ol{padding-left:20px; font-size:14px; color:var(--text-soft); line-height:1.9;}
+  .install-hint ol b{color:var(--text);}
+  .install-hint .fp-actions{justify-content:flex-end;}
   .progress-badge{font:400 12px var(--mono); color:var(--text-soft); font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap;}
   .progress-badge::after{
     content:""; display:block; height:2px; margin-top:6px; background:var(--line);
@@ -357,6 +375,18 @@ setTimeout(function(){
 </script>
 
 
+<div class="install-hint" id="installHint" role="dialog" aria-modal="true" aria-labelledby="installHintTitle" hidden>
+  <div class="card">
+    <h3 id="installHintTitle">加入主畫面</h3>
+    <ol>
+      <li>點瀏覽器的 <b>「分享」</b> 按鈕（方框加向上箭頭）</li>
+      <li>往下找到 <b>「加入主畫面」</b></li>
+      <li>按右上角 <b>「新增」</b>，桌面就會出現肌肉教練的圖示</li>
+    </ol>
+    <div class="fp-actions"><button class="fp-btn primary" id="installHintClose">知道了</button></div>
+  </div>
+</div>
+
 <div class="stage" id="stage">
   <div class="chamber" id="chamber">
     <canvas id="canvas3d"></canvas>
@@ -370,7 +400,10 @@ setTimeout(function(){
 
   <header class="topbar">
     <div class="brand"><span class="brand-mark" aria-hidden="true">M</span><h1>肌肉教練</h1><span class="brand-sub">333 條肌肉的 3D 解剖</span></div>
-    <div class="progress-badge" id="progressBadge">已探索 0 / 28</div>
+    <div class="topbar-right">
+      <button class="ghost-btn" id="installBtn" title="安裝到桌面或主畫面" hidden>安裝 App</button>
+      <div class="progress-badge" id="progressBadge">已探索 0 / 28</div>
+    </div>
   </header>
 
   <div class="toolbar" id="toolbar" role="toolbar" aria-label="檢視控制">
@@ -1754,6 +1787,38 @@ function clearFace(){
     if(sz){ sizeEl.value = sz; faceSize = sz/100; document.getElementById('faceSizeOut').textContent = sz + '%'; }
     if(saved){ setFaceImage(saved); show('on'); }
   }catch(e){}
+}
+
+
+/* ---- 安裝到桌面（PWA）：Chrome/Edge/Android 用系統的安裝視窗；iPhone/iPad 顯示「加入主畫面」步驟 ---- */
+{
+  const btn = document.getElementById('installBtn'), hint = document.getElementById('installHint');
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const iOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let deferred = null;
+  window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferred = e; if(!standalone) btn.hidden = false; });
+  window.addEventListener('appinstalled', ()=>{ btn.hidden = true; deferred = null; showToast('已安裝，之後可以從桌面直接打開'); });
+  if(iOS && !standalone) btn.hidden = false;
+  btn.addEventListener('click', async ()=>{
+    if(deferred){
+      deferred.prompt();
+      const choice = await deferred.userChoice;
+      deferred = null;
+      if(choice.outcome === 'accepted') btn.hidden = true;
+    } else {
+      hint.hidden = false;
+      document.getElementById('installHintClose').focus();
+    }
+  });
+  const closeHint = ()=>{ hint.hidden = true; btn.focus(); };
+  document.getElementById('installHintClose').addEventListener('click', closeHint);
+  hint.addEventListener('click', e=>{ if(e.target === hint) closeHint(); });
+  document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && !hint.hidden) closeHint(); });
+  /* 離線快取：只在正式網址（https）或本機測試時註冊，嵌在其他頁面裡（例如預覽）時略過 */
+  let topLevel = true; try{ topLevel = window.top === window; }catch(e){ topLevel = false; }
+  if('serviceWorker' in navigator && topLevel && (location.protocol === 'https:' || location.hostname === 'localhost')){
+    window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  }
 }
 
 /* =========================================================
