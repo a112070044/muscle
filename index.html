@@ -264,6 +264,21 @@
   .chip-row.s button{border-color:rgba(242,161,58,.55);}
   .chip-row button:hover{background:rgba(255,255,255,.05);}
 
+  /* body-shape panel */
+  .shape-panel{order:2; margin:10px 12px 0; padding:14px 16px 12px; background:rgba(11,16,23,.96); border:1px solid var(--line); border-radius:14px;}
+  .shape-panel[hidden]{display:none;}
+  .sp-head{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .sp-head b{flex:1; font-size:14px; font-weight:600;}
+  .sp-head button{background:none; border:none; cursor:pointer; color:var(--text-soft); font-size:13px;}
+  .sp-head #shapeReset{color:var(--ice); text-decoration:underline; text-underline-offset:3px;}
+  .sp-presets{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
+  .sp-presets button{font-size:12.5px; padding:6px 12px; background:transparent; border:1px solid var(--line-hi); border-radius:6px; cursor:pointer;}
+  .sp-presets button:hover, .sp-presets button.active{border-color:var(--scan); background:var(--ice-dim);}
+  .sp-row{display:grid; grid-template-columns:76px 1fr 58px; align-items:center; gap:10px; font-size:13px; color:var(--text-soft); padding:4px 0;}
+  .sp-row input{width:100%; accent-color:var(--scan);}
+  .sp-row output{font-variant-numeric:tabular-nums; color:var(--text); text-align:right; font-size:12.5px;}
+  .sp-note{font-size:11.5px; color:var(--text-faint); margin-top:8px; line-height:1.6;}
+
   /* ---------- immersive desktop ---------- */
   @media (min-width:1080px){
     html,body{height:100%; overflow:hidden;}
@@ -275,6 +290,8 @@
     .rail-toggle{display:none;}
     .legend{flex:1; -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(to bottom,#000 calc(100% - 28px),transparent);}
     .console{position:absolute; right:24px; top:76px; bottom:92px; width:420px; margin:0; z-index:5;}
+    .shape-panel .sp-rows{display:grid; grid-template-columns:1fr 1fr; column-gap:22px;}
+    .shape-panel{position:absolute; left:50%; bottom:86px; transform:translateX(-50%); width:620px; max-width:calc(100% - 960px); min-width:440px; margin:0; z-index:8; background:var(--glass); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); box-shadow:0 24px 60px -24px rgba(0,0,0,.8);}
     .toolbar{position:absolute; left:0; right:0; bottom:24px; margin:0 auto; width:max-content; max-width:calc(100% - 48px); z-index:6; overflow:visible;}
     .hint{display:block; position:absolute; right:24px; bottom:34px; z-index:1; font-size:11.5px; color:var(--text-faint); pointer-events:none; transition:opacity .6s ease;}
     body.interacted .hint{opacity:0;}
@@ -293,6 +310,7 @@
     .rail,.console,.toolbar,.peek{backdrop-filter:none; -webkit-backdrop-filter:none; background:rgba(11,16,23,.94);}
     .rail-toggle{display:inline-block;}
     #expandBtn{display:none;}
+    .shape-panel{position:static;}
     .chat-scroll{max-height:420px;}
     .muscle-info{max-height:none;}
     .console{min-height:0;}
@@ -361,7 +379,22 @@ setTimeout(function(){
       <button id="zoomIn" aria-label="放大">＋</button>
       <button id="expandBtn" aria-pressed="false">專注檢視</button>
     </div>
+    <div class="seg" role="group" aria-label="體型">
+      <button id="shapeBtn" aria-expanded="false" aria-controls="shapePanel">體型</button>
+    </div>
   </div>
+
+  <section class="shape-panel" id="shapePanel" aria-label="調整體型" hidden>
+    <div class="sp-head"><b>調整體型</b><button id="shapeReset">還原</button><button id="shapeClose" aria-label="關閉">✕</button></div>
+    <div class="sp-presets" id="shapePresets"></div>
+    <div class="sp-rows">
+    <label class="sp-row"><span>身高</span><input type="range" id="shHeight" min="150" max="200" step="1"><output id="shHeightOut"></output></label>
+    <label class="sp-row"><span>上半身肌肉</span><input type="range" id="shUpper" min="-100" max="100" step="5"><output id="shUpperOut"></output></label>
+    <label class="sp-row"><span>下半身肌肉</span><input type="range" id="shLower" min="-100" max="100" step="5"><output id="shLowerOut"></output></label>
+    <label class="sp-row"><span>肩寬</span><input type="range" id="shShoulder" min="-100" max="100" step="5"><output id="shShoulderOut"></output></label>
+    </div>
+    <p class="sp-note">調整骨架比例與肌肉厚度，不含脂肪與皮膚。動作示範也會套用這個體型。</p>
+  </section>
 
   <nav class="rail" id="rail" aria-label="肌群清單">
     <div class="rail-head">
@@ -853,6 +886,7 @@ const PAN_LIMIT = { x:1.3, yMin:-1.6, yMax:1.6 };
 function updateCamera(){
   camera.position.copy(viewTarget).addScaledVector(viewDir, camDist);
   camera.lookAt(viewTarget);
+  if(scene.fog){ scene.fog.near = Math.max(5, camDist - 0.6); scene.fog.far = Math.max(11, camDist + 5.4); }   /* 拉遠時霧也跟著退，模型不會變暗 */
 }
 updateCamera();
 
@@ -1084,8 +1118,8 @@ async function loadAnatomyModels(){
           });
           const mesh = new THREE.Mesh(geo, mat);
           mesh.name = name; mesh.castShadow = true;
-          applyPose(mat, armModeFor(meta.g));
-          mesh.customDepthMaterial = poseDepthMaterial(armModeFor(meta.g));
+          applyPose(mat, armModeFor(meta.g), shapeWeightFor(meta));
+          mesh.customDepthMaterial = poseDepthMaterial(armModeFor(meta.g), shapeWeightFor(meta));
           mesh.frustumCulled = false;
           const part = {id: meta.g, key:name, mesh, group:mesh, material:mat, meta, baseColor: isTendon ? TENDON_COLOR : MUSCLE_RED};
           mesh.userData.part = part;
@@ -1102,6 +1136,9 @@ async function loadAnatomyModels(){
     const h = box.max.y - box.min.y, scale = 3.4 / h;
     modelRoot.scale.setScalar(scale);
     modelRoot.position.set(-(box.min.x+box.max.x)/2*scale, -(box.min.y+box.max.y)/2*scale, -(box.min.z+box.max.z)/2*scale);
+    modelFit = {scale, box: box.clone(), floor: box.min.y*scale + modelRoot.position.y};
+    applyShape();
+    fitShapeView();
     ground.position.y = -1.72;
     holoFloor.position.y = -1.715;
     if(!reduceMotion) sweepBeam(-1.7, 1.72, false);
@@ -1203,10 +1240,12 @@ const baseKey = k => k.replace(/_[LRC]$/, '');
 const POSE_U = {
   uLegL:{value:new THREE.Vector4()}, uLegR:{value:new THREE.Vector4()},   /* 髖, 膝, 踝, 腳趾（相對角度） */
   uUp:{value:new THREE.Vector4()},                                         /* 軀幹, 肩, 肘, 聳肩位移 */
-  uOff:{value:new THREE.Vector2()}                                         /* 整體上下、前後位移 */
+  uOff:{value:new THREE.Vector2()},                                        /* 整體上下、前後位移 */
+  uShape:{value:new THREE.Vector4()}                                       /* 體型：上半身肌肉厚度, 下半身肌肉厚度, 肩寬 */
 };
 const POSE_GLSL = `
-uniform vec4 uLegL; uniform vec4 uLegR; uniform vec4 uUp; uniform vec2 uOff;
+uniform vec4 uLegL; uniform vec4 uLegR; uniform vec4 uUp; uniform vec2 uOff; uniform vec4 uShape;
+uniform float uShapeW; /* 這個網格受肌肉厚度影響的程度 */
 uniform float uArmMode; /* 1=手臂肌肉 0=非手臂 0.5=依位置判斷(骨骼、三角肌) */
 vec3 poseRX(vec3 v, float a){ float c = cos(a), s = sin(a); return vec3(v.x, v.y*c - v.z*s, v.y*s + v.z*c); }
 float poseArm(vec3 p){
@@ -1215,6 +1254,8 @@ float poseArm(vec3 p){
 }
 vec3 poseApply(vec3 v, vec3 p, float isPoint){
   float arm = poseArm(p), na = 1.0 - arm;
+  /* 體型：沿法線加厚肌肉（上下半身分開），在站姿空間先做 */
+  v += normal * mix(uShape.y, uShape.x, max(arm, smoothstep(0.80, 1.00, p.y))) * uShapeW * isPoint;
   float wT = smoothstep(0.05, 0.085, p.z) * (1.0 - smoothstep(0.06, 0.12, p.y)) * na;
   float wA = (1.0 - smoothstep(0.045, 0.105, p.y)) * na;
   float wK = (1.0 - smoothstep(0.45, 0.55, p.y)) * na;
@@ -1231,23 +1272,28 @@ vec3 poseApply(vec3 v, vec3 p, float isPoint){
   c = vec3(0.0, 1.08, -0.03) * isPoint;   v = poseRX(v - c, uUp.z * wE) + c;
   c = vec3(0.0, 1.37, -0.04) * isPoint;   v = poseRX(v - c, uUp.y * arm) + c;
   c = vec3(0.0, 0.89, -0.01) * isPoint;   v = poseRX(v - c, uUp.x) + c;
+  /* 肩寬：旋轉都繞 x 軸，所以左右方向的伸縮可以最後再做 */
+  float wide = smoothstep(1.05, 1.30, p.y) * (1.0 - smoothstep(1.42, 1.52, p.y));
+  v.x += uShape.z * mix(p.x * wide, sign(p.x) * 0.17, arm) * isPoint;
   return v + vec3(0.0, uOff.x, uOff.y) * isPoint;
 }
 `;
-function applyPose(material, armMode){
+function applyPose(material, armMode, shapeW){
   material.onBeforeCompile = (shader)=>{
-    Object.assign(shader.uniforms, POSE_U, {uArmMode:{value: armMode}});
+    Object.assign(shader.uniforms, POSE_U, {uArmMode:{value: armMode}, uShapeW:{value: shapeW || 0}});
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\n' + POSE_GLSL)
       .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n  objectNormal = poseApply(objectNormal, position, 0.0);')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed = poseApply(position, position, 1.0);');
   };
-  material.customProgramCacheKey = ()=> 'pose-v2';
+  material.customProgramCacheKey = ()=> 'pose-v3';
   return material;
 }
-function poseDepthMaterial(armMode){
-  return applyPose(new THREE.MeshDepthMaterial({depthPacking: THREE.RGBADepthPacking}), armMode);
+function poseDepthMaterial(armMode, shapeW){
+  return applyPose(new THREE.MeshDepthMaterial({depthPacking: THREE.RGBADepthPacking}), armMode, shapeW);
 }
+/* 肌腱、臉部薄肌只微微加厚，避免變形 */
+function shapeWeightFor(meta){ return meta.k === 't' ? 0.25 : (meta.g === 'head' ? 0.15 : 1); }
 function armModeFor(group){ return ARM_GROUPS.has(group) ? 1 : (group === 'shoulders' ? 0.5 : 0); }
 
 /* 與著色器相同的計算，用在身體上的幾個點：決定貼地位置、道具位置與鏡頭 */
@@ -1487,6 +1533,72 @@ function stopExercise(){
   clearGlow();
 }
 
+
+/* ---- 體型調整：身高（整體縮放，腳維持踩地）、上下半身肌肉厚度、肩寬 ---- */
+const SHAPE_DEFAULT = {height:170, upper:0, lower:0, shoulder:0};
+const SHAPE_PRESETS = [
+  {name:'纖瘦', v:{height:170, upper:-80, lower:-60, shoulder:-50}},
+  {name:'標準', v:SHAPE_DEFAULT},
+  {name:'健美', v:{height:176, upper:100, lower:80, shoulder:80}},
+  {name:'長跑', v:{height:172, upper:-40, lower:30, shoulder:-30}}
+];
+let modelFit = null;
+let shape = Object.assign({}, SHAPE_DEFAULT);
+try{ const saved = JSON.parse(localStorage.getItem('muscle-shape') || 'null'); if(saved) Object.assign(shape, saved); }catch(e){}
+const thickness = v => v >= 0 ? v/100 * 0.012 : v/100 * 0.004;   /* 公尺：最多加厚 1.2 cm、減薄 0.4 cm */
+function applyShape(){
+  const U = POSE_U.uShape.value;
+  U.x = thickness(shape.upper); U.y = thickness(shape.lower); U.z = shape.shoulder/100 * 0.12;
+  if(modelFit){
+    const s = modelFit.scale * shape.height / 170, b = modelFit.box;
+    modelRoot.scale.setScalar(s);
+    modelRoot.position.set(-(b.min.x+b.max.x)/2*s, modelFit.floor - b.min.y*s, -(b.min.z+b.max.z)/2*s);
+  }
+}
+function syncShapeUI(){
+  const fmt = v => v === 0 ? '標準' : (v > 0 ? '+' : '') + v + '%';
+  [['shHeight','height', v=> v + ' cm'], ['shUpper','upper', fmt], ['shLower','lower', fmt], ['shShoulder','shoulder', fmt]].forEach(([id, key, f])=>{
+    document.getElementById(id).value = shape[key];
+    document.getElementById(id + 'Out').textContent = f(shape[key]);
+  });
+  document.querySelectorAll('#shapePresets button').forEach((b, i)=>{
+    const v = SHAPE_PRESETS[i].v;
+    b.classList.toggle('active', Object.keys(SHAPE_DEFAULT).every(k=> v[k] === shape[k]));
+  });
+}
+/* 鏡頭跟著身高調整；電腦版打開面板時把人往上移，避免被面板擋住 */
+function fitShapeView(){
+  if(currentMode === 'move' && poseAnim.def){ frameExercise(poseAnim.def, targetRotY ?? bodyGroup.rotation.y); return; }
+  if(currentMuscle) return;
+  const k = shape.height / 170, open = !document.getElementById('shapePanel').hidden && window.innerWidth >= 1080;
+  /* 面板約佔畫面下方 30%：拉遠讓全身塞進上方 70%，再把對焦點往下移，讓人出現在空出來的區域中間 */
+  const d = open ? 7.4 * k : INITIAL_CAM_POS.length() * Math.max(1, k);
+  focusTarget = new THREE.Vector3(0, 1.7*(k - 1) - (open ? 0.1 * d : 0), 0);
+  focusCamDist = d;
+}
+function setShape(next){
+  Object.assign(shape, next);
+  try{ localStorage.setItem('muscle-shape', JSON.stringify(shape)); }catch(e){}
+  applyShape(); syncShapeUI(); fitShapeView();
+}
+{
+  const panel = document.getElementById('shapePanel'), btn = document.getElementById('shapeBtn');
+  const presets = document.getElementById('shapePresets');
+  SHAPE_PRESETS.forEach(p=>{ const b = document.createElement('button'); b.textContent = p.name; b.addEventListener('click', ()=> setShape(p.v)); presets.appendChild(b); });
+  const toggle = open=>{
+    panel.hidden = !open; btn.setAttribute('aria-pressed', open ? 'true' : 'false'); btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    fitShapeView();
+  };
+  btn.addEventListener('click', ()=> toggle(panel.hidden));
+  document.getElementById('shapeClose').addEventListener('click', ()=> toggle(false));
+  document.getElementById('shapeReset').addEventListener('click', ()=> setShape(SHAPE_DEFAULT));
+  [['shHeight','height'], ['shUpper','upper'], ['shLower','lower'], ['shShoulder','shoulder']].forEach(([id, key])=>{
+    document.getElementById(id).addEventListener('input', e=> setShape({[key]: +e.target.value}));
+  });
+  syncShapeUI();
+  applyShape();
+}
+
 /* =========================================================
    3. 互動：旋轉 + 縮放 + 平移 + 點擊選取
 ========================================================= */
@@ -1635,8 +1747,9 @@ function focusOnMuscle(id){
   showGlowFor(id);
 }
 function focusWholeBody(){
-  focusTarget = ORIGIN.clone();
-  focusCamDist = INITIAL_CAM_POS.distanceTo(ORIGIN);
+  const k = shape.height / 170;   /* 身高調整後，鏡頭對準新的身體中心 */
+  focusTarget = new THREE.Vector3(0, 1.7*(k - 1), 0);
+  focusCamDist = INITIAL_CAM_POS.distanceTo(ORIGIN) * Math.max(1, k);
 }
 
 document.getElementById('zoomIn').addEventListener('click', ()=>{ userInteracted = true; applyZoom(-camDist*0.22); });
