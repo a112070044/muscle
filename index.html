@@ -278,6 +278,18 @@
   .sp-row input{width:100%; accent-color:var(--scan);}
   .sp-row output{font-variant-numeric:tabular-nums; color:var(--text); text-align:right; font-size:12.5px;}
   .sp-note{font-size:11.5px; color:var(--text-faint); margin-top:8px; line-height:1.6;}
+  .fp-actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;}
+  .fp-btn{display:inline-flex; align-items:center; font-size:13px; font-weight:500; padding:8px 14px; border:1px solid var(--line-hi); border-radius:8px; background:transparent; color:var(--text); cursor:pointer;}
+  .fp-btn:hover{border-color:var(--scan);}
+  .fp-btn.primary{background:var(--ice); border-color:var(--ice); color:#fff; font-weight:600;}
+  .fp-intro{font-size:13px; color:var(--text-soft); line-height:1.7;}
+  .fp-crop{display:flex; gap:16px; align-items:center; flex-wrap:wrap;}
+  #faceCanvas{width:200px; height:200px; border-radius:12px; background:#000; touch-action:none; cursor:grab; flex-shrink:0;}
+  #faceCanvas:active{cursor:grabbing;}
+  .fp-crop-side{flex:1; min-width:180px;}
+  .fp-on{display:flex; gap:14px; align-items:center;}
+  #facePreview{width:64px; height:64px; border-radius:50%; flex-shrink:0; border:2px solid #fff;}
+  .fp-on-side{flex:1; min-width:0;}
 
   /* ---------- immersive desktop ---------- */
   @media (min-width:1080px){
@@ -381,8 +393,39 @@ setTimeout(function(){
     </div>
     <div class="seg" role="group" aria-label="體型">
       <button id="shapeBtn" aria-expanded="false" aria-controls="shapePanel">體型</button>
+      <button id="faceBtn" aria-expanded="false" aria-controls="facePanel">我的頭</button>
     </div>
   </div>
+
+  <section class="shape-panel" id="facePanel" aria-label="我的頭" hidden>
+    <div class="sp-head"><b>我的頭</b><button id="faceClose" aria-label="關閉">✕</button></div>
+    <div id="faceEmpty">
+      <p class="fp-intro">選一張正面照片，你的臉會變成大頭貼放在模型頭上，做動作時也會跟著動。<br>照片只存在你的瀏覽器裡，不會上傳。</p>
+      <div class="fp-actions">
+        <label class="fp-btn primary">選擇照片<input type="file" accept="image/*" id="faceFile" hidden></label>
+        <label class="fp-btn">自拍<input type="file" accept="image/*" capture="user" id="faceCam" hidden></label>
+      </div>
+    </div>
+    <div id="faceCrop" hidden>
+      <div class="fp-crop">
+        <canvas id="faceCanvas" width="400" height="400" aria-label="拖曳照片對準臉部"></canvas>
+        <div class="fp-crop-side">
+          <p class="fp-intro">拖曳照片，把臉放進圓圈裡。</p>
+          <label class="sp-row"><span>縮放</span><input type="range" id="faceZoom" min="100" max="400" step="1" value="100"><output id="faceZoomOut">100%</output></label>
+          <div class="fp-actions"><button class="fp-btn primary" id="faceApply">套用</button><button class="fp-btn" id="faceCancel">取消</button></div>
+        </div>
+      </div>
+    </div>
+    <div id="faceOn" hidden>
+      <div class="fp-on">
+        <img id="facePreview" alt="目前的大頭貼">
+        <div class="fp-on-side">
+          <label class="sp-row"><span>大小</span><input type="range" id="faceSize" min="60" max="180" step="5" value="100"><output id="faceSizeOut">100%</output></label>
+        </div>
+      </div>
+      <div class="fp-actions"><button class="fp-btn" id="faceChange">換照片</button><button class="fp-btn" id="faceRemove">換回原本的頭</button></div>
+    </div>
+  </section>
 
   <section class="shape-panel" id="shapePanel" aria-label="調整體型" hidden>
     <div class="sp-head"><b>調整體型</b><button id="shapeReset">還原</button><button id="shapeClose" aria-label="關閉">✕</button></div>
@@ -1432,6 +1475,7 @@ function updatePose(){
   setPoseUniforms(U, poseAnim.blend < 1 ? 0.18 : 1);
   const Uc = {L:POSE_U.uLegL.value.toArray(), R:POSE_U.uLegR.value.toArray(), up:POSE_U.uUp.value.toArray(), off:POSE_U.uOff.value.toArray()};
   updateProps(poseAnim.def, Uc);
+  updateFaceSprite(Uc);
   poseActive = [...Uc.L, ...Uc.R, ...Uc.up, ...Uc.off].some(v=> Math.abs(v) > 0.003);
 }
 /* 鏡頭：框住這個動作兩個關鍵姿勢會用到的範圍 */
@@ -1570,11 +1614,20 @@ function syncShapeUI(){
 function fitShapeView(){
   if(currentMode === 'move' && poseAnim.def){ frameExercise(poseAnim.def, targetRotY ?? bodyGroup.rotation.y); return; }
   if(currentMuscle) return;
-  const k = shape.height / 170, open = !document.getElementById('shapePanel').hidden && window.innerWidth >= 1080;
+  const k = shape.height / 170, open = !!document.querySelector('.shape-panel:not([hidden])') && window.innerWidth >= 1080;
   /* 面板約佔畫面下方 30%：拉遠讓全身塞進上方 70%，再把對焦點往下移，讓人出現在空出來的區域中間 */
   const d = open ? 7.4 * k : INITIAL_CAM_POS.length() * Math.max(1, k);
   focusTarget = new THREE.Vector3(0, 1.7*(k - 1) - (open ? 0.1 * d : 0), 0);
   focusCamDist = d;
+}
+/* 工具列下方的面板（體型、我的頭）一次只開一個 */
+function setBottomPanel(id){
+  [['shapePanel','shapeBtn'], ['facePanel','faceBtn']].forEach(([pid, bid])=>{
+    const open = pid === id, b = document.getElementById(bid);
+    document.getElementById(pid).hidden = !open;
+    b.setAttribute('aria-pressed', open ? 'true' : 'false'); b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  fitShapeView();
 }
 function setShape(next){
   Object.assign(shape, next);
@@ -1585,18 +1638,122 @@ function setShape(next){
   const panel = document.getElementById('shapePanel'), btn = document.getElementById('shapeBtn');
   const presets = document.getElementById('shapePresets');
   SHAPE_PRESETS.forEach(p=>{ const b = document.createElement('button'); b.textContent = p.name; b.addEventListener('click', ()=> setShape(p.v)); presets.appendChild(b); });
-  const toggle = open=>{
-    panel.hidden = !open; btn.setAttribute('aria-pressed', open ? 'true' : 'false'); btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    fitShapeView();
-  };
-  btn.addEventListener('click', ()=> toggle(panel.hidden));
-  document.getElementById('shapeClose').addEventListener('click', ()=> toggle(false));
+  btn.addEventListener('click', ()=> setBottomPanel(panel.hidden ? 'shapePanel' : null));
+  document.getElementById('shapeClose').addEventListener('click', ()=> setBottomPanel(null));
   document.getElementById('shapeReset').addEventListener('click', ()=> setShape(SHAPE_DEFAULT));
   [['shHeight','height'], ['shUpper','upper'], ['shLower','lower'], ['shShoulder','shoulder']].forEach(([id, key])=>{
     document.getElementById(id).addEventListener('input', e=> setShape({[key]: +e.target.value}));
   });
   syncShapeUI();
   applyShape();
+}
+
+
+/* ---- 我的頭：把使用者的臉做成圓形大頭貼，跟著頭部移動（照片只存在這個瀏覽器） ---- */
+const FACE_HEAD = [0, 1.585, 0.0];      /* 頭部中心（站姿座標） */
+const FACE_DIAMETER = 0.27;             /* 公尺，約一顆頭的高度 */
+const faceSprite = new THREE.Sprite(new THREE.SpriteMaterial({transparent:true, depthTest:false, depthWrite:false, fog:false}));
+faceSprite.renderOrder = 10; faceSprite.visible = false;
+let faceSize = 1;
+function updateFaceSprite(U){
+  if(!faceSprite.material.map){ faceSprite.visible = false; return; }
+  if(modelReady && !faceSprite.parent) modelRoot.add(faceSprite);
+  const p = fkPoint(FACE_HEAD, U);
+  faceSprite.position.set(p[0], p[1], p[2]);
+  faceSprite.scale.setScalar(FACE_DIAMETER * faceSize);
+  faceSprite.visible = true;
+}
+/* 存的是方形 JPEG；顯示時裁成圓形並加白邊，像貼紙 */
+function setFaceImage(dataUrl){
+  const img = new Image();
+  img.onload = ()=>{
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    const g = c.getContext('2d');
+    g.save(); g.beginPath(); g.arc(128, 128, 120, 0, Math.PI*2); g.clip(); g.drawImage(img, 0, 0, 256, 256); g.restore();
+    g.lineWidth = 7; g.strokeStyle = '#fff'; g.beginPath(); g.arc(128, 128, 121, 0, Math.PI*2); g.stroke();
+    const tex = new THREE.CanvasTexture(c);
+    tex.encoding = THREE.sRGBEncoding;
+    if(faceSprite.material.map) faceSprite.material.map.dispose();
+    faceSprite.material.map = tex; faceSprite.material.needsUpdate = true;
+    document.getElementById('facePreview').src = c.toDataURL();
+  };
+  img.src = dataUrl;
+}
+function clearFace(){
+  if(faceSprite.material.map){ faceSprite.material.map.dispose(); faceSprite.material.map = null; faceSprite.material.needsUpdate = true; }
+  faceSprite.visible = false;
+  try{ localStorage.removeItem('muscle-face'); }catch(e){}
+}
+{
+  const views = {empty:document.getElementById('faceEmpty'), crop:document.getElementById('faceCrop'), on:document.getElementById('faceOn')};
+  const show = v=> Object.entries(views).forEach(([k, el])=> el.hidden = k !== v);
+  const cv = document.getElementById('faceCanvas'), cg = cv.getContext('2d'), zoomEl = document.getElementById('faceZoom');
+  const C = 200, R = 150;   /* 裁切畫布中心與圓圈半徑（畫布 400×400） */
+  let src = null, base = 1, zoom = 1, cx = 0, cy = 0;   /* cx, cy：照片上對準圓心的點 */
+  function drawCrop(){
+    const sc = base * zoom;
+    cg.fillStyle = '#000'; cg.fillRect(0, 0, 400, 400);
+    cg.drawImage(src, C - cx*sc, C - cy*sc, src.width*sc, src.height*sc);
+    cg.save(); cg.fillStyle = 'rgba(0,0,0,.6)'; cg.beginPath(); cg.rect(0, 0, 400, 400); cg.arc(C, C, R, 0, Math.PI*2, true); cg.fill('evenodd'); cg.restore();
+    cg.lineWidth = 3; cg.strokeStyle = '#fff'; cg.beginPath(); cg.arc(C, C, R, 0, Math.PI*2); cg.stroke();
+    document.getElementById('faceZoomOut').textContent = Math.round(zoom*100) + '%';
+  }
+  function clampCenter(){
+    const sc = base * zoom, half = R / sc;
+    cx = Math.min(Math.max(cx, half), src.width - half);
+    cy = Math.min(Math.max(cy, half), src.height - half);
+  }
+  function loadFile(file){
+    if(!file) return;
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = ()=>{
+      src = img; base = (2*R) / Math.min(img.width, img.height); zoom = 1; zoomEl.value = 100;
+      cx = img.width/2; cy = img.height * (img.height > img.width ? 0.4 : 0.5);   /* 直式照片的臉通常偏上 */
+      clampCenter(); drawCrop(); show('crop');
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); showToast('這張圖片讀不出來，換一張試試'); };
+    img.src = url;
+  }
+  ['faceFile','faceCam'].forEach(id=> document.getElementById(id).addEventListener('change', e=>{ loadFile(e.target.files[0]); e.target.value = ''; }));
+  zoomEl.addEventListener('input', ()=>{ if(!src) return; zoom = zoomEl.value/100; clampCenter(); drawCrop(); });
+  let drag = null;
+  cv.addEventListener('pointerdown', e=>{ if(!src) return; cv.setPointerCapture(e.pointerId); drag = {x:e.clientX, y:e.clientY}; });
+  cv.addEventListener('pointermove', e=>{
+    if(!drag) return;
+    const k = (cv.width / cv.getBoundingClientRect().width) / (base * zoom);
+    cx -= (e.clientX - drag.x) * k; cy -= (e.clientY - drag.y) * k; drag = {x:e.clientX, y:e.clientY};
+    clampCenter(); drawCrop();
+  });
+  ['pointerup','pointercancel'].forEach(t=> cv.addEventListener(t, ()=> drag = null));
+  cv.addEventListener('wheel', e=>{
+    if(!src) return; e.preventDefault();
+    zoom = Math.min(4, Math.max(1, zoom * (e.deltaY < 0 ? 1.08 : 1/1.08))); zoomEl.value = Math.round(zoom*100);
+    clampCenter(); drawCrop();
+  }, {passive:false});
+  document.getElementById('faceApply').addEventListener('click', ()=>{
+    const out = document.createElement('canvas'); out.width = out.height = 256;
+    const sc = base * zoom, side = 2*R / sc;
+    out.getContext('2d').drawImage(src, cx - side/2, cy - side/2, side, side, 0, 0, 256, 256);
+    const data = out.toDataURL('image/jpeg', 0.88);
+    try{ localStorage.setItem('muscle-face', data); }catch(e){ showToast('瀏覽器空間不足，這次換頭不會被記住'); }
+    setFaceImage(data); show('on');
+  });
+  document.getElementById('faceCancel').addEventListener('click', ()=> show(faceSprite.material.map ? 'on' : 'empty'));
+  document.getElementById('faceChange').addEventListener('click', ()=> document.getElementById('faceFile').click());
+  document.getElementById('faceRemove').addEventListener('click', ()=>{ clearFace(); show('empty'); });
+  const sizeEl = document.getElementById('faceSize');
+  sizeEl.addEventListener('input', ()=>{
+    faceSize = sizeEl.value/100; document.getElementById('faceSizeOut').textContent = sizeEl.value + '%';
+    try{ localStorage.setItem('muscle-face-size', sizeEl.value); }catch(e){}
+  });
+  document.getElementById('faceBtn').addEventListener('click', ()=> setBottomPanel(document.getElementById('facePanel').hidden ? 'facePanel' : null));
+  document.getElementById('faceClose').addEventListener('click', ()=> setBottomPanel(null));
+  try{
+    const saved = localStorage.getItem('muscle-face'), sz = localStorage.getItem('muscle-face-size');
+    if(sz){ sizeEl.value = sz; faceSize = sz/100; document.getElementById('faceSizeOut').textContent = sz + '%'; }
+    if(saved){ setFaceImage(saved); show('on'); }
+  }catch(e){}
 }
 
 /* =========================================================
