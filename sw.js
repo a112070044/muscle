@@ -1,5 +1,5 @@
-/* 肌肉教練：離線快取。網頁本身每次先上網拿最新版（沒網路才用快取），其他檔案先用快取、背景再更新。 */
-const VERSION = 'muscle-v2';
+/* MUSCLE LAB：離線快取。網頁本身每次先上網拿最新版（沒網路才用快取），其他檔案先用快取、背景再更新。 */
+const VERSION = 'muscle-v3';
 const CORE = ['./', './vendor/three.min.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png'];
 
 self.addEventListener('install', event => {

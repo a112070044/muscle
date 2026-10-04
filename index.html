@@ -3,25 +3,66 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>肌肉教練｜333 條肌肉的 3D 解剖與 AI 問答</title>
+<title>MUSCLE LAB｜人體肌肉 3D 研究室</title>
 <meta name="description" content="333 條肌肉的 3D 解剖、14 個訓練動作示範、體型調整與 AI 教練問答。">
-<meta name="theme-color" content="#0A0A0B">
+<meta name="theme-color" content="#ECEBE7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0A0A0B" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="肌肉教練">
+<meta name="apple-mobile-web-app-title" content="MUSCLE LAB">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="vendor/three.min.js"></script>
 
+<script>
+  /* 先決定日／夜配色，避免載入時閃一下 */
+  try{ document.documentElement.dataset.theme = localStorage.getItem('muscle-theme') || 'light'; }catch(e){ document.documentElement.dataset.theme = 'light'; }
+</script>
 <style>
+  /* 日間（預設）：實驗室淺色 */
   :root{
+    --void:#ECEBE7;
+    --glass:rgba(250,249,246,.9);
+    --panel-solid:#F7F6F3;
+    --line:rgba(17,17,17,.10);
+    --line-hi:rgba(17,17,17,.24);
+    --text:#111111;
+    --text-soft:#4B4A46;
+    --text-faint:#8A8882;
+    --ice:#D7261E;
+    --ice-dim:rgba(215,38,30,.08);
+    --scan:#D7261E;
+    --amber:#B5791C;
+    --amber-dim:rgba(181,121,28,.10);
+    --second:#4A4744;
+    --sel:rgba(215,38,30,.18);
+    --grid:rgba(17,17,17,.05);
+    --chamber-bg:linear-gradient(var(--grid) 1px, transparent 1px) 0 0/40px 40px, linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/40px 40px, radial-gradient(70% 62% at 50% 46%, #FBFBF9 0%, #EFEEEA 62%, #E4E2DD 100%);
+    --chamber-vignette:inset 0 0 140px rgba(0,0,0,.05);
+    --tip-bg:rgba(255,255,255,.97);
+    --overlay-bg:rgba(236,235,231,.94);
+    --shadow:0 18px 50px -26px rgba(0,0,0,.28);
+    --seg-bg:rgba(17,17,17,.04);
+    --seg-active:rgba(17,17,17,.09);
+    --hover:rgba(17,17,17,.04);
+    --input-bg:#FFFFFF;
+    --mark-bg:#111111;
+    --mark-fg:#FFFFFF;
+    --sans:'Inter','Noto Sans TC',system-ui,sans-serif;
+    --display:'Inter Tight','Inter','Noto Sans TC',system-ui,sans-serif;
+    --mono:'JetBrains Mono','Noto Sans TC',ui-monospace,monospace;
+    --ease:cubic-bezier(.2,.7,.2,1);
+  }
+  /* 夜間：原本的深色 */
+  :root[data-theme="dark"]{
     --void:#0A0A0B;
     --glass:rgba(19,19,21,.94);
+    --panel-solid:rgba(11,16,23,.96);
     --line:rgba(255,255,255,.08);
     --line-hi:rgba(255,255,255,.18);
     --text:#F3F3F4;
@@ -32,9 +73,20 @@
     --scan:#E5451B;
     --amber:#F0B45C;
     --amber-dim:rgba(240,180,92,.12);
-    --sans:'Inter','Noto Sans TC',system-ui,sans-serif;
-    --mono:'Inter','Noto Sans TC',ui-monospace,monospace;
-    --ease:cubic-bezier(.2,.7,.2,1);
+    --second:#F2A13A;
+    --sel:rgba(95,227,239,.28);
+    --grid:transparent;
+    --chamber-bg:radial-gradient(70% 62% at 50% 46%, #15222F 0%, #0A1017 58%, #06090E 100%);
+    --chamber-vignette:inset 0 0 160px rgba(0,0,0,.55);
+    --tip-bg:rgba(7,10,15,.94);
+    --overlay-bg:rgba(7,10,15,.92);
+    --shadow:0 24px 60px -24px rgba(0,0,0,.8);
+    --seg-bg:rgba(255,255,255,.04);
+    --seg-active:rgba(142,214,234,.17);
+    --hover:rgba(255,255,255,.035);
+    --input-bg:rgba(0,0,0,.28);
+    --mark-bg:#E5451B;
+    --mark-fg:#FFFFFF;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{background:var(--void);}
@@ -44,20 +96,20 @@
   }
   button{font-family:var(--sans); color:inherit;}
   :focus-visible{outline:2px solid var(--scan); outline-offset:2px;}
-  ::selection{background:rgba(95,227,239,.28);}
+  ::selection{background:var(--sel);}
 
   /* ---------- stage (mobile-first: stacked) ---------- */
   .stage{display:flex; flex-direction:column; min-height:100vh;}
   .topbar{order:0; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 16px 12px;}
   .brand{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
-  .brand-mark{display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; background:var(--scan); color:#fff; font-weight:800; font-size:15px; flex-shrink:0;}
-  .brand h1{font-size:19px; font-weight:700; letter-spacing:.01em; line-height:1.2;}
+  .brand-mark{display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; background:var(--mark-bg); color:var(--mark-fg); font:700 11.5px var(--display); letter-spacing:.04em; flex-shrink:0;}
+  .brand h1{font:700 19px var(--display); letter-spacing:.08em; line-height:1.2;}
   .brand-sub{font-size:12.5px; color:var(--text-faint);}
   .topbar-right{display:flex; align-items:center; gap:12px; flex-shrink:0;}
   #installBtn{white-space:nowrap;}
   .install-hint{position:fixed; inset:0; z-index:1100; display:flex; align-items:flex-end; justify-content:center; padding:16px; background:rgba(0,0,0,.55);}
   .install-hint[hidden]{display:none;}
-  .install-hint .card{width:100%; max-width:420px; background:#12171F; border:1px solid var(--line-hi); border-radius:16px; padding:20px 20px 16px;}
+  .install-hint .card{width:100%; max-width:420px; background:var(--panel-solid); border:1px solid var(--line-hi); border-radius:16px; padding:20px 20px 16px;}
   .install-hint h3{font-size:17px; font-weight:600; margin-bottom:10px;}
   .install-hint ol{padding-left:20px; font-size:14px; color:var(--text-soft); line-height:1.9;}
   .install-hint ol b{color:var(--text);}
@@ -72,12 +124,12 @@
   .chamber{
     order:1; position:relative; height:62vh; min-height:400px; margin:0 12px;
     border:1px solid var(--line); border-radius:18px; overflow:hidden;
-    background:radial-gradient(70% 62% at 50% 46%, #15222F 0%, #0A1017 58%, #06090E 100%);
+    background:var(--chamber-bg);
     touch-action:none; cursor:grab;
   }
   .chamber:active{cursor:grabbing;}
   .chamber canvas{display:block; width:100%; height:100%;}
-  .chamber::after{content:""; position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 160px rgba(0,0,0,.55);}
+  .chamber::after{content:""; position:absolute; inset:0; pointer-events:none; box-shadow:var(--chamber-vignette);}
 
   .height-ruler{display:none;}
   .height-ruler .tick{position:absolute; left:12px; width:7px; height:1px; background:rgba(142,214,234,.32);}
@@ -91,7 +143,7 @@
 
   .muscle-tooltip{
     position:absolute; z-index:6; pointer-events:none; opacity:0; transition:opacity .12s ease;
-    background:rgba(7,10,15,.94); border:1px solid var(--line-hi); border-radius:8px;
+    background:var(--tip-bg); border:1px solid var(--line-hi); border-radius:8px; box-shadow:var(--shadow);
     padding:8px 12px; max-width:280px; font-size:13px; line-height:1.45;
   }
   .muscle-tooltip.show{opacity:1;}
@@ -112,7 +164,7 @@
   .model-loading{
     position:absolute; inset:0; z-index:9; display:flex; align-items:center; justify-content:center; gap:12px;
     padding:24px; text-align:center; font-size:13.5px; color:var(--text-soft);
-    background:rgba(7,10,15,.92); transition:opacity .6s ease;
+    background:var(--overlay-bg); transition:opacity .6s ease;
   }
   .model-loading.done{opacity:0; pointer-events:none;}
   .spin{width:18px; height:18px; flex-shrink:0; border:2px solid var(--line-hi); border-top-color:var(--scan); border-radius:50%; animation:spin .8s linear infinite;}
@@ -122,20 +174,20 @@
   .rail, .console, .toolbar{
     background:var(--glass); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
     border:1px solid var(--line); border-radius:18px;
-    box-shadow:0 24px 60px -24px rgba(0,0,0,.8);
+    box-shadow:var(--shadow);
   }
 
   /* toolbar */
   .toolbar{order:2; margin:10px 12px 0; display:flex; align-items:center; gap:8px; padding:6px; overflow-x:auto; scrollbar-width:none;}
   .toolbar::-webkit-scrollbar{display:none;}
-  .seg{display:flex; gap:2px; padding:2px; background:rgba(255,255,255,.04); border-radius:8px; flex-shrink:0;}
+  .seg{display:flex; gap:2px; padding:2px; background:var(--seg-bg); border-radius:8px; flex-shrink:0;}
   .seg button{
     background:none; border:none; border-radius:6px; padding:8px 13px; cursor:pointer; white-space:nowrap;
     font-size:13px; font-weight:500; color:var(--text-soft); transition:color .15s ease, background .15s ease;
   }
   .seg button:hover{color:var(--text);}
-  .seg button.active{background:rgba(142,214,234,.17); color:var(--text);}
-  .seg button[aria-pressed="true"]{background:rgba(142,214,234,.17); color:var(--text);}
+  .seg button.active{background:var(--seg-active); color:var(--text);}
+  .seg button[aria-pressed="true"]{background:var(--seg-active); color:var(--text);}
 
   /* rail (muscle list) */
   .rail{order:3; margin:12px 12px 0; display:flex; flex-direction:column; min-height:0;}
@@ -153,7 +205,7 @@
     border-left:2px solid transparent; border-radius:0 6px 6px 0; cursor:pointer;
     font-size:13.5px; color:var(--text-soft); transition:color .12s ease, background .12s ease;
   }
-  .legend button:hover{color:var(--text); background:rgba(255,255,255,.035);}
+  .legend button:hover{color:var(--text); background:var(--hover);}
   .legend button.active{color:var(--text); font-weight:500; border-left-color:var(--scan); background:var(--ice-dim);}
 
   /* console (info / quiz / chat) */
@@ -193,7 +245,7 @@
   .ask-row{display:flex; flex-wrap:wrap; gap:6px;}
   .ask-row button{font-size:13px; font-weight:500; background:transparent; border:1px solid var(--line-hi); border-radius:6px; padding:8px 13px; cursor:pointer; color:var(--text); transition:border-color .15s ease, color .15s ease;}
   .ask-row button:hover{border-color:var(--scan); color:var(--scan);}
-  .ai-answer{display:none; margin-top:12px; padding:12px 14px; font-size:14px; line-height:1.75; background:rgba(255,255,255,.035); border:1px solid var(--line); border-radius:8px;}
+  .ai-answer{display:none; margin-top:12px; padding:12px 14px; font-size:14px; line-height:1.75; background:var(--hover); border:1px solid var(--line); border-radius:8px;}
   .ai-answer.active{display:block;}
   .ai-answer p{margin-bottom:6px;} .ai-answer p:last-child{margin-bottom:0;} .ai-answer ul{margin:4px 0 8px 18px;}
   .ai-loading{display:flex; align-items:center; gap:8px; color:var(--text-soft);}
@@ -227,8 +279,8 @@
   .role-tag{display:block; font-size:11.5px; color:var(--text-faint); margin-bottom:5px;}
   .msg.user .role-tag{text-align:right;}
   .bubble{padding:11px 14px; border-radius:10px; line-height:1.75;}
-  .msg.user .bubble{background:rgba(142,214,234,.13); border:1px solid rgba(142,214,234,.28);}
-  .msg.assistant .bubble{background:rgba(255,255,255,.035); border:1px solid var(--line);}
+  .msg.user .bubble{background:var(--seg-active); border:1px solid var(--line-hi);}
+  .msg.assistant .bubble{background:var(--hover); border:1px solid var(--line);}
   .bubble p{margin-bottom:6px;} .bubble p:last-child{margin-bottom:0;} .bubble ul{margin:4px 0 8px 18px;} .bubble li{margin-bottom:3px;}
   .typing{display:inline-flex; gap:4px; padding:4px 0;}
   .typing span{width:5px; height:5px; border-radius:50%; background:var(--scan); animation:blink 1.2s infinite ease-in-out;}
@@ -238,7 +290,7 @@
   .quick-asks button{font-size:12.5px; font-weight:500; color:var(--text-soft); background:transparent; border:1px solid var(--line-hi); border-radius:6px; padding:7px 12px; cursor:pointer;}
   .quick-asks button:hover{border-color:var(--scan); color:var(--scan);}
   .chat-input-row{display:flex; gap:8px; align-items:flex-end; padding:14px 24px 18px; border-top:1px solid var(--line);}
-  .chat-input-row textarea{flex:1; resize:none; height:46px; max-height:120px; padding:12px 14px; font:400 14px var(--sans); color:var(--text); background:rgba(0,0,0,.28); border:1px solid var(--line-hi); border-radius:8px;}
+  .chat-input-row textarea{flex:1; resize:none; height:46px; max-height:120px; padding:12px 14px; font:400 14px var(--sans); color:var(--text); background:var(--input-bg); border:1px solid var(--line-hi); border-radius:8px;}
   .chat-input-row textarea::placeholder{color:var(--text-faint);}
   .chat-input-row textarea:focus{outline:none; border-color:var(--scan);}
   .chat-input-row button{height:46px; padding:0 20px; font-size:14px; font-weight:600; color:#fff; background:var(--ice); border:none; border-radius:8px; cursor:pointer;}
@@ -252,10 +304,62 @@
 
   .app-toast{
     position:fixed; left:50%; bottom:96px; transform:translate(-50%, 16px); z-index:1000;
-    background:rgba(13,19,27,.96); border:1px solid var(--line-hi); border-radius:10px;
+    background:var(--panel-solid); border:1px solid var(--line-hi); border-radius:10px; box-shadow:var(--shadow);
     padding:12px 22px; font-size:14px; opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease;
   }
   .app-toast.show{opacity:1; transform:translate(-50%, 0);}
+
+  /* ---------- MUSCLE LAB entrance ---------- */
+  .lab-intro{display:none;}
+  body.intro .lab-intro{display:grid;}
+  body.intro .topbar, body.intro .rail, body.intro .console, body.intro .toolbar, body.intro .shape-panel, body.intro .peek, body.intro .hint, body.intro .model-loading{visibility:hidden;}
+  body.intro .chamber{position:fixed; inset:0; height:auto; min-height:0; margin:0; border:none; border-radius:0;}
+  .lab-intro{position:fixed; inset:0; z-index:30; grid-template-rows:auto 1fr auto; padding:26px 36px 30px; pointer-events:none; color:var(--text); transition:opacity .5s ease;}
+  .lab-intro.leaving{opacity:0;}
+  .li-top, .li-bottom{display:flex; justify-content:space-between; align-items:center; gap:16px; font:500 10.5px var(--mono); letter-spacing:.18em; color:var(--text-soft); text-transform:uppercase;}
+  .li-top{padding-bottom:12px; border-bottom:1px solid var(--line-hi);}
+  .li-main{display:grid; grid-template-columns:1fr minmax(240px, 280px); align-items:end; gap:24px; padding:28px 0;}
+  .li-title{align-self:center; pointer-events:auto; max-width:40%;}
+  .li-kicker{display:flex; align-items:center; gap:10px; font:500 13px var(--mono); letter-spacing:.32em; color:var(--text);}
+  .li-kicker::before{content:""; width:28px; height:2px; background:var(--scan);}
+  .li-title h2{font:800 clamp(56px, 7.4vw, 124px)/.88 var(--display); letter-spacing:-.025em; margin:14px 0 18px; color:var(--text);}
+  .li-title h2 span{display:block;}
+  .li-title h2 .red{color:var(--scan);}
+  .li-title p{font-size:15px; line-height:1.8; color:var(--text-soft); max-width:380px;}
+  .li-card{pointer-events:auto; border:1px solid var(--text); background:var(--panel-solid); font:400 11px var(--mono); letter-spacing:.06em;}
+  .li-card header{background:var(--text); color:var(--void); padding:7px 12px; font-weight:500; letter-spacing:.18em; display:flex; justify-content:space-between;}
+  .li-card dl{display:grid; grid-template-columns:auto 1fr; margin:0;}
+  .li-card dt, .li-card dd{padding:8px 12px; border-top:1px solid var(--line-hi);}
+  .li-card dt{color:var(--text-faint); letter-spacing:.14em;}
+  .li-card dd{text-align:right; color:var(--text); font-weight:500;}
+  .li-card .dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--scan); margin-right:6px; animation:blink 1.6s infinite ease-in-out;}
+  .li-bottom{pointer-events:auto; padding-top:14px; border-top:1px solid var(--line-hi);}
+  .li-enter{display:inline-flex; align-items:center; gap:14px; font:600 14px var(--display); letter-spacing:.22em; padding:16px 26px; background:var(--text); color:var(--void); border:none; cursor:pointer; transition:background .2s ease;}
+  .li-enter:hover:not(:disabled){background:var(--scan); color:#fff;}
+  .li-enter:disabled{opacity:.55; cursor:progress;}
+  .li-enter .arr{font-family:var(--sans); font-size:18px;}
+  .li-scan{position:fixed; left:0; right:0; top:0; height:2px; background:var(--scan); box-shadow:0 0 18px 2px var(--scan); z-index:31; opacity:0; pointer-events:none;}
+  .li-scan.run{animation:labscan .9s var(--ease) forwards;}
+  @keyframes labscan{0%{top:0; opacity:1;} 90%{opacity:1;} 100%{top:100%; opacity:0;}}
+  @media (max-width:760px){
+    .lab-intro{padding:18px 18px 22px;}
+    .li-main{grid-template-columns:1fr; align-items:start; padding:20px 0;}
+    .li-title{max-width:none; background:var(--overlay-bg); margin:0 -18px; padding:18px; border-top:1px solid var(--line-hi); border-bottom:1px solid var(--line-hi);}
+    .li-title h2{font-size:clamp(54px, 17vw, 88px);}
+    .li-title p{font-size:13.5px; max-width:240px;}
+    .li-card{display:none;}
+    .li-top span:nth-child(2), .li-bottom .li-fig{display:none;}
+    .li-bottom{justify-content:center;}
+    .li-enter{width:100%; justify-content:center;}
+  }
+  .theme-btn{font-family:var(--mono); letter-spacing:.06em;}
+  .brand h1{white-space:nowrap;}
+  @media (max-width:520px){
+    .brand h1{font-size:16px; letter-spacing:.06em;}
+    .topbar-right{gap:8px;}
+    .topbar-right .ghost-btn{padding:5px 9px;}
+    .pb-label, .tb-label{display:none;}
+  }
 
   /* single-muscle detail */
   .mdetail{display:grid; grid-template-columns:auto 1fr; gap:7px 14px; font-size:13.5px; line-height:1.65; margin:0;}
@@ -264,7 +368,7 @@
 
   /* movement mode */
   .key{display:inline-block; width:9px; height:9px; border-radius:2px; margin:0 6px 0 2px; vertical-align:0;}
-  .key-p{background:var(--scan);} .key-s{background:#F2A13A;}
+  .key-p{background:var(--scan);} .key-s{background:var(--second);}
   .ex-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); gap:6px; margin-bottom:22px;}
   .ex-grid button{text-align:left; font-size:13.5px; font-weight:500; line-height:1.35; padding:9px 11px; background:transparent; border:1px solid var(--line-hi); border-radius:8px; color:var(--text); cursor:pointer; transition:border-color .15s ease, background .15s ease;}
   .ex-grid button small{display:block; font-size:11px; font-weight:400; color:var(--text-faint); margin-top:2px;}
@@ -278,12 +382,12 @@
   .ex-note{font-size:12.5px; color:var(--text-faint); margin:8px 0 18px;}
   .chip-row{display:flex; flex-wrap:wrap; gap:6px;}
   .chip-row button{font-size:13px; padding:5px 11px; background:transparent; border:1px solid var(--line-hi); border-radius:6px; color:var(--text); cursor:pointer;}
-  .chip-row.p button{border-color:rgba(229,69,27,.6);}
-  .chip-row.s button{border-color:rgba(242,161,58,.55);}
-  .chip-row button:hover{background:rgba(255,255,255,.05);}
+  .chip-row.p button{border-color:var(--scan);}
+  .chip-row.s button{border-color:var(--second);}
+  .chip-row button:hover{background:var(--hover);}
 
   /* body-shape panel */
-  .shape-panel{order:2; margin:10px 12px 0; padding:14px 16px 12px; background:rgba(11,16,23,.96); border:1px solid var(--line); border-radius:14px;}
+  .shape-panel{order:2; margin:10px 12px 0; padding:14px 16px 12px; background:var(--panel-solid); border:1px solid var(--line); border-radius:14px;}
   .shape-panel[hidden]{display:none;}
   .sp-head{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
   .sp-head b{flex:1; font-size:14px; font-weight:600;}
@@ -337,7 +441,7 @@
     body.focus-mode .peek.on{display:flex;}
   }
   @media (max-width:1079px){
-    .rail,.console,.toolbar,.peek{backdrop-filter:none; -webkit-backdrop-filter:none; background:rgba(11,16,23,.94);}
+    .rail,.console,.toolbar,.peek{backdrop-filter:none; -webkit-backdrop-filter:none; background:var(--panel-solid);}
     .rail-toggle{display:inline-block;}
     #expandBtn{display:none;}
     .shape-panel{position:static;}
@@ -381,11 +485,37 @@ setTimeout(function(){
     <ol>
       <li>點瀏覽器的 <b>「分享」</b> 按鈕（方框加向上箭頭）</li>
       <li>往下找到 <b>「加入主畫面」</b></li>
-      <li>按右上角 <b>「新增」</b>，桌面就會出現肌肉教練的圖示</li>
+      <li>按右上角 <b>「新增」</b>，桌面就會出現MUSCLE LAB 的圖示</li>
     </ol>
     <div class="fp-actions"><button class="fp-btn primary" id="installHintClose">知道了</button></div>
   </div>
 </div>
+
+<section class="lab-intro" id="labIntro" aria-label="MUSCLE LAB 入口">
+  <div class="li-top"><span>MUSCLE LAB</span><span>Human Musculature Research Facility</span><span>EST. 2026</span></div>
+  <div class="li-main">
+    <div class="li-title">
+      <div class="li-kicker">WELCOME TO</div>
+      <h2><span>MUSCLE</span><span class="red">LAB.</span></h2>
+      <p>人體肌肉研究室。333 條肌肉的 3D 解剖圖鑑、14 項訓練實驗協定，從結構到動作，一層一層拆解。</p>
+    </div>
+    <aside class="li-card" aria-label="標本資料">
+      <header><span>SPECIMEN LABEL</span><span>ML-001</span></header>
+      <dl>
+        <dt>SUBJECT</dt><dd>HUMAN · ADULT</dd>
+        <dt>MUSCLES</dt><dd>333</dd>
+        <dt>GROUPS</dt><dd>28</dd>
+        <dt>PROTOCOLS</dt><dd>14</dd>
+        <dt>STATUS</dt><dd id="liStatus"><span class="dot"></span>PREPARING</dd>
+      </dl>
+    </aside>
+  </div>
+  <div class="li-bottom">
+    <span class="li-fig">FIG. 01 — ANTERIOR VIEW · 拖曳旋轉標本</span>
+    <button class="li-enter" id="labEnter" disabled><span id="labEnterText">PREPARING SPECIMEN</span><span class="arr" aria-hidden="true">→</span></button>
+  </div>
+</section>
+<div class="li-scan" id="labScan" aria-hidden="true"></div>
 
 <div class="stage" id="stage">
   <div class="chamber" id="chamber">
@@ -399,10 +529,11 @@ setTimeout(function(){
   </div>
 
   <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true">M</span><h1>肌肉教練</h1><span class="brand-sub">333 條肌肉的 3D 解剖</span></div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true">ML</span><h1>MUSCLE LAB</h1><span class="brand-sub">人體肌肉研究室</span></div>
     <div class="topbar-right">
+      <button class="ghost-btn theme-btn" id="themeBtn" aria-label="切換日間／夜間模式">夜間</button>
       <button class="ghost-btn" id="installBtn" title="安裝到桌面或主畫面" hidden>安裝 App</button>
-      <div class="progress-badge" id="progressBadge">已探索 0 / 28</div>
+      <div class="progress-badge" id="progressBadge"><span class="pb-label">已探索 </span>0 / 28</div>
     </div>
   </header>
 
@@ -485,10 +616,10 @@ setTimeout(function(){
 
   <aside class="console info-col" id="console" data-view="info" aria-label="說明面板">
     <div class="mode-switch" id="modeSwitch" role="tablist">
-      <button data-mode="explore" class="active" role="tab">說明</button>
-      <button data-mode="quiz" role="tab">測驗</button>
-      <button data-mode="move" role="tab">動作</button>
-      <button data-tab="chat" role="tab">AI 教練</button>
+      <button data-mode="explore" class="active" role="tab">標本檔案</button>
+      <button data-mode="quiz" role="tab">檢定</button>
+      <button data-mode="move" role="tab">實驗協定</button>
+      <button data-tab="chat" role="tab">研究員</button>
     </div>
 
     <div class="muscle-info" id="muscleInfo">
@@ -947,6 +1078,12 @@ const categoryLabels = { all:'全部', upper:'頭頸與上肢', core:'軀幹', l
 /* =========================================================
    2. THREE.JS 場景建立
 ========================================================= */
+/* 日／夜主題的 3D 配色：日間是白色石膏標本 + 紅色標示，夜間是原本的深灰 */
+const LAB_THEMES = {
+  light:{muscle:0xCFCAC2, tendon:0xF4F2EE, bone:0xE9E5DE, accent:0xD7261E, second:0x5A5753, ghost:0xF2F0EC, ghostMix:0.72, boneDim:0.94, fog:0xEDEBE7, exposure:1.0},
+  dark:{muscle:0x55565A, tendon:0xDBDCDE, bone:0xB9BBBE, accent:0xE5451B, second:0xF2A13A, ghost:0x2A2A2C, ghostMix:0.84, boneDim:0.5, fog:0x0A1017, exposure:0.92}
+};
+let TH = LAB_THEMES[document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'];
 const chamberEl = document.getElementById('chamber');
 const canvas = document.getElementById('canvas3d');
 const scene = new THREE.Scene();
@@ -973,9 +1110,9 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.92;
+renderer.toneMappingExposure = TH.exposure;
 
-scene.fog = new THREE.Fog(0x0A1017, 5, 11);
+scene.fog = new THREE.Fog(TH.fog, 5, 11);
 
 scene.add(new THREE.HemisphereLight(0xE8E8E9, 0x0A0A0B, 0.28));
 /* studio environment: a dark room with three soft-box panels, pre-filtered into reflections */
@@ -1078,7 +1215,7 @@ const clickableParts = [];   // one entry per muscle mesh: {id: groupId, key, me
 let boneMesh = null;
 let modelReady = false;
 let currentPart = null;       // the specific muscle mesh the user clicked (if any)
-const MUSCLE_RED = 0x55565A, TENDON_COLOR = 0xDBDCDE, BONE_COLOR = 0xB9BBBE;
+let MUSCLE_RED = TH.muscle, TENDON_COLOR = TH.tendon, BONE_COLOR = TH.bone;   /* 跟著日／夜主題換 */
 const TEX_SIZE = 512;
 
 /* ---- procedural tissue textures ---- */
@@ -1537,7 +1674,7 @@ function exerciseRole(part, ex){
   return null;
 }
 function paintExercise(ex){
-  const P = new THREE.Color(0xE5451B), Sc = new THREE.Color(0xF2A13A);
+  const P = new THREE.Color(TH.accent), Sc = new THREE.Color(TH.second);
   glowParts = [];
   clickableParts.forEach(p=>{
     const m = p.material, role = ex ? exerciseRole(p, ex) : null, isTendon = p.meta.k === 't';
@@ -1545,10 +1682,10 @@ function paintExercise(ex){
     let emis = 0;
     if(role === 'p'){ if(!isTendon) _hlColor.lerp(P, 0.9); m.emissive.copy(P); emis = 0.2; glowParts.push(p); }
     else if(role === 's'){ if(!isTendon) _hlColor.lerp(Sc, 0.92); m.emissive.copy(Sc); emis = 0.12; glowParts.push(p); }
-    else { if(ex) _hlColor.lerp(_ghost, 0.84); m.emissive.setHex(0x000000); }
+    else { if(ex) _hlColor.lerp(_ghost, TH.ghostMix); m.emissive.setHex(0x000000); }
     p._baseEmissive = emis; m.color.copy(_hlColor); m.emissiveIntensity = emis;
   });
-  if(boneMesh) boneMesh.material.color.setHex(BONE_COLOR).multiplyScalar(ex ? 0.5 : 1);
+  if(boneMesh) boneMesh.material.color.setHex(BONE_COLOR).multiplyScalar(ex ? TH.boneDim : 1);
 }
 function exerciseLabel(item){
   if(muscleData[item]) return muscleData[item].name;
@@ -1821,6 +1958,64 @@ function clearFace(){
   }
 }
 
+
+/* ---- 日間／夜間切換 ---- */
+function setLabTheme(name){
+  TH = LAB_THEMES[name];
+  document.documentElement.dataset.theme = name;
+  try{ localStorage.setItem('muscle-theme', name); }catch(e){}
+  MUSCLE_RED = TH.muscle; TENDON_COLOR = TH.tendon; BONE_COLOR = TH.bone;
+  renderer.toneMappingExposure = TH.exposure;
+  scene.fog.color.setHex(TH.fog);
+  _ghost.setHex(TH.ghost);
+  clickableParts.forEach(p=>{ p.baseColor = p.meta.k === 't' ? TENDON_COLOR : MUSCLE_RED; });
+  if(currentMode === 'move') paintExercise(EXERCISE_LIB.find(e=> e.id === currentExercise) || null);
+  else updateHighlight(currentMode === 'explore' ? currentMuscle : null);
+  const btn = document.getElementById('themeBtn');
+  btn.innerHTML = name === 'dark' ? '☀<span class="tb-label"> 日間</span>' : '☾<span class="tb-label"> 夜間</span>';
+  btn.setAttribute('aria-pressed', name === 'dark' ? 'true' : 'false');
+}
+document.getElementById('themeBtn').addEventListener('click', ()=> setLabTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+document.getElementById('themeBtn').innerHTML = document.documentElement.dataset.theme === 'dark' ? '☀<span class="tb-label"> 日間</span>' : '☾<span class="tb-label"> 夜間</span>';
+
+/* ---- 入口：WELCOME TO MUSCLE LAB（每次開啟網站顯示一次） ---- */
+{
+  const intro = document.getElementById('labIntro'), enter = document.getElementById('labEnter');
+  const label = document.getElementById('labEnterText'), status = document.getElementById('liStatus');
+  let seen = false; try{ seen = sessionStorage.getItem('lab-entered') === '1'; }catch(e){}
+  if(!seen){
+    document.body.classList.add('intro');
+    const poll = setInterval(()=>{
+      const failed = document.getElementById('modelLoading').getAttribute('data-failed');
+      if(window.modelReadyFlag){
+        clearInterval(poll);
+        enter.disabled = false; label.textContent = 'ENTER LAB';
+        status.innerHTML = '<span class="dot"></span>READY';
+        enter.focus({preventScroll:true});
+      } else if(failed){
+        clearInterval(poll);
+        label.textContent = 'ENTER LAB'; enter.disabled = false;
+        status.textContent = 'ERROR';
+      } else {
+        label.textContent = 'PREPARING SPECIMEN';
+      }
+    }, 250);
+    enter.addEventListener('click', ()=>{
+      try{ sessionStorage.setItem('lab-entered', '1'); }catch(e){}
+      userInteracted = true;
+      const scan = document.getElementById('labScan');
+      scan.classList.add('run');
+      intro.classList.add('leaving');
+      setTimeout(()=>{
+        document.body.classList.remove('intro');
+        intro.hidden = true;
+        computeInsets(); onResize();
+      }, reduceMotion ? 0 : 650);
+      setTimeout(()=> scan.classList.remove('run'), 1000);
+    });
+  }
+}
+
 /* =========================================================
    3. 互動：旋轉 + 縮放 + 平移 + 點擊選取
 ========================================================= */
@@ -2078,7 +2273,7 @@ document.getElementById('randomExplore').addEventListener('click', ()=>{
 /* =========================================================
    4. 選取肌群 → 更新視覺 + 資訊面板 + 圖例
 ========================================================= */
-const _hlColor = new THREE.Color(), _grpColor = new THREE.Color(), _ghost = new THREE.Color(0x2A2A2C);
+const _hlColor = new THREE.Color(), _grpColor = new THREE.Color(), _ghost = new THREE.Color(TH.ghost);
 /* colours only: which muscles are lit, ghosted, or previewed */
 function paintHighlight(selectedId, previewId){
   clickableParts.forEach(p=>{
@@ -2086,14 +2281,14 @@ function paintHighlight(selectedId, previewId){
     _hlColor.setHex(p.baseColor);
     let emis = 0;
     if(selectedId && p.id === selectedId){
-      if(p.meta.k !== 't') _hlColor.lerp(_grpColor.setHex(0xE5451B), 0.9);
-      m.emissive.setHex(0xE5451B);
+      if(p.meta.k !== 't') _hlColor.lerp(_grpColor.setHex(TH.accent), 0.9);
+      m.emissive.setHex(TH.accent);
       emis = (currentPart && currentPart === p) ? 0.38 : 0.13;
     } else if(previewId && p.id === previewId){
-      m.emissive.setHex(0xE5451B);
+      m.emissive.setHex(TH.accent);
       emis = selectedId ? 0.10 : 0.16;
     } else if(selectedId){
-      _hlColor.lerp(_ghost, 0.84);
+      _hlColor.lerp(_ghost, TH.ghostMix);
       m.emissive.setHex(0x000000);
     } else {
       m.emissive.setHex(0x000000);
@@ -2102,7 +2297,7 @@ function paintHighlight(selectedId, previewId){
     m.color.copy(_hlColor);
     m.emissiveIntensity = emis;
   });
-  if(boneMesh) boneMesh.material.color.setHex(BONE_COLOR).multiplyScalar(selectedId ? 0.5 : 1);
+  if(boneMesh) boneMesh.material.color.setHex(BONE_COLOR).multiplyScalar(selectedId ? TH.boneDim : 1);
 }
 function updateHighlight(selectedId){
   paintHighlight(selectedId, null);
@@ -2206,7 +2401,7 @@ function renderMuscleInfo(id){
 function updateProgressBadge(){
   const badge = document.getElementById('progressBadge');
   const n = visitedMuscles.size, t = muscleOrder.length;
-  if(badge){ badge.textContent = `已探索 ${n} / ${t}`; badge.style.setProperty('--p', (n / t * 100).toFixed(1)); }
+  if(badge){ badge.innerHTML = `<span class="pb-label">已探索 </span>${n} / ${t}`; badge.style.setProperty('--p', (n / t * 100).toFixed(1)); }
   if(n === t) showToast('你已經探索完所有肌群');
 }
 
@@ -2510,7 +2705,7 @@ function applyViewOffset(){
 }
 function computeInsets(){
   const wide = window.innerWidth >= 1080;
-  const active = wide && !document.body.classList.contains('focus-mode');
+  const active = wide && !document.body.classList.contains('focus-mode') && !document.body.classList.contains('intro');
   let l = 0, r = 0;
   if(active){
     l = railEl.offsetLeft + railEl.offsetWidth;
