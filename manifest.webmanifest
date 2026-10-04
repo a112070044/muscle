@@ -1,14 +1,14 @@
 {
   "name": "MUSCLE LAB｜人體肌肉 3D 研究室",
   "short_name": "MUSCLE LAB",
-  "description": "333 條肌肉的 3D 解剖、14 個訓練動作示範、體型調整與 AI 教練問答。",
+  "description": "ANATOMY × FITNESS — 333 條肌肉的 3D 解剖、14 個訓練動作示範、體型調整與 AI 研究員。",
   "lang": "zh-Hant",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#ECEBE7",
-  "theme_color": "#ECEBE7",
+  "background_color": "#0B0B0B",
+  "theme_color": "#0B0B0B",
   "icons": [
     {
       "src": "icons/icon-192.png",
