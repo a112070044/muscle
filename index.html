@@ -362,7 +362,39 @@
     .topbar-right{gap:8px;}
     .topbar-right .ghost-btn{padding:5px 9px;}
     .pb-label, .tb-label{display:none;}
+    .progress-badge{display:none;}
+    .brand{flex-wrap:nowrap;}
   }
+
+  /* ---------- orientation tour ---------- */
+  .tour{position:fixed; inset:0; z-index:40; pointer-events:none;}
+  .tour[hidden]{display:none;}
+  .tour-spot{position:fixed; border-radius:14px; border:1px solid rgba(255,255,255,.7); box-shadow:0 0 0 9999px rgba(0,0,0,.58); transition:left .35s var(--ease), top .35s var(--ease), width .35s var(--ease), height .35s var(--ease), opacity .3s ease; pointer-events:none;}
+  :root[data-theme="light"] .tour-spot{border-color:rgba(17,17,17,.6); box-shadow:0 0 0 9999px rgba(20,20,20,.38);}
+  .tour-spot.off{opacity:0;}
+  .tour-card{position:fixed; width:340px; pointer-events:auto; background:var(--panel-solid); border:1px solid var(--line-hi); border-radius:14px; padding:16px 18px 14px; box-shadow:var(--shadow); transition:left .35s var(--ease), top .35s var(--ease);}
+  .tc-meta{display:flex; justify-content:space-between; align-items:center; font:500 10.5px var(--mono); letter-spacing:.18em; color:var(--text-faint); margin-bottom:10px;}
+  .tc-meta button{background:none; border:none; color:var(--text-soft); font:400 12px var(--sans); letter-spacing:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px;}
+  .tc-bar{display:flex; gap:4px; margin-bottom:12px;}
+  .tc-bar i{flex:1; height:2px; background:var(--line-hi);}
+  .tc-bar i.on{background:var(--text);}
+  .tour-card h3{font:600 16px var(--display); letter-spacing:.14em; margin-bottom:6px;}
+  .tour-card p{font-size:13.5px; line-height:1.75; color:var(--text-soft);}
+  .tc-task{display:flex; align-items:center; gap:10px; margin-top:12px; padding:9px 12px; border:1px dashed var(--line-hi); border-radius:8px; font-size:13px; color:var(--text);}
+  .tc-task[hidden]{display:none;}
+  .tc-check{width:16px; height:16px; flex-shrink:0; border:1.5px solid var(--text-soft); border-radius:4px; position:relative;}
+  .tc-task.done{border-style:solid; border-color:var(--text);}
+  .tc-task.done .tc-check{background:var(--text); border-color:var(--text);}
+  .tc-task.done .tc-check::after{content:""; position:absolute; left:4px; top:1px; width:4px; height:8px; border:solid var(--void); border-width:0 2px 2px 0; transform:rotate(45deg);}
+  .tc-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:14px;}
+  .tc-actions [hidden]{display:none;}
+  .tour-hand{position:fixed; width:44px; height:44px; margin:-22px 0 0 -22px; border-radius:50%; border:1.5px solid var(--text); background:rgba(255,255,255,.08); pointer-events:none; animation:tourdrag 2.2s var(--ease) infinite;}
+  .tour-hand[hidden]{display:none;}
+  @keyframes tourdrag{0%{transform:translateX(-60px); opacity:0;} 15%{opacity:1;} 70%{transform:translateX(60px); opacity:1;} 100%{transform:translateX(60px); opacity:0;}}
+  @media (max-width:760px){
+    .tour-card{left:12px !important; right:12px; bottom:12px; top:auto !important; width:auto;}
+  }
+  @media (prefers-reduced-motion: reduce){ .tour-hand{animation:none;} }
 
   /* single-muscle detail */
   .mdetail{display:grid; grid-template-columns:auto 1fr; gap:7px 14px; font-size:13.5px; line-height:1.65; margin:0;}
@@ -520,6 +552,19 @@ setTimeout(function(){
 </section>
 <div class="li-scan" id="labScan" aria-hidden="true"></div>
 
+<div class="tour" id="tour" hidden>
+  <div class="tour-spot off" id="tourSpot"></div>
+  <div class="tour-hand" id="tourHand" hidden></div>
+  <section class="tour-card" id="tourCard" role="dialog" aria-labelledby="tcTitle" aria-live="polite">
+    <div class="tc-meta"><span id="tcStep">ORIENTATION · 01 / 06</span><button id="tourSkip">略過導覽</button></div>
+    <div class="tc-bar" id="tcBar"></div>
+    <h3 id="tcTitle"></h3>
+    <p id="tcBody"></p>
+    <div class="tc-task" id="tcTask"><span class="tc-check"></span><span id="tcTaskText"></span></div>
+    <div class="tc-actions"><button class="fp-btn" id="tourBack">上一步</button><button class="fp-btn primary" id="tourNext">下一步</button></div>
+  </section>
+</div>
+
 <div class="stage" id="stage">
   <div class="chamber" id="chamber">
     <canvas id="canvas3d"></canvas>
@@ -534,6 +579,7 @@ setTimeout(function(){
   <header class="topbar">
     <div class="brand"><span class="brand-mark" role="img" aria-label="ML"></span><h1>MUSCLE LAB</h1><span class="brand-sub">ANATOMY × FITNESS</span></div>
     <div class="topbar-right">
+      <button class="ghost-btn" id="tourBtn" title="重新看一次導覽" aria-label="導覽">?<span class="tb-label"> 導覽</span></button>
       <button class="ghost-btn theme-btn" id="themeBtn" aria-label="切換日間／夜間模式">夜間</button>
       <button class="ghost-btn" id="installBtn" title="安裝到桌面或主畫面" hidden>安裝 App</button>
       <div class="progress-badge" id="progressBadge"><span class="pb-label">已探索 </span>0 / 28</div>
@@ -1987,6 +2033,9 @@ document.getElementById('themeBtn').innerHTML = document.documentElement.dataset
   const intro = document.getElementById('labIntro'), enter = document.getElementById('labEnter');
   const label = document.getElementById('labEnterText'), status = document.getElementById('liStatus');
   let seen = false; try{ seen = sessionStorage.getItem('lab-entered') === '1'; }catch(e){}
+  if(seen){
+    const wait = setInterval(()=>{ if(window.modelReadyFlag){ clearInterval(wait); setTimeout(()=> maybeStartTour(), 600); } }, 300);
+  }
   if(!seen){
     document.body.classList.add('intro');
     const poll = setInterval(()=>{
@@ -2016,9 +2065,110 @@ document.getElementById('themeBtn').innerHTML = document.documentElement.dataset
         computeInsets(); onResize();
       }, reduceMotion ? 0 : 650);
       setTimeout(()=> scan.classList.remove('run'), 1000);
+      setTimeout(()=> maybeStartTour(), reduceMotion ? 200 : 1100);
     });
   }
 }
+
+
+/* ---- 新手導覽：6 個步驟，每一步要實際操作一次（同一台裝置只自動出現一次） ---- */
+const TOUR_STEPS = [
+  {title:'ROTATE THE SPECIMEN', body:'拖曳標本，從各個角度觀察它。手機用一指滑動，兩指可以縮放。', task:'旋轉標本', target:null, hand:true,
+    start:()=>{ tour.rot0 = bodyGroup.rotation.y; }, done:()=> Math.abs(bodyGroup.rotation.y - tour.rot0) > 0.6},
+  {title:'SELECT A MUSCLE', body:'點人體上的任何一條肌肉，它會亮成紅色。也可以從左邊的肌群清單挑。', task:'點選一條肌肉', target:null,
+    start:()=>{ if(currentMode !== 'explore') setMode('explore'); tour.m0 = currentMuscle; tour.p0 = currentPart; },
+    done:()=> !!currentMuscle && (currentMuscle !== tour.m0 || currentPart !== tour.p0)},
+  {title:'READ THE FILE', body:'標本檔案記錄這條肌肉的起點、止點、神經與功能，還有常見訓練動作與不適原因。', target:'#console',
+    start:()=>{ if(currentMode !== 'explore') setMode('explore'); if(!currentMuscle) selectMuscle('chest'); setConsoleView('info'); }},
+  {title:'RUN A PROTOCOL', body:'打開「實驗協定」，選一個訓練動作。模型會示範，並標出參與的肌肉：紅色是主要發力，銀白是輔助。', task:'打開實驗協定，選一個動作',
+    target:()=> currentMode === 'move' ? '.ex-grid' : '.mode-switch [data-mode="move"]',
+    start:()=>{ tour.ex0 = currentMode === 'move' ? currentExercise : null; }, done:()=> currentMode === 'move' && !!currentExercise && currentExercise !== tour.ex0},
+  {title:'CUSTOMIZE THE SUBJECT', body:'「體型」可以調整身高、上下半身肌肉量與肩寬；「我的頭」可以換上你的臉，做動作時也會跟著動。', target:()=> document.getElementById('shapeBtn').parentElement},
+  {title:'ASK THE RESEARCHER', body:'訓練、痠痛、伸展的問題，都可以問研究員。導覽結束，開始你的研究吧。', target:'.mode-switch [data-tab="chat"]', last:true}
+];
+const tour = {i:-1, timer:null, raf:0, finishedAt:0};
+function tourEl(id){ return document.getElementById(id); }
+function tourTarget(step){
+  const t = typeof step.target === 'function' ? step.target() : step.target;
+  if(!t) return null;
+  return typeof t === 'string' ? document.querySelector(t) : t;
+}
+function placeTour(){
+  if(tour.i < 0) return;
+  const step = TOUR_STEPS[tour.i], el = tourTarget(step), spot = tourEl('tourSpot'), card = tourEl('tourCard');
+  const narrow = window.innerWidth <= 760;
+  if(el && el.getClientRects().length){
+    const r = el.getBoundingClientRect(), pad = 6;
+    spot.classList.remove('off');
+    Object.assign(spot.style, {left:(r.left-pad)+'px', top:(r.top-pad)+'px', width:(r.width+pad*2)+'px', height:(r.height+pad*2)+'px'});
+    if(!narrow){
+      const cw = card.offsetWidth, ch = card.offsetHeight, m = 16;
+      let x, y;
+      if(r.left > cw + m*2){ x = r.left - cw - m; y = Math.min(Math.max(r.top, m), window.innerHeight - ch - m); }       /* 目標右側：卡片放左邊 */
+      else if(window.innerHeight - r.bottom > ch + m*2){ x = Math.min(Math.max(r.left, m), window.innerWidth - cw - m); y = r.bottom + m; }
+      else { x = Math.min(Math.max(r.left + r.width/2 - cw/2, m), window.innerWidth - cw - m); y = Math.max(r.top - ch - m, m); }
+      card.style.left = x + 'px'; card.style.top = y + 'px';
+    }
+  } else {
+    spot.classList.add('off');
+    if(!narrow){ card.style.left = (window.innerWidth/2 - card.offsetWidth/2) + 'px'; card.style.top = (window.innerHeight - card.offsetHeight - 110) + 'px'; }
+  }
+  const hand = tourEl('tourHand');
+  hand.hidden = !(step.hand && !tour.taskDone);
+  if(!hand.hidden){ const c = chamberEl.getBoundingClientRect(); hand.style.left = (c.left + c.width/2) + 'px'; hand.style.top = (c.top + c.height*0.45) + 'px'; }
+}
+function tourLoop(){ placeTour(); tour.raf = requestAnimationFrame(tourLoop); }
+function showTourStep(i){
+  clearInterval(tour.timer);
+  tour.i = i; tour.taskDone = false;
+  const step = TOUR_STEPS[i];
+  if(step.start) step.start();
+  tourEl('tcStep').textContent = `ORIENTATION · ${String(i+1).padStart(2,'0')} / ${String(TOUR_STEPS.length).padStart(2,'0')}`;
+  tourEl('tcBar').innerHTML = TOUR_STEPS.map((_, k)=> `<i class="${k <= i ? 'on' : ''}"></i>`).join('');
+  tourEl('tcTitle').textContent = step.title;
+  tourEl('tcBody').textContent = step.body;
+  const task = tourEl('tcTask'), next = tourEl('tourNext');
+  task.hidden = !step.task; task.classList.remove('done');
+  tourEl('tcTaskText').textContent = step.task || '';
+  next.textContent = step.last ? '開始探索' : (step.done ? '跳過這步' : '下一步');
+  tourEl('tourBack').hidden = i === 0;
+  const el = tourTarget(step);
+  if(el && window.innerWidth < 1080) el.scrollIntoView({behavior: reduceMotion ? 'auto' : 'smooth', block:'center', inline:'center'});
+  if(step.done){
+    tour.timer = setInterval(()=>{
+      if(!step.done()) return;
+      clearInterval(tour.timer);
+      tour.taskDone = true; task.classList.add('done'); tourEl('tcTaskText').textContent = '完成';
+      next.textContent = '下一步';
+      setTimeout(()=>{ if(tour.i === i) showTourStep(i + 1); }, 1100);
+    }, 120);
+  }
+}
+function startTour(){
+  if(document.body.classList.contains('intro')) return;
+  userInteracted = true;   /* 停止自動旋轉，第一步才偵測得到使用者的拖曳 */
+  tourEl('tour').hidden = false;
+  cancelAnimationFrame(tour.raf); tourLoop();
+  showTourStep(0);
+  tourEl('tourNext').focus({preventScroll:true});
+}
+function endTour(){
+  clearInterval(tour.timer); cancelAnimationFrame(tour.raf);
+  tour.i = -1; tourEl('tour').hidden = true;
+  try{ localStorage.setItem('lab-tour-done', '1'); }catch(e){}
+}
+function maybeStartTour(){
+  let done = false; try{ done = localStorage.getItem('lab-tour-done') === '1'; }catch(e){}
+  if(!done && tour.i < 0) startTour();
+}
+tourEl('tourNext').addEventListener('click', ()=>{
+  if(TOUR_STEPS[tour.i].last){ endTour(); showToast('歡迎加入 MUSCLE LAB'); return; }
+  showTourStep(tour.i + 1);
+});
+tourEl('tourBack').addEventListener('click', ()=>{ if(tour.i > 0) showTourStep(tour.i - 1); });
+tourEl('tourSkip').addEventListener('click', endTour);
+tourEl('tourBtn').addEventListener('click', ()=>{ if(tour.i < 0) startTour(); });
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && tour.i >= 0) endTour(); });
 
 /* =========================================================
    3. 互動：旋轉 + 縮放 + 平移 + 點擊選取
