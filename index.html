@@ -1474,7 +1474,7 @@ const EXERCISE_LIB = [
    L/R 結尾只套用在左/右腳。solve 會自動調整一個角度讓兩個身體點等高；contacts 是要貼地的點，第一個點固定前後位置。 */
 const POSES = {
   squat:{B:{shank:35, thigh:-85, torso:40, arm:-80}, period:2.8, view:0.85},
-  hinge:{B:{shank:6, thigh:-14, torso:78}, period:3.0, view:1.2},
+  hinge:{A:{grip:1}, B:{shank:6, thigh:-14, torso:78, grip:1}, period:3.0, view:1.2},
   lunge:{A:{thighL:-22, shankL:4, thighR:12, shankR:22, footR:38}, B:{torso:4, thighL:-82, shankL:8, thighR:2, shankR:78, footR:52},
     solve:{field:'thighR', a:'toeR', b:'heelL', range:[-40,70]}, contacts:['heelL','toeR'], period:3.0, view:1.45},
   hipthrust:{A:{thigh:-125, shank:-12, armRel:0}, B:{thigh:-90, shank:0, armRel:0},
@@ -1483,17 +1483,17 @@ const POSES = {
   calf:{B:{foot:22}, contacts:['toeL','toeR'], period:2.0, view:0.9},
   pushup:{A:{arm:-68}, B:{arm:45, elbow:-135}, solve:{field:'root', a:'handL', b:'toeL', target:0.02, range:[20,120]},
     contacts:['toeL','toeR','handL:0.02','handR:0.02'], period:2.4, view:1.57},
-  bench:{A:{torso:-90, thigh:-90, arm:-180}, B:{torso:-90, thigh:-90, arm:-45, elbow:-130}, contacts:['heelL','heelR'],
+  bench:{A:{torso:-90, thigh:-90, arm:-180, abd:15, grip:1}, B:{torso:-90, thigh:-90, arm:-90, abd:75, elbow:-90, grip:1}, contacts:['heelL','heelR'],
     prop:{type:'bench', a:'sacrum', b:'bladeL', pad:0.22}, period:2.6, view:1.57},
-  ohp:{A:{arm:-30, elbow:-120}, B:{arm:-178}, period:2.6, view:1.2},
-  raise:{B:{arm:-90}, period:2.6, view:1.05},
-  pullup:{A:{arm:-178, thigh:-10, shank:25}, B:{arm:-25, elbow:-140, thigh:-10, shank:25}, hang:{hand:'handL', clear:0.06},
-    prop:{type:'bar'}, period:3.0, view:1.3},
-  row:{A:{torso:65, thigh:-18, shank:12}, B:{torso:65, thigh:-18, shank:12, arm:60, elbow:-60}, period:2.4, view:1.35},
-  curl:{B:{elbow:-130}, period:2.2, view:1.1},
-  plank:{A:{arm:-90, elbow:-90}, B:{arm:-90, elbow:-90}, solve:{field:'root', a:'elbowL', b:'toeL', target:0.035, range:[20,120]},
+  ohp:{A:{abd:80, elbowZ:100, grip:1}, B:{abd:165, grip:1}, period:2.6, view:0.45},
+  raise:{A:{grip:1}, B:{arm:-90, grip:1}, period:2.6, view:1.05},
+  pullup:{A:{abd:158, grip:1, thigh:-10, shank:25}, B:{abd:35, elbowZ:145, grip:1, thigh:-10, shank:25}, hang:{hand:'gripL', clear:0.06},
+    prop:{type:'bar'}, period:3.0, view:0.5},
+  row:{A:{torso:65, thigh:-18, shank:12, grip:1}, B:{torso:65, thigh:-18, shank:12, arm:60, elbow:-60, grip:1}, period:2.4, view:1.35},
+  curl:{A:{grip:1}, B:{elbow:-130, grip:1}, period:2.2, view:1.1},
+  plank:{A:{arm:-90, elbow:-90, grip:0.6}, B:{arm:-90, elbow:-90, grip:0.6}, solve:{field:'root', a:'elbowL', b:'toeL', target:0.035, range:[20,120]},
     contacts:['toeL','toeR','elbowL:0.035','elbowR:0.035'], period:3.0, view:1.57},
-  shrug:{B:{shrug:0.06}, period:2.0, view:0.6}
+  shrug:{A:{grip:1}, B:{shrug:0.06, grip:1}, period:2.0, view:0.6}
 };
 const ARM_GROUPS = new Set(['biceps','triceps','forearmFlex','forearmExt','hand']);
 const baseKey = k => k.replace(/_[LRC]$/, '');
@@ -1502,11 +1502,14 @@ const baseKey = k => k.replace(/_[LRC]$/, '');
 const POSE_U = {
   uLegL:{value:new THREE.Vector4()}, uLegR:{value:new THREE.Vector4()},   /* 髖, 膝, 踝, 腳趾（相對角度） */
   uUp:{value:new THREE.Vector4()},                                         /* 軀幹, 肩, 肘, 聳肩位移 */
-  uOff:{value:new THREE.Vector2()},                                        /* 整體上下、前後位移 */
+  uOff:{value:new THREE.Vector2()},
+  uArmX:{value:new THREE.Vector4()},                                       /* 肩外展, 肘側彎, 握拳 0–1（左右對稱） */                                        /* 整體上下、前後位移 */
   uShape:{value:new THREE.Vector4()}                                       /* 體型：上半身肌肉厚度, 下半身肌肉厚度, 肩寬 */
 };
 const POSE_GLSL = `
-uniform vec4 uLegL; uniform vec4 uLegR; uniform vec4 uUp; uniform vec2 uOff; uniform vec4 uShape;
+uniform vec4 uLegL; uniform vec4 uLegR; uniform vec4 uUp; uniform vec2 uOff; uniform vec4 uShape; uniform vec4 uArmX;
+/* 繞 z 軸（正面平面）轉：手臂往兩側張開／收回 */
+vec3 poseRZ(vec3 v, float a){ float c = cos(a), s = sin(a); return vec3(v.x*c - v.y*s, v.x*s + v.y*c, v.z); }
 uniform float uShapeW; /* 這個網格受肌肉厚度影響的程度 */
 uniform float uArmMode; /* 1=手臂肌肉 0=非手臂 0.5=依位置判斷(骨骼、三角肌) */
 vec3 poseRX(vec3 v, float a){ float c = cos(a), s = sin(a); return vec3(v.x, v.y*c - v.z*s, v.y*s + v.z*c); }
@@ -1531,7 +1534,16 @@ vec3 poseApply(vec3 v, vec3 p, float isPoint){
   c = vec3(0.0, 0.075, -0.035) * isPoint; v = poseRX(v - c, L.z * wA) + c;
   c = vec3(0.0, 0.50, -0.02) * isPoint;   v = poseRX(v - c, L.y * wK) + c;
   c = vec3(0.0, 0.89, -0.01) * isPoint;   v = poseRX(v - c, L.x * wH) + c;
+  /* 手指握拳：指根、指中兩個關節往掌心彎；拇指不動 */
+  float side = p.x >= 0.0 ? 1.0 : -1.0;
+  /* 拇指在外側上方（掌心朝前的解剖姿勢），排除它，掌腱膜才不會被撕開 */
+  float fingers = arm * (1.0 - smoothstep(0.295, 0.315, abs(p.x)) * smoothstep(0.75, 0.77, p.y));
+  float wMcp = fingers * (1.0 - smoothstep(0.785, 0.805, p.y)), wPip = fingers * (1.0 - smoothstep(0.745, 0.765, p.y));
+  c = vec3(0.0, 0.795, 0.04) * isPoint;   v = poseRX(v - c, -0.79 * uArmX.z * wMcp) + c;
+  c = vec3(0.0, 0.755, 0.05) * isPoint;   v = poseRX(v - c, -1.08 * uArmX.z * wPip) + c;
   c = vec3(0.0, 1.08, -0.03) * isPoint;   v = poseRX(v - c, uUp.z * wE) + c;
+  c = vec3(side * 0.225, 1.08, 0.0) * isPoint;  v = poseRZ(v - c, side * uArmX.y * wE) + c;
+  c = vec3(side * 0.175, 1.37, 0.0) * isPoint;  v = poseRZ(v - c, side * uArmX.x * arm) + c;
   c = vec3(0.0, 1.37, -0.04) * isPoint;   v = poseRX(v - c, uUp.y * arm) + c;
   c = vec3(0.0, 0.89, -0.01) * isPoint;   v = poseRX(v - c, uUp.x) + c;
   /* 肩寬：旋轉都繞 x 軸，所以左右方向的伸縮可以最後再做 */
@@ -1560,10 +1572,10 @@ function armModeFor(group){ return ARM_GROUPS.has(group) ? 1 : (group === 'shoul
 
 /* 與著色器相同的計算，用在身體上的幾個點：決定貼地位置、道具位置與鏡頭 */
 const LANDMARKS = {
-  heelL:[0.085,0.01,-0.07], toeL:[0.09,0.008,0.115], handL:[0.27,0.76,0.0], elbowL:[0.21,1.08,-0.03], bladeL:[0.10,1.30,-0.12],
+  heelL:[0.085,0.01,-0.07], toeL:[0.09,0.008,0.115], handL:[0.27,0.76,0.0], gripL:[0.275,0.795,0.09], elbowL:[0.21,1.08,-0.03], bladeL:[0.10,1.30,-0.12],
   sacrum:[0,0.92,-0.12], head:[0,1.69,0.0]
 };
-['heel','toe','hand','elbow','blade'].forEach(k=>{ const v = LANDMARKS[k+'L']; LANDMARKS[k+'R'] = [-v[0], v[1], v[2]]; });
+['heel','toe','hand','grip','elbow','blade'].forEach(k=>{ const v = LANDMARKS[k+'L']; LANDMARKS[k+'R'] = [-v[0], v[1], v[2]]; });
 const POSE_FLOOR = 0.007;
 const sstep = (a, b, x)=>{ const t = Math.min(1, Math.max(0, (x-a)/(b-a))); return t*t*(3-2*t); };
 function fkPoint(pt, U){
@@ -1576,12 +1588,15 @@ function fkPoint(pt, U){
   const p = [x, y + U.up[3]*wSh, z];
   const rot = (cy, cz, a)=>{ const dy = p[1]-cy, dz = p[2]-cz, c = Math.cos(a), s = Math.sin(a); p[1] = dy*c - dz*s + cy; p[2] = dy*s + dz*c + cz; };
   rot(0.02, 0.07, L[3]*wT); rot(0.075, -0.035, L[2]*wA); rot(0.50, -0.02, L[1]*wK); rot(0.89, -0.01, L[0]*wH);
-  rot(1.08, -0.03, U.up[2]*wE); rot(1.37, -0.04, U.up[1]*arm); rot(0.89, -0.01, U.up[0]);
+  const sd = x >= 0 ? 1 : -1, A = U.armX || [0,0,0,0];
+  const rotZ = (cx, cy, a)=>{ const dx = p[0]-cx, dy = p[1]-cy, c = Math.cos(a), s = Math.sin(a); p[0] = dx*c - dy*s + cx; p[1] = dx*s + dy*c + cy; };
+  rot(1.08, -0.03, U.up[2]*wE); rotZ(sd*0.225, 1.08, sd*A[1]*wE); rotZ(sd*0.175, 1.37, sd*A[0]*arm);
+  rot(1.37, -0.04, U.up[1]*arm); rot(0.89, -0.01, U.up[0]);
   return [p[0], p[1] + U.off[0], p[2] + U.off[1]];
 }
 const LEG_KEYS = ['thigh','shank','foot','toes'];
 function keyAngles(k){
-  const w = {torso:k.torso||0, arm:k.arm||0, elbow:k.elbow||0, shrug:k.shrug||0, armRel:k.armRel};
+  const w = {torso:k.torso||0, arm:k.arm||0, elbow:k.elbow||0, shrug:k.shrug||0, armRel:k.armRel, abd:k.abd||0, elbowZ:k.elbowZ||0, grip:k.grip||0};
   ['L','R'].forEach(sd=> LEG_KEYS.forEach(n=>{ w[n+sd] = k[n+sd] ?? k[n] ?? 0; }));
   return w;
 }
@@ -1594,7 +1609,7 @@ function anglesToU(w, root){
   const r = Math.PI/180, R = root || 0, g = k => (w[k] || 0) + R;
   const torso = g('torso'), arm = (w.armRel !== undefined ? (w.torso||0) + w.armRel : (w.arm||0)) + R;
   const leg = sd => [g('thigh'+sd) - torso, g('shank'+sd) - g('thigh'+sd), g('foot'+sd) - g('shank'+sd), g('toes'+sd) - g('foot'+sd)].map(v=> v*r);
-  return {L:leg('L'), R:leg('R'), up:[torso*r, (arm - torso)*r, (w.elbow||0)*r, w.shrug||0], off:[0,0]};
+  return {L:leg('L'), R:leg('R'), up:[torso*r, (arm - torso)*r, (w.elbow||0)*r, w.shrug||0], armX:[(w.abd||0)*r, (w.elbowZ||0)*r, w.grip||0, 0], off:[0,0]};
 }
 function landmark(name, U){
   const [key, lift] = name.split(':');
@@ -1674,12 +1689,12 @@ function updateProps(def, U){
 const poseAnim = {def:null, period:2.6, t:0, playing:false, last:performance.now(), blend:0};
 let poseActive = false;
 function setPoseUniforms(U, k){
-  const Lv = POSE_U.uLegL.value, Rv = POSE_U.uLegR.value, Up = POSE_U.uUp.value, O = POSE_U.uOff.value;
+  const Lv = POSE_U.uLegL.value, Rv = POSE_U.uLegR.value, Up = POSE_U.uUp.value, O = POSE_U.uOff.value, AX = POSE_U.uArmX.value;
   const ease = (o, key, v)=>{ o[key] += (v - o[key]) * k; };
-  ['x','y','z','w'].forEach((c,i)=>{ ease(Lv, c, U.L[i]); ease(Rv, c, U.R[i]); ease(Up, c, U.up[i]); });
+  ['x','y','z','w'].forEach((c,i)=>{ ease(Lv, c, U.L[i]); ease(Rv, c, U.R[i]); ease(Up, c, U.up[i]); ease(AX, c, U.armX[i]); });
   ease(O, 'x', U.off[0]); ease(O, 'y', U.off[1]);
 }
-const ZERO_U = {L:[0,0,0,0], R:[0,0,0,0], up:[0,0,0,0], off:[0,0]};
+const ZERO_U = {L:[0,0,0,0], R:[0,0,0,0], up:[0,0,0,0], armX:[0,0,0,0], off:[0,0]};
 function updatePose(){
   const now = performance.now(), dt = Math.min(0.05, (now - poseAnim.last)/1000);
   poseAnim.last = now;
@@ -1692,10 +1707,10 @@ function updatePose(){
   }
   /* 切換動作時平滑過渡，之後直接套用，避免手腳離地 */
   setPoseUniforms(U, poseAnim.blend < 1 ? 0.18 : 1);
-  const Uc = {L:POSE_U.uLegL.value.toArray(), R:POSE_U.uLegR.value.toArray(), up:POSE_U.uUp.value.toArray(), off:POSE_U.uOff.value.toArray()};
+  const Uc = {L:POSE_U.uLegL.value.toArray(), R:POSE_U.uLegR.value.toArray(), up:POSE_U.uUp.value.toArray(), armX:POSE_U.uArmX.value.toArray(), off:POSE_U.uOff.value.toArray()};
   updateProps(poseAnim.def, Uc);
   updateFaceSprite(Uc);
-  poseActive = [...Uc.L, ...Uc.R, ...Uc.up, ...Uc.off].some(v=> Math.abs(v) > 0.003);
+  poseActive = [...Uc.L, ...Uc.R, ...Uc.up, ...Uc.armX, ...Uc.off].some(v=> Math.abs(v) > 0.003);
 }
 /* 鏡頭：框住這個動作兩個關鍵姿勢會用到的範圍 */
 function frameExercise(def, rotY){
