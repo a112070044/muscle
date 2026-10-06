@@ -1483,9 +1483,13 @@ const POSES = {
   calf:{B:{foot:22}, contacts:['toeL','toeR'], period:2.0, view:0.9},
   pushup:{A:{arm:-68}, B:{arm:45, elbow:-135}, solve:{field:'root', a:'handL', b:'toeL', target:0.02, range:[20,120]},
     contacts:['toeL','toeR','handL:0.02','handR:0.02'], period:2.4, view:1.57},
-  bench:{A:{torso:-90, thigh:-90, arm:-180, abd:15, grip:1}, B:{torso:-90, thigh:-90, arm:-90, abd:75, elbow:-90, grip:1}, contacts:['heelL','heelR'],
-    prop:{type:'bench', a:'sacrum', b:'bladeL', pad:0.22}, period:2.6, view:1.57},
-  ohp:{A:{abd:80, elbowZ:100, grip:1}, B:{abd:165, grip:1}, period:2.6, view:0.45},
+  /* 臥推：槓從肩膀正上方垂直降到胸口下緣，前臂全程垂直、手肘外展約 60° */
+  bench:{A:{torso:-90, thigh:-90, grip:1}, B:{torso:-90, thigh:-90, grip:1}, contacts:['heelL','heelR'],
+    ik:{from:[0.34, 1.31, 0.52], to:[0.35, 1.19, 0.17], dir:[0,0,1], seed:[-75, 30, -40, 0]},
+    prop:{type:'bench', a:'sacrum', b:'bladeL', pad:0.22}, barbell:true, period:2.6, view:1.05},
+  /* 肩推：槓從下巴前方（鎖骨高度）垂直推到頭頂，前臂全程垂直、手肘在槓的正下方略往前 */
+  ohp:{A:{grip:1}, B:{grip:1}, ik:{from:[0.30, 1.46, 0.15], to:[0.29, 1.94, 0.0], dir:[0,1,0], seed:[-70, 25, -90, 0]},
+    barbell:true, period:2.8, view:0.55},
   raise:{A:{grip:1}, B:{arm:-90, grip:1}, period:2.6, view:1.05},
   pullup:{A:{abd:158, grip:1, thigh:-10, shank:25}, B:{abd:35, elbowZ:145, grip:1, thigh:-10, shank:25}, hang:{hand:'gripL', clear:0.06},
     prop:{type:'bar'}, period:3.0, view:0.5},
@@ -1618,6 +1622,46 @@ function landmark(name, U){
   return p;
 }
 /* 給定動作進度 s(0–1) 算出完整的姿勢：解角度 → 決定位置 */
+/* 手臂反向運動學：給定手（握點）的路徑與前臂方向，反推肩屈曲、肩外展、肘彎、肘側彎四個角度。
+   在站姿的身體座標裡解（不含軀幹傾斜），用阻尼最小平方法，從上一格的解接著算，動作才會連續。 */
+const IK_KEYS = ['armRel','abd','elbow','elbowZ'];
+const IK_RANGE = [[-200, 60], [-10, 175], [-160, 0], [-30, 160]];
+function solveArmIK(def, w, s){
+  const ik = def.ik, lerp = (a, b)=> a.map((v, i)=> v + (b[i] - v) * s);
+  const tgt = lerp(ik.from, ik.to), dir = ik.dir, wd = ik.dirWeight ?? 0.1;
+  const resid = v=>{
+    const ww = Object.assign({}, w, {torso:0, armRel:v[0], abd:v[1], elbow:v[2], elbowZ:v[3]});
+    const U = anglesToU(ww), h = fkPoint(LANDMARKS.gripL, U), e = fkPoint(LANDMARKS.elbowL, U);
+    const f = [h[0]-e[0], h[1]-e[1], h[2]-e[2]], n = Math.hypot(...f) || 1;
+    return [h[0]-tgt[0], h[1]-tgt[1], h[2]-tgt[2], wd*(f[0]/n-dir[0]), wd*(f[1]/n-dir[1]), wd*(f[2]/n-dir[2])];
+  };
+  const cost = r=> r.reduce((t, x)=> t + x*x, 0);
+  const clamp = v=> v.map((x, k)=> Math.min(IK_RANGE[k][1], Math.max(IK_RANGE[k][0], x)));
+  /* 真實手肘只有一個彎曲方向：肘側彎固定，只解肩屈曲、肩外展、肘彎，解才會唯一、動作不會抽動 */
+  const free = ik.free || [0, 1, 2], F = free.length;
+  /* Levenberg–Marquardt：每一步都要讓誤差變小才採用，否則加大阻尼重試 */
+  const run = start=>{
+    let v = clamp(start), r = resid(v), c = cost(r), lam = 1e-3;
+    for(let it = 0; it < 60 && c > 1e-8; it++){
+      const J = free.map(k=>{ const d = v.slice(); d[k] += 0.25; const r2 = resid(d); return r2.map((x, i)=> (x - r[i]) / 0.25); });
+      const A = J.map(a=> J.map(b2=> a.reduce((t, x, i)=> t + x*b2[i], 0)));
+      const g = J.map(a=> -a.reduce((t, x, i)=> t + x*r[i], 0));
+      A.forEach((row, i)=> row[i] += lam*row[i] + 1e-9);
+      const M = A.map((row, i)=> row.concat(g[i]));
+      for(let i = 0; i < F; i++) for(let j = i+1; j < F; j++){ const f = M[j][i] / M[i][i]; for(let k = i; k <= F; k++) M[j][k] -= f*M[i][k]; }
+      const d = new Array(F).fill(0);
+      for(let i = F-1; i >= 0; i--){ let t = M[i][F]; for(let k = i+1; k < F; k++) t -= M[i][k]*d[k]; d[i] = t / M[i][i]; }
+      const v2 = v.slice(); free.forEach((k, i)=> v2[k] += Math.max(-30, Math.min(30, d[i])));
+      const v3 = clamp(v2), r2 = resid(v3), c2 = cost(r2);
+      if(c2 < c){ v = v3; r = r2; c = c2; lam = Math.max(1e-6, lam/3); } else { lam *= 5; if(lam > 1e4) break; }
+    }
+    return {v, c};
+  };
+  let best = run(ik.seed);
+  if(def._ik && Math.abs(def._ik.s - s) < 0.25){ const cont = run(def._ik.v); if(cont.c <= best.c * 1.05) best = cont; }
+  def._ik = {s, v:best.v};
+  return {armRel:best.v[0], abd:best.v[1], elbow:best.v[2], elbowZ:best.v[3]};
+}
 function poseAt(def, s){
   let w = lerpAngles(keyAngles(def.A || {}), keyAngles(def.B || {}), s), root = 0;
   const sv = def.solve;
@@ -1637,6 +1681,7 @@ function poseAt(def, s){
     const v = (lo + hi)/2;
     if(sv.field === 'root') root = v; else w = Object.assign({}, w, {[sv.field]: v});
   }
+  if(def.ik) w = Object.assign({}, w, solveArmIK(def, w, s));
   const U = anglesToU(w, root);
   if(def.hang){
     const h = landmark(def.hang.hand, U);
@@ -1660,19 +1705,26 @@ function prepPose(def){
 const propMat = new THREE.MeshStandardMaterial({color:0x30353D, roughness:0.75, metalness:0.1});
 const benchMesh = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), propMat);
 const barGroup = new THREE.Group();
+const barbell = new THREE.Group();   /* 槓鈴：跟著兩手握點移動 */
 {
   const metal = new THREE.MeshStandardMaterial({color:0x8A8F96, roughness:0.35, metalness:0.8});
   const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.3, 16), metal);
   bar.rotation.z = Math.PI/2; barGroup.add(bar);
   [-0.62, 0.62].forEach(x=>{ const post = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1, 12), propMat); post.position.x = x; post.name = 'post'; barGroup.add(post); });
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.9, 16), metal);
+  shaft.rotation.z = Math.PI/2; barbell.add(shaft);
+  const plateMat = new THREE.MeshStandardMaterial({color:0x2A2A2A, roughness:0.6, metalness:0.2});
+  [-0.7, 0.7].forEach(x=>{ const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 32), plateMat); plate.rotation.z = Math.PI/2; plate.position.x = x; barbell.add(plate); });
 }
 /* 等模型量完尺寸才加進來，避免道具影響人體的縮放與置中 */
-[benchMesh, barGroup].forEach(m=>{ m.visible = false; m.traverse(o=>{ o.castShadow = true; o.receiveShadow = true; }); });
+[benchMesh, barGroup, barbell].forEach(m=>{ m.visible = false; m.traverse(o=>{ o.castShadow = true; o.receiveShadow = true; }); });
 function updateProps(def, U){
-  if(modelReady && !benchMesh.parent){ modelRoot.add(benchMesh); modelRoot.add(barGroup); }
+  if(modelReady && !benchMesh.parent){ modelRoot.add(benchMesh); modelRoot.add(barGroup); modelRoot.add(barbell); }
   const prop = def && def.prop;
   benchMesh.visible = !!(prop && prop.type === 'bench');
   barGroup.visible = !!(prop && prop.type === 'bar');
+  barbell.visible = !!(def && def.barbell);
+  if(barbell.visible){ const g = landmark('gripL', U); barbell.position.set(0, g[1], g[2]); }
   if(benchMesh.visible){
     const a = landmark(prop.a, U), b = landmark(prop.b, U);
     const top = Math.min(a[1], b[1]), z0 = Math.min(a[2], b[2]) - prop.pad, z1 = Math.max(a[2], b[2]) + prop.pad;
