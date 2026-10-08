@@ -4,7 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MUSCLE LAB｜人體肌肉 3D 研究室</title>
-<meta name="description" content="333 條肌肉的 3D 解剖、14 個訓練動作示範、體型調整與 AI 教練問答。">
+<meta name="description" content="MUSCLE LAB 人體肌肉 3D 研究室：333 條肌肉的 3D 解剖、14 個訓練動作示範、體型調整與 AI 研究員問答。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MUSCLE LAB">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:title" content="MUSCLE LAB｜人體肌肉 3D 研究室">
+<meta property="og:description" content="點一條肌肉，看它亮起來。333 條肌肉的 3D 解剖圖鑑、14 項訓練實驗協定，從結構到動作一層一層拆解。">
+<meta property="og:url" content="https://a112070044.github.io/muscle/">
+<meta property="og:image" content="https://a112070044.github.io/muscle/brand/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MUSCLE LAB 標誌與 3D 人體肌肉標本，胸大肌以紅色標示">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0B0B0B" id="themeColorMeta">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -396,6 +407,57 @@
   }
   @media (prefers-reduced-motion: reduce){ .tour-hand{animation:none;} }
 
+  /* ---------- search ---------- */
+  .rail-search{position:relative; padding:0 12px 10px;}
+  .rail-search input{width:100%; height:38px; padding:0 12px; font:400 13.5px var(--sans); color:var(--text); background:var(--input-bg); border:1px solid var(--line-hi); border-radius:8px;}
+  .rail-search input::placeholder{color:var(--text-faint);}
+  .rail-search input:focus{outline:none; border-color:var(--text);}
+  .search-results{position:absolute; left:12px; right:12px; top:calc(100% - 4px); z-index:20; max-height:340px; overflow-y:auto; padding:4px; background:var(--panel-solid); border:1px solid var(--line-hi); border-radius:10px; box-shadow:var(--shadow);}
+  .search-results[hidden]{display:none;}
+  .search-results button{display:grid; grid-template-columns:52px 1fr; column-gap:8px; width:100%; text-align:left; background:none; border:none; border-radius:6px; padding:8px 10px; color:var(--text); cursor:pointer;}
+  .search-results button.on, .search-results button:hover{background:var(--hover);}
+  .sr-code{grid-row:span 2; align-self:center; font:400 10.5px var(--mono); color:var(--text-faint); letter-spacing:.04em;}
+  .sr-name{font-size:13.5px; line-height:1.4;}
+  .sr-sub{font-size:11.5px; color:var(--text-faint); line-height:1.4;}
+  .sr-empty{padding:10px 12px; font-size:13px; color:var(--text-soft);}
+
+  /* ---------- lab numbering ---------- */
+  .legend button{display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  .lg-code{font:400 10px var(--mono); color:var(--text-faint); letter-spacing:.06em; flex-shrink:0;}
+  .ex-kicker{font:500 10.5px var(--mono); letter-spacing:.2em; color:var(--text-faint); padding-top:18px; border-top:1px solid var(--line);}
+  .ex-kicker + .ex-head{padding-top:6px; border-top:none;}
+
+  /* ---------- anatomy-atlas leader line ---------- */
+  .leader{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; overflow:visible;}
+  .leader line{stroke:var(--text-soft); stroke-width:1;}
+  .leader circle{fill:var(--scan); stroke:var(--void); stroke-width:1.5;}
+  .leader-label{position:absolute; z-index:3; pointer-events:none; transform:translateY(-50%); padding:6px 11px 7px; background:var(--tip-bg); border:1px solid var(--line-hi); border-left:2px solid var(--scan); font-size:13px; line-height:1.35; white-space:nowrap;}
+  .leader-label small{display:block; font:400 10px var(--mono); letter-spacing:.1em; color:var(--text-faint);}
+  .leader.off, .leader-label.off{display:none;}
+
+  /* ---------- protocols for this muscle ---------- */
+  .proto-list{display:flex; flex-direction:column; gap:6px;}
+  .proto-list button{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; text-align:left; padding:9px 12px; border:1px solid var(--line-hi); border-radius:8px; background:transparent; color:var(--text); cursor:pointer; transition:border-color .15s ease;}
+  .proto-list button:hover{border-color:var(--text);}
+  .proto-list .pc{font:400 10.5px var(--mono); letter-spacing:.06em; color:var(--text-faint);}
+  .proto-list b{font-weight:500; font-size:13.5px;}
+  .proto-list small{display:flex; align-items:center; font-size:12px; color:var(--text-soft); white-space:nowrap;}
+  .proto-none{font-size:13px; color:var(--text-soft);}
+
+  /* ---------- playback speed ---------- */
+  .speed{display:inline-flex; gap:2px; padding:2px; background:var(--seg-bg); border-radius:8px; flex-shrink:0;}
+  .speed button{background:none; border:none; color:var(--text-soft); font:500 12px var(--mono); padding:6px 10px; border-radius:6px; cursor:pointer;}
+  .speed button.on{background:var(--seg-active); color:var(--text);}
+
+  /* ---------- touch targets: at least 44px on touch screens ---------- */
+  @media (pointer: coarse){
+    .ghost-btn{min-height:44px; min-width:44px; padding:0 12px;}
+    .seg button{min-width:44px;}
+    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn{min-height:44px;}
+    .rail-search input{height:44px; font-size:16px;}
+  }
+  @media (max-width:760px){ .leader, .leader-label{display:none;} }
+
   /* single-muscle detail */
   .mdetail{display:grid; grid-template-columns:auto 1fr; gap:7px 14px; font-size:13.5px; line-height:1.65; margin:0;}
   .mdetail dt{font-size:12px; color:var(--text-faint); padding-top:2px; white-space:nowrap;}
@@ -412,8 +474,8 @@
   .ex-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; padding-top:18px; border-top:1px solid var(--line);}
   .ex-head h3{font-size:22px; font-weight:600; line-height:1.3;}
   .ex-head .en{margin:0;}
-  .ex-ctrl{display:flex; align-items:center; gap:12px; margin:10px 0 18px; font-size:12px; color:var(--text-faint);}
-  .ex-ctrl button{flex-shrink:0; font-size:13.5px; font-weight:600; color:var(--on-ice); background:var(--ice); border:none; border-radius:8px; padding:8px 18px; cursor:pointer;}
+  .ex-ctrl{display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; margin:10px 0 18px; font-size:12px; color:var(--text-faint);}
+  .ex-ctrl > button{flex-shrink:0; font-size:13.5px; font-weight:600; color:var(--on-ice); background:var(--ice); border:none; border-radius:8px; padding:8px 18px; cursor:pointer;}
   .ex-note{font-size:12.5px; color:var(--text-faint); margin:8px 0 18px;}
   .chip-row{display:flex; flex-wrap:wrap; gap:6px;}
   .chip-row button{font-size:13px; padding:5px 11px; background:transparent; border:1px solid var(--line-hi); border-radius:6px; color:var(--text); cursor:pointer;}
@@ -568,6 +630,8 @@ setTimeout(function(){
 <div class="stage" id="stage">
   <div class="chamber" id="chamber">
     <canvas id="canvas3d"></canvas>
+    <svg class="leader off" id="leaderSvg" aria-hidden="true"><line id="leaderLine"/><circle id="leaderDot" r="4"/></svg>
+    <div class="leader-label off" id="leaderLabel" aria-hidden="true"></div>
     <div class="height-ruler" id="heightRuler"></div>
     <div class="readout" id="readout">目標 <b id="roTarget">尚未選取</b><br>縮放 <b id="roZoom">1.0×</b>　方位 <b id="roAngle">0°</b></div>
     <div class="hint">拖曳旋轉　滾輪縮放　右鍵平移</div>
@@ -581,7 +645,7 @@ setTimeout(function(){
     <div class="topbar-right">
       <button class="ghost-btn" id="tourBtn" title="重新看一次導覽" aria-label="導覽">?<span class="tb-label"> 導覽</span></button>
       <button class="ghost-btn theme-btn" id="themeBtn" aria-label="切換日間／夜間模式">夜間</button>
-      <button class="ghost-btn" id="installBtn" title="安裝到桌面或主畫面" hidden>安裝 App</button>
+      <button class="ghost-btn" id="installBtn" title="安裝到桌面或主畫面" hidden>安裝<span class="tb-label"> App</span></button>
       <div class="progress-badge" id="progressBadge"><span class="pb-label">已探索 </span>0 / 28</div>
     </div>
   </header>
@@ -660,6 +724,10 @@ setTimeout(function(){
         <button id="railToggle" class="ghost-btn rail-toggle" aria-expanded="true">收合清單</button>
       </div>
     </div>
+    <div class="rail-search">
+      <input type="search" id="muscleSearch" placeholder="搜尋肌肉：中文、英文或編號" autocomplete="off" spellcheck="false" aria-label="搜尋肌肉" aria-controls="searchResults">
+      <div class="search-results" id="searchResults" role="listbox" hidden></div>
+    </div>
     <div class="legend" id="legend"></div>
   </nav>
 
@@ -678,7 +746,7 @@ setTimeout(function(){
     <div class="chat-area">
       <div class="chat-scroll" id="chatScroll">
         <div class="msg assistant">
-          <span class="role-tag">AI 教練</span>
+          <span class="role-tag">研究員</span>
           <div class="bubble"><p>點一條肌肉再問我，我會針對那條肌肉回答；也可以直接問訓練、痠痛或伸展的問題。</p></div>
         </div>
       </div>
@@ -1774,7 +1842,7 @@ function updatePose(){
   poseAnim.blend = Math.min(1, poseAnim.blend + dt*1.6);
   let U = ZERO_U;
   if(poseAnim.def){
-    if(poseAnim.playing) poseAnim.t += dt;
+    if(poseAnim.playing) poseAnim.t += dt * (poseAnim.speed || 1);
     const s = reduceMotion ? 1 : (1 - Math.cos(2*Math.PI*poseAnim.t/poseAnim.period))/2;
     U = poseAt(poseAnim.def, s);
   }
@@ -1835,7 +1903,7 @@ function renderMovePanel(){
     <span class="mi-region">動作連動</span>
     <h2>選一個訓練動作</h2>
     <p class="func">3D 人體會跟著做動作，並亮起參與的肌肉：<i class="key key-p"></i>主要發力　<i class="key key-s"></i>輔助穩定。</p>
-    <div class="ex-grid">${EXERCISE_LIB.map(e=>`<button data-ex="${e.id}"${e.id===currentExercise?' class="active"':''}>${e.name}<small>${e.en}</small></button>`).join('')}</div>
+    <div class="ex-grid">${EXERCISE_LIB.map((e, i)=>`<button data-ex="${e.id}"${e.id===currentExercise?' class="active"':''}>${e.name}<small>P${String(i+1).padStart(2,'0')} · ${e.en}</small></button>`).join('')}</div>
     <div id="exDetail"></div>`;
   infoEl.classList.remove('refresh'); void infoEl.offsetWidth; infoEl.classList.add('refresh');
   infoEl.scrollTop = 0;
@@ -1862,12 +1930,17 @@ function selectExercise(id, keepView){
   const chips = (list, cls)=> `<div class="chip-row ${cls}">${list.map(it=>`<button data-go="${it}">${exerciseLabel(it)}</button>`).join('')}</div>`;
   const slot = document.getElementById('exDetail');
   slot.innerHTML = `
+    <div class="ex-kicker">${protocolCode(ex.id)}</div>
     <div class="ex-head"><h3>${ex.name}</h3><span class="en">${ex.en}</span></div>
-    <div class="ex-ctrl"><button id="exPlay">${poseAnim.playing ? '暫停' : '播放'}</button><span>模型動作為簡化示意，不是標準姿勢教學</span></div>
+    <div class="ex-ctrl"><button id="exPlay">${poseAnim.playing ? '暫停' : '播放'}</button><span class="speed" role="group" aria-label="播放速度">${[0.5, 1].map(v=> `<button data-speed="${v}" class="${(poseAnim.speed || 1) === v ? 'on' : ''}" aria-pressed="${(poseAnim.speed || 1) === v}">${v}×</button>`).join('')}</span><span>模型動作為簡化示意，不是標準姿勢教學</span></div>
     <section class="mi-sec"><h6><i class="key key-p"></i>主要發力</h6>${chips(ex.p, 'p')}</section>
     <section class="mi-sec"><h6><i class="key key-s"></i>輔助穩定</h6>${chips(ex.s, 's')}</section>
     <p class="tip">${ex.cue}</p>
     <p class="ex-note">點上面的肌肉名稱，可以跳到它的說明。</p>`;
+  slot.querySelectorAll('[data-speed]').forEach(b=> b.addEventListener('click', ()=>{
+    poseAnim.speed = +b.dataset.speed;
+    slot.querySelectorAll('[data-speed]').forEach(x=>{ const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+  }));
   document.getElementById('exPlay').addEventListener('click', function(){
     poseAnim.playing = !poseAnim.playing;
     this.textContent = poseAnim.playing ? '暫停' : '播放';
@@ -2258,13 +2331,133 @@ tourEl('tourSkip').addEventListener('click', endTour);
 tourEl('tourBtn').addEventListener('click', ()=>{ if(tour.i < 0) startTour(); });
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && tour.i >= 0) endTour(); });
 
+
+/* ---- 編號系統：MG-xx 肌群、M-xxx 單條肌肉、PROTOCOL xx 實驗協定 ---- */
+const labPad = (n, w)=> String(n).padStart(w, '0');
+const groupCode = id=> 'MG-' + labPad(muscleOrder.indexOf(id) + 1, 2);
+const protocolCode = id=> 'PROTOCOL ' + labPad(EXERCISE_LIB.findIndex(e=> e.id === id) + 1, 2);
+let _labIndex = null;
+/* 單條肌肉照肌群順序編號（模型載入後才建立） */
+function labIndex(){
+  if(_labIndex || !clickableParts.length) return _labIndex || {muscles:[], byBase:{}};
+  const order = Object.keys(MUSCLE_DETAIL), muscles = [], byBase = {};
+  let n = 0;
+  muscleOrder.forEach(g=>{
+    const bases = [...new Set(clickableParts.filter(p=> p.id === g).map(p=> baseKey(p.key)))].sort((a, b)=> order.indexOf(a) - order.indexOf(b));
+    bases.forEach(b=>{
+      const part = clickableParts.find(p=> baseKey(p.key) === b && !/_R$/.test(p.key)) || clickableParts.find(p=> baseKey(p.key) === b);
+      const e = {base:b, group:g, code:'M-' + labPad(++n, 3), zh:part.meta.zh, en:part.meta.en, part};
+      muscles.push(e); byBase[b] = e;
+    });
+  });
+  return (_labIndex = {muscles, byBase});
+}
+const muscleCode = base=> (labIndex().byBase[base] || {}).code || '';
+/* 一個實驗協定對某肌群（或某條肌肉）的角色：主要 p／輔助 s／無 */
+function protocolRole(ex, groupId, base){
+  const hit = it=> it === groupId || (base ? it === base : (labIndex().byBase[it] || {}).group === groupId);
+  if(ex.p.some(hit)) return 'p';
+  if(ex.s.some(hit)) return 's';
+  return null;
+}
+
+/* ---- 肌肉搜尋：中文、英文或編號 ---- */
+{
+  const input = document.getElementById('muscleSearch'), box = document.getElementById('searchResults');
+  let hits = [], sel = 0;
+  const norm = t=> String(t).toLowerCase().replace(/[\s()（）·\-_,，]/g, '');
+  const esc = t=> String(t).replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function search(q){
+    const n = norm(q);
+    if(!n || !modelReady) return [];
+    const groups = muscleOrder.map(id=> ({type:'group', id, code:groupCode(id), zh:muscleData[id].name, en:muscleData[id].en, sub:'肌群 · ' + categoryLabels[muscleData[id].category]}));
+    const muscles = labIndex().muscles.map(m=> ({type:'muscle', part:m.part, code:m.code, zh:m.zh, en:m.en, sub:muscleData[m.group].name + ' · ' + m.en}));
+    const score = e=>{
+      const z = norm(e.zh), en = norm(e.en), c = norm(e.code);
+      if(z.startsWith(n) || c === n) return 0;
+      if(z.includes(n)) return 1;
+      if(en.startsWith(n) || c.includes(n)) return 2;
+      if(en.includes(n)) return 3;
+      return 9;
+    };
+    return [...groups, ...muscles].map(e=> [score(e), e]).filter(x=> x[0] < 9).sort((a, b)=> a[0] - b[0]).slice(0, 8).map(x=> x[1]);
+  }
+  function render(){
+    const q = input.value.trim();
+    box.hidden = !q;
+    if(!q) return;
+    box.innerHTML = hits.length
+      ? hits.map((e, i)=> `<button role="option" data-i="${i}" class="${i === sel ? 'on' : ''}" aria-selected="${i === sel}"><span class="sr-code">${e.code}</span><span class="sr-name">${esc(e.zh)}</span><span class="sr-sub">${esc(e.sub)}</span></button>`).join('')
+      : `<div class="sr-empty">${modelReady ? '找不到「' + esc(q) + '」，試試其他名稱或英文' : '標本載入中…'}</div>`;
+  }
+  function choose(e){
+    if(!e) return;
+    if(currentMode !== 'explore') setMode('explore');
+    if(e.type === 'group') selectMuscle(e.id); else selectMuscle(e.part.id, e.part);
+    input.value = ''; hits = []; box.hidden = true; input.blur();
+    if(window.innerWidth < 1080) chamberEl.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+  input.addEventListener('input', ()=>{ hits = search(input.value); sel = 0; render(); });
+  input.addEventListener('keydown', e=>{
+    if(e.key === 'ArrowDown'){ sel = Math.min(hits.length - 1, sel + 1); render(); e.preventDefault(); }
+    else if(e.key === 'ArrowUp'){ sel = Math.max(0, sel - 1); render(); e.preventDefault(); }
+    else if(e.key === 'Enter'){ choose(hits[sel]); e.preventDefault(); }
+    else if(e.key === 'Escape'){ input.value = ''; hits = []; box.hidden = true; e.stopPropagation(); }
+  });
+  box.addEventListener('mousedown', e=> e.preventDefault());
+  box.addEventListener('click', e=>{ const b = e.target.closest('[data-i]'); if(b) choose(hits[+b.dataset.i]); });
+  input.addEventListener('blur', ()=> setTimeout(()=>{ box.hidden = true; }, 150));
+}
+
+/* ---- 圖鑑引線：從選到的肌肉拉一條細線到標籤 ---- */
+const leaderSvg = document.getElementById('leaderSvg'), leaderLine = document.getElementById('leaderLine');
+const leaderDot = document.getElementById('leaderDot'), leaderLabel = document.getElementById('leaderLabel');
+let leaderAnchor = null;
+const _lv = new THREE.Vector3(), _la = new THREE.Vector3(), _lc = new THREE.Vector3(), _ln = new THREE.Vector3();
+function setLeaderAnchor(){
+  if(!currentMuscle || !modelReady){ leaderAnchor = null; return; }
+  const specific = currentPart && currentPart.id === currentMuscle;
+  let parts = specific ? [currentPart] : clickableParts.filter(p=> p.id === currentMuscle);
+  const left = parts.filter(p=> !/_R$/.test(p.key));   /* 左右成對的肌群只指向一側，線才不會落在兩塊肌肉中間 */
+  if(left.length) parts = left;
+  const box = new THREE.Box3();
+  parts.forEach(p=>{ if(!p.mesh.geometry.boundingBox) p.mesh.geometry.computeBoundingBox(); box.union(p.mesh.geometry.boundingBox); });
+  leaderAnchor = box.getCenter(new THREE.Vector3());
+  leaderLabel.innerHTML = specific
+    ? `<small>${muscleCode(baseKey(currentPart.key))}</small>${currentPart.meta.zh}`
+    : `<small>${groupCode(currentMuscle)}</small>${muscleData[currentMuscle].name}`;
+}
+function updateLeader(){
+  const show = !!leaderAnchor && modelReady && currentMode === 'explore' && !poseActive && window.innerWidth > 760 && !document.body.classList.contains('intro');
+  leaderSvg.classList.toggle('off', !show); leaderLabel.classList.toggle('off', !show);
+  if(!show) return;
+  const w = chamberEl.clientWidth, h = chamberEl.clientHeight;
+  _lv.copy(leaderAnchor); modelRoot.localToWorld(_lv);
+  _la.set(0, leaderAnchor.y, 0); modelRoot.localToWorld(_la);
+  const facing = _ln.subVectors(_lv, _la).dot(_lc.subVectors(camera.position, _lv)) > 0;   /* 肌肉轉到背面時線變淡 */
+  _lv.project(camera); _la.project(camera);
+  const x = (_lv.x + 1) / 2 * w, y = (1 - (_lv.y + 1) / 2) * h, cx = (_la.x + 1) / 2 * w;
+  let minX = 12, maxX = w - 12;
+  if(window.innerWidth >= 1080 && !document.body.classList.contains('focus-mode')){ minX = railEl.offsetLeft + railEl.offsetWidth + 16; maxX = consoleEl.offsetLeft - 16; }
+  const lw = leaderLabel.offsetWidth, side = x < cx ? -1 : 1;
+  let lx = side < 0 ? x - 170 - lw : x + 170;
+  lx = Math.max(minX, Math.min(maxX - lw, lx));
+  const ly = Math.max(48, Math.min(h - 120, y - 36));
+  const ex = lx + lw / 2 < x ? lx + lw : lx;
+  leaderLabel.style.left = lx + 'px'; leaderLabel.style.top = ly + 'px';
+  leaderLine.setAttribute('x1', x); leaderLine.setAttribute('y1', y); leaderLine.setAttribute('x2', ex); leaderLine.setAttribute('y2', ly);
+  leaderDot.setAttribute('cx', x); leaderDot.setAttribute('cy', y);
+  leaderSvg.style.opacity = facing ? 1 : 0.35;
+}
+
 /* =========================================================
    3. 互動：旋轉 + 縮放 + 平移 + 點擊選取
 ========================================================= */
 let userInteracted = false;
 let currentMuscle = null;
 let currentMode = 'explore';
-let visitedMuscles = new Set();
+/* 已探索的肌群記在這台裝置上，重新整理不會歸零 */
+let visitedMuscles = new Set((()=>{ try{ return JSON.parse(localStorage.getItem('muscle-visited') || '[]'); }catch(e){ return []; } })().filter(id=> muscleData[id]));
 let targetRotY = null, targetRotX = null;
 const activePointers = new Map(); // pointerId -> {x,y,button}
 
@@ -2472,7 +2665,7 @@ function updateHover(){
   const hits = raycaster.intersectObjects(visibleMuscleMeshes());
   if(hits.length){
     const p = hits[0].object.userData.part;
-    tooltipEl.innerHTML = `<b>${p.meta.zh}</b><span>${p.meta.en} · ${muscleData[p.id].name}</span>`;
+    tooltipEl.innerHTML = `<b>${p.meta.zh}</b><span>${muscleCode(baseKey(p.key))} · ${p.meta.en} · ${muscleData[p.id].name}</span>`;
     tooltipEl.style.left = (hoverPos.lx + 14) + 'px';
     tooltipEl.style.top = (hoverPos.ly + 14) + 'px';
     tooltipEl.classList.add('show');
@@ -2580,7 +2773,15 @@ function renderMuscleInfo(id){
   const specific = currentPart && currentPart.id === id;
   const det = specific ? MUSCLE_DETAIL[baseKey(currentPart.key)] : null;
   const lock = specific
-    ? `<div class="lock"><i class="lock-ico"></i><span><b>${currentPart.meta.zh}</b><small>${currentPart.meta.en}</small></span></div>` : '';
+    ? `<div class="lock"><i class="lock-ico"></i><span><b>${currentPart.meta.zh}</b><small>${muscleCode(baseKey(currentPart.key))} · ${currentPart.meta.en}</small></span></div>` : '';
+  /* 反查：哪些實驗協定會練到這裡（主要在前） */
+  const protos = EXERCISE_LIB.map(ex=> ({ex, role:protocolRole(ex, id, specific ? baseKey(currentPart.key) : null)})).filter(x=> x.role).sort((a, b)=> (a.role === 'p' ? 0 : 1) - (b.role === 'p' ? 0 : 1));
+  const protoHtml = `
+    <section class="mi-sec">
+      <h6>實驗協定 · 訓練${specific ? '這條肌肉' : '這個肌群'}的動作</h6>
+      ${protos.length ? `<div class="proto-list">${protos.map(({ex, role})=> `<button data-proto="${ex.id}"><span class="pc">${protocolCode(ex.id)}</span><b>${ex.name}</b><small><i class="key key-${role}"></i>${role === 'p' ? '主要發力' : '輔助穩定'}</small></button>`).join('')}</div>`
+        : '<p class="proto-none">目前的 14 項實驗協定沒有直接訓練到這裡，可以參考下面的常見訓練動作。</p>'}
+    </section>`;
   const detailHtml = det ? `
     <section class="mi-sec">
       <h6>這條肌肉</h6>
@@ -2588,14 +2789,15 @@ function renderMuscleInfo(id){
     </section>
     <h6 class="mi-sec-label">整個${d.name}</h6>` : '';
   infoEl.innerHTML = `
-    <span class="mi-region">${categoryLabels[d.category]}</span>
+    <span class="mi-region">${groupCode(id)} · ${categoryLabels[d.category]}</span>
     <h2>${d.name}</h2>
     <span class="en">${d.en}</span>
     ${lock}
     ${detailHtml}
     <p class="func">${d.func}</p>
+    ${protoHtml}
     <section class="mi-sec">
-      <h6>常見訓練動作</h6>
+      <h6>其他常見訓練動作</h6>
       <ul class="inline-list">${d.exercises.map(e=>'<li>'+e+'</li>').join('')}</ul>
     </section>
     <section class="mi-sec">
@@ -2604,7 +2806,7 @@ function renderMuscleInfo(id){
     </section>
     <p class="tip">${d.tip}</p>
     <section class="mi-sec">
-      <h6>問 AI 教練</h6>
+      <h6>問研究員</h6>
       <div class="ask-row">
         <button data-ask="訓練">怎麼練</button>
         <button data-ask="疼痛">為什麼會痠痛</button>
@@ -2620,6 +2822,7 @@ function renderMuscleInfo(id){
   `;
   infoEl.classList.remove('refresh'); void infoEl.offsetWidth; infoEl.classList.add('refresh');
   infoEl.scrollTop = 0;
+  infoEl.querySelectorAll('[data-proto]').forEach(b=> b.addEventListener('click', ()=>{ setMode('move'); selectExercise(b.dataset.proto); }));
   document.getElementById('factReroll').addEventListener('click', ()=>{
     document.getElementById('factText').textContent = d.facts[Math.floor(Math.random() * d.facts.length)];
   });
@@ -2627,12 +2830,12 @@ function renderMuscleInfo(id){
     btn.addEventListener('click', async ()=>{
       const ans = document.getElementById('inlineAnswer');
       ans.classList.add('active');
-      ans.innerHTML = '<div class="ai-loading"><span class="dots"><span></span><span></span><span></span></span>AI 教練思考中</div>';
+      ans.innerHTML = '<div class="ai-loading"><span class="dots"><span></span><span></span><span></span></span>研究員思考中</div>';
       const reply = await sendMessage(buildQuickQuestion(btn.dataset.ask, id));
       const live = document.getElementById('inlineAnswer');
       if(!live || currentMuscle !== id) return;
       live.innerHTML = reply
-        ? formatMessage(reply) + '<button class="link-btn" id="goChat">在 AI 教練繼續追問</button>'
+        ? formatMessage(reply) + '<button class="link-btn" id="goChat">到研究員分頁繼續追問</button>'
         : '<p>上一個問題還在回覆中，請稍等一下再問。</p>';
       const g = document.getElementById('goChat');
       if(g) g.addEventListener('click', ()=> setConsoleView('chat'));
@@ -2640,11 +2843,11 @@ function renderMuscleInfo(id){
   });
 }
 
-function updateProgressBadge(){
+function updateProgressBadge(justAdded){
   const badge = document.getElementById('progressBadge');
   const n = visitedMuscles.size, t = muscleOrder.length;
   if(badge){ badge.innerHTML = `<span class="pb-label">已探索 </span>${n} / ${t}`; badge.style.setProperty('--p', (n / t * 100).toFixed(1)); }
-  if(n === t) showToast('你已經探索完所有肌群');
+  if(n === t && justAdded) showToast('你已經探索完所有肌群');
 }
 
 let _toastTimer = null;
@@ -2666,7 +2869,7 @@ function showToast(text){
 function updatePeek(){
   if(!currentMuscle || currentMode !== 'explore'){ peekEl.classList.remove('on'); return; }
   const d = muscleData[currentMuscle], specific = currentPart && currentPart.id === currentMuscle;
-  peekEl.innerHTML = `<div><b>${specific ? currentPart.meta.zh : d.name}</b><span>${specific ? currentPart.meta.en : d.en}</span></div><button id="peekMore">看說明</button>`;
+  peekEl.innerHTML = `<div><b>${specific ? currentPart.meta.zh : d.name}</b><span>${specific ? muscleCode(baseKey(currentPart.key)) + ' · ' + currentPart.meta.en : groupCode(currentMuscle) + ' · ' + d.en}</span></div><button id="peekMore">看說明</button>`;
   peekEl.classList.add('on');
   document.getElementById('peekMore').addEventListener('click', ()=> consoleEl.scrollIntoView({behavior:'smooth', block:'start'}));
 }
@@ -2677,8 +2880,11 @@ function selectMuscle(id, part){
   currentPart = part || null;
   updateHighlight(id);
   renderMuscleInfo(id);
+  const seenBefore = visitedMuscles.size;
   visitedMuscles.add(id);
-  updateProgressBadge();
+  try{ localStorage.setItem('muscle-visited', JSON.stringify([...visitedMuscles])); }catch(e){}
+  updateProgressBadge(visitedMuscles.size > seenBefore);
+  setLeaderAnchor();
   focusOnMuscle(id);
   setConsoleView('info');
   updatePeek();
@@ -2691,6 +2897,7 @@ function selectMuscle(id, part){
 function clearSelection(){
   if(!currentMuscle) return;
   currentMuscle = null; currentPart = null;
+  setLeaderAnchor();
   updateHighlight(null);
   document.getElementById('muscleInfo').innerHTML = PLACEHOLDER_HTML;
   document.querySelectorAll('.legend button').forEach(b=> b.classList.remove('active'));
@@ -2709,7 +2916,7 @@ function renderLegend(){
     muscleOrder.filter(id=> muscleData[id].category === cat).forEach(id=>{
       const btn = document.createElement('button');
       btn.dataset.id = id;
-      btn.textContent = muscleData[id].name;
+      btn.innerHTML = `<span>${muscleData[id].name}</span><span class="lg-code">${groupCode(id)}</span>`;
       btn.classList.toggle('active', id === currentMuscle);
       btn.addEventListener('click', ()=>{
         if(currentMode === 'quiz') checkQuizAnswer(id);
@@ -2741,8 +2948,13 @@ syncRailToggle();
 ========================================================= */
 let quizQueue = [], quizIndex = 0, quizScore = 0, quizTarget = null, quizAwaitingNext = false;
 
+function primaryGroups(ex){ return new Set(ex.p.map(it=> muscleData[it] ? it : (labIndex().byBase[it] || {}).group).filter(Boolean)); }
+function secondaryGroups(ex){ return new Set(ex.s.map(it=> muscleData[it] ? it : (labIndex().byBase[it] || {}).group).filter(Boolean)); }
+/* 10 題：6 題「找出肌群」＋ 4 題「這個動作主要練哪裡」 */
 function startQuiz(){
-  quizQueue = [...muscleOrder].sort(()=> Math.random() - 0.5).slice(0, 10);
+  const finds = [...muscleOrder].sort(()=> Math.random() - 0.5).slice(0, 6).map(id=> ({type:'find', id}));
+  const protos = EXERCISE_LIB.filter(e=> primaryGroups(e).size).sort(()=> Math.random() - 0.5).slice(0, 4).map(ex=> ({type:'proto', ex}));
+  quizQueue = [...finds, ...protos].sort(()=> Math.random() - 0.5);
   quizIndex = 0; quizScore = 0; quizAwaitingNext = false;
   updateHighlight(null);
   document.querySelectorAll('.legend button').forEach(b=>b.classList.remove('active'));
@@ -2756,19 +2968,24 @@ function nextQuizQuestion(){
   renderQuizPrompt();
 }
 function renderQuizPrompt(){
-  const d = muscleData[quizTarget];
+  const q = quizTarget, round = `第 ${quizIndex+1} 題 / 共 ${quizQueue.length} 題`;
+  const body = q.type === 'find'
+    ? `<div class="quiz-round">${round} · 找出肌群</div>
+       <div class="quiz-prompt">請找出：<em>${muscleData[q.id].name}</em></div>
+       <div class="quiz-sub">在 3D 模型或肌群清單中，點選你認為對應的部位（${muscleData[q.id].en}）</div>`
+    : `<div class="quiz-round">${round} · ${protocolCode(q.ex.id)}</div>
+       <div class="quiz-prompt"><em>${q.ex.name}</em>主要練到哪裡？</div>
+       <div class="quiz-sub">點選任一個「主要發力」的肌群（${q.ex.en}），模型或清單都可以</div>`;
   document.getElementById('muscleInfo').innerHTML = `
     <div class="quiz-panel">
-      <div class="quiz-round">第 ${quizIndex+1} 題 / 共 ${quizQueue.length} 題</div>
-      <div class="quiz-prompt">請找出：<em>${d.name}</em></div>
-      <div class="quiz-sub">在 3D 模型或肌群清單中，點選你認為對應的部位(${d.en})</div>
+      ${body}
       <button class="hint-btn" id="quizHintBtn">給我一個提示</button>
       <div class="quiz-score-line mono">目前分數：${quizScore} / ${quizIndex}</div>
       <div id="quizFeedbackSlot"></div>
     </div>
   `;
   document.getElementById('quizHintBtn').addEventListener('click', function(){
-    this.textContent = '提示：' + d.func;
+    this.textContent = '提示：' + (q.type === 'find' ? muscleData[q.id].func : q.ex.cue);
     this.disabled = true;
   });
 }
@@ -2784,37 +3001,47 @@ function flashMuscle(id, isCorrect){
 }
 function checkQuizAnswer(id){
   if(quizAwaitingNext) return;
-  const slot = document.getElementById('quizFeedbackSlot');
-  if(id === quizTarget){
+  const slot = document.getElementById('quizFeedbackSlot'), q = quizTarget, name = muscleData[id].name;
+  const pg = q.type === 'proto' ? primaryGroups(q.ex) : null;
+  const correct = q.type === 'find' ? id === q.id : pg.has(id);
+  if(correct){
     quizScore++;
     quizAwaitingNext = true;
-    flashMuscle(id, true);
-    if(slot) slot.innerHTML = `<div class="quiz-feedback correct">答對了！這是「${muscleData[id].name}」。<button class="quiz-next-btn" id="quizNextBtn">下一題</button></div>`;
+    let msg;
+    if(q.type === 'find'){ flashMuscle(id, true); msg = `答對了！這是「${name}」。`; }
+    else {
+      paintExercise({p:[...pg], s:[...secondaryGroups(q.ex)]});   /* 把這個動作的主要（紅）／輔助（銀）肌群全部亮出來 */
+      msg = `答對了！${q.ex.name}的主要發力：${[...pg].map(g=> muscleData[g].name).join('、')}。`;
+    }
+    if(slot) slot.innerHTML = `<div class="quiz-feedback correct">${msg}<button class="quiz-next-btn" id="quizNextBtn">下一題</button></div>`;
     const nextBtn = document.getElementById('quizNextBtn');
     if(nextBtn) nextBtn.addEventListener('click', ()=>{ quizIndex++; nextQuizQuestion(); });
   } else {
     flashMuscle(id, false);
-    if(slot) slot.innerHTML = `<div class="quiz-feedback wrong">不對喔，這是「${muscleData[id].name}」，再試試看！</div>`;
+    const msg = q.type === 'find' ? `不對喔，這是「${name}」，再試試看！`
+      : secondaryGroups(q.ex).has(id) ? `「${name}」在${q.ex.name}裡是輔助穩定，再找找主要發力的！`
+      : `「${name}」不是${q.ex.name}的主要肌群，再試試看！`;
+    if(slot) slot.innerHTML = `<div class="quiz-feedback wrong">${msg}</div>`;
   }
 }
 function renderQuizResult(){
   const total = quizQueue.length;
-  const msg = quizScore === total ? '滿分！看來你已經很熟悉肌群位置了。'
-    : quizScore >= total - 3 ? '表現不錯，多練習幾次會更熟悉每個部位的位置。'
-    : '建議先回到探索模式多看看每個部位，再來挑戰一次！';
+  const msg = quizScore === total ? '滿分！肌群位置和動作都很熟了。'
+    : quizScore >= total - 3 ? '表現不錯，多練習幾次會更熟悉每個部位和動作。'
+    : '建議先回到標本檔案和實驗協定多看看，再來挑戰一次！';
   document.getElementById('muscleInfo').innerHTML = `
     <div class="quiz-panel quiz-result">
-      <div class="quiz-round">測驗完成</div>
+      <div class="quiz-round">檢定完成</div>
       <div class="big-score">${quizScore} / ${total}</div>
       <p>${msg}</p>
-      <button class="quiz-restart-btn" id="quizRestartBtn">再玩一次</button>
+      <button class="quiz-restart-btn" id="quizRestartBtn">再測一次</button>
     </div>
   `;
   document.getElementById('quizRestartBtn').addEventListener('click', startQuiz);
-  if(quizScore === total) showToast('滿分通過肌群小測驗');
+  if(quizScore === total) showToast('滿分通過 MUSCLE LAB 檢定');
 }
 
-/* console tabs: 說明 / 測驗 / 動作 / AI 教練 */
+/* console tabs: 標本檔案 / 檢定 / 實驗協定 / 研究員 */
 function setMode(mode){
   if(mode === currentMode){ setConsoleView('info'); return; }
   const prev = currentMode;
@@ -2935,6 +3162,7 @@ function animate(){
   if(userInteracted && !document.body.classList.contains('interacted')) document.body.classList.add('interacted');
   updateCamera();
   renderer.render(scene, camera);
+  updateLeader();
   updateRuler();
 }
 animate();
@@ -3005,7 +3233,7 @@ function formatMessage(text){
 function appendMessage(role, content, isTyping){
   const wrap = document.createElement('div');
   wrap.className = 'msg ' + role;
-  const tag = role === 'user' ? '你' : 'AI 教練';
+  const tag = role === 'user' ? '你' : '研究員';
   wrap.innerHTML = `<span class="role-tag mono">${tag}</span><div class="bubble">${isTyping ? '<div class="typing"><span></span><span></span><span></span></div>' : formatMessage(content)}</div>`;
   chatScroll.appendChild(wrap);
   chatScroll.scrollTop = chatScroll.scrollHeight;
