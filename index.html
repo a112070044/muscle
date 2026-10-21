@@ -1323,6 +1323,10 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(chamberEl.clientWidth, chamberEl.clientHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+/* 陰影只在模型真的有變（轉動、做動作、體型、鼓起、圖層）時才重畫，靜止時省下一半的繪製量 */
+renderer.shadowMap.autoUpdate = false;
+let _shadowSig = '';
+function markShadowsDirty(){ _shadowSig = ''; }
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = TH.exposure;
@@ -1599,6 +1603,7 @@ async function loadAnatomyModels(){
     updateHighlight(currentMuscle);
     renderer.compile(scene, camera);
     modelReady = true; window.modelReadyFlag = true;
+    markShadowsDirty();
     applyDeepLink();
     // reflections are the most expensive step, so they are built after the body is already on screen
     setTimeout(()=>{ try{ buildStudioEnv(); }catch(e){ console.warn('env skipped', e); } }, 600);
@@ -1613,6 +1618,7 @@ async function loadAnatomyModels(){
 /* ---- layer toggles: bones / muscles / x-ray ---- */
 const layerState = { bones:true, muscles:true, xray:false };
 function applyLayers(){
+  markShadowsDirty();
   if(boneMesh) boneMesh.visible = layerState.bones;
   clickableParts.forEach(p=>{
     p.mesh.visible = layerState.muscles;
@@ -2394,14 +2400,14 @@ function snapshotViews(){
   updateCamera();
   for(const ry of [0, Math.PI]){
     bodyGroup.rotation.set(0, ry, 0); bodyGroup.updateMatrixWorld(true);
-    renderer.render(scene, camera);
+    renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
     const c = document.createElement('canvas'); c.width = canvas.width; c.height = canvas.height;
     c.getContext('2d').drawImage(canvas, 0, 0);
     shots.push(c);
   }
   bodyGroup.rotation.copy(saved.rot); viewTarget.copy(saved.target); camDist = saved.dist;
   if(saved.view) camera.setViewOffset(saved.view.fullWidth, saved.view.fullHeight, saved.view.offsetX, saved.view.offsetY, saved.view.width, saved.view.height);
-  updateCamera(); renderer.render(scene, camera);
+  updateCamera(); markShadowsDirty(); updateShadowIfNeeded(); renderer.render(scene, camera);
   return shots;
 }
 function loadImg(src){ return new Promise(r=>{ const i = new Image(); i.onload = ()=> r(i); i.onerror = ()=> r(null); i.src = src; }); }
@@ -2918,7 +2924,16 @@ function clearFace(){
 
 
 /* ---- 日間／夜間切換 ---- */
+function updateShadowIfNeeded(){
+  const f = x=> Math.round(x * 1e4);
+  const parts = [f(bodyGroup.rotation.x), f(bodyGroup.rotation.y), f(modelRoot.scale.y), f(modelRoot.position.y), layerState.muscles, layerState.bones, layerState.xray, PROPS.map(m=> m.visible ? 1 : 0).join('')];
+  for(const k in POSE_U){ const v = POSE_U[k].value; parts.push(v.toArray().map(f).join(',')); }
+  bulgeParts.forEach(b=> parts.push(f(b.part.bulge.uBulgeC.value.w * 10)));
+  const sig = parts.join('|');
+  if(sig !== _shadowSig){ _shadowSig = sig; renderer.shadowMap.needsUpdate = true; }
+}
 function setLabTheme(name){
+  markShadowsDirty();
   TH = LAB_THEMES[name];
   document.documentElement.dataset.theme = name;
   document.getElementById('themeColorMeta').setAttribute('content', name === 'light' ? '#ECEBE7' : '#0B0B0B');
@@ -4092,6 +4107,7 @@ function animate(){
   if(Math.abs(shiftTarget - shiftCur) > 0.05){ shiftCur += (shiftTarget - shiftCur) * 0.12; applyViewOffset(); }
   if(userInteracted && !document.body.classList.contains('interacted')) document.body.classList.add('interacted');
   updateCamera();
+  updateShadowIfNeeded();
   renderer.render(scene, camera);
   updateLeader();
   updateRuler();
