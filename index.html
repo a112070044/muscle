@@ -4076,15 +4076,16 @@ let quizQueue = [], quizIndex = 0, quizScore = 0, quizTarget = null, quizAwaitin
 
 function primaryGroups(ex){ return new Set(ex.p.map(it=> muscleData[it] ? it : (labIndex().byBase[it] || {}).group).filter(Boolean)); }
 function secondaryGroups(ex){ return new Set(ex.s.map(it=> muscleData[it] ? it : (labIndex().byBase[it] || {}).group).filter(Boolean)); }
-/* 10 題：5 題「找出肌群」、2 題「這個動作主要練哪裡」、2 題「看動作猜名稱」、1 題「這個伸展拉到哪裡」 */
+/* 10 題：4 題「找出肌群」、2 題「這個動作主要練哪裡」、2 題「看動作猜名稱」、1 題「這個伸展拉到哪裡」、1 題「關節動作的主動肌」 */
 const shuffled = list=> list.map(v=> [Math.random(), v]).sort((a, b)=> a[0] - b[0]).map(x=> x[1]);
 function startQuiz(){
-  const finds = shuffled(muscleOrder).slice(0, 5).map(id=> ({type:'find', id}));
+  const finds = shuffled(muscleOrder).slice(0, 4).map(id=> ({type:'find', id}));
+  const joints = shuffled(JOINT_LIB).slice(0, 1).map(ex=> ({type:'joint', ex}));
   const exs = shuffled(EXERCISE_LIB.filter(e=> primaryGroups(e).size));
   const protos = exs.slice(0, 2).map(ex=> ({type:'proto', ex}));
   const watches = exs.slice(2, 4).map(ex=> ({type:'watch', ex, options:shuffled([ex, ...shuffled(EXERCISE_LIB.filter(o=> o !== ex && o.pose !== ex.pose)).slice(0, 3)])}));
   const stretches = shuffled(STRETCH_DEMOS).slice(0, 1).map(ex=> ({type:'stretch', ex}));
-  quizQueue = shuffled([...finds, ...protos, ...watches, ...stretches]);
+  quizQueue = shuffled([...finds, ...protos, ...watches, ...stretches, ...joints]);
   quizIndex = 0; quizScore = 0; quizAwaitingNext = false;
   updateHighlight(null);
   document.querySelectorAll('.legend button').forEach(b=>b.classList.remove('active'));
@@ -4118,6 +4119,10 @@ function renderQuizPrompt(){
        <div class="quiz-prompt">模型正在做哪個動作？</div>
        <div class="quiz-sub">看看 3D 人體的動作，從下面四個選一個</div>
        <div class="quiz-options">${q.options.map(o=> `<button data-opt="${o.id}">${o.name}<small>${o.en}</small></button>`).join('')}</div>`
+    : q.type === 'joint'
+    ? `<div class="quiz-round">${round} · 肌動學 · ${protocolCode(q.ex.id)}</div>
+       <div class="quiz-prompt"><em>${q.ex.name}</em>的主動肌在哪裡？</div>
+       <div class="quiz-sub">模型正在做這個關節動作，點選主要負責的肌群（${q.ex.en}）</div>`
     : q.type === 'stretch'
     ? `<div class="quiz-round">${round} · ${protocolCode(q.ex.id)}</div>
        <div class="quiz-prompt"><em>${q.ex.name}</em>主要拉長哪裡？</div>
@@ -4134,7 +4139,7 @@ function renderQuizPrompt(){
     </div>
   `;
   document.getElementById('quizHintBtn').addEventListener('click', function(){
-    this.textContent = '提示：' + (q.type === 'find' ? muscleData[q.id].func : q.type === 'watch' ? '主要練到' + [...primaryGroups(q.ex)].map(g=> muscleData[g].name).join('、') : q.type === 'stretch' ? q.ex.how : q.ex.cue);
+    this.textContent = '提示：' + (q.type === 'find' ? muscleData[q.id].func : q.type === 'watch' ? '主要練到' + [...primaryGroups(q.ex)].map(g=> muscleData[g].name).join('、') : q.type === 'stretch' ? q.ex.how : q.type === 'joint' ? '日常例子：' + q.ex.example : q.ex.cue);
     this.disabled = true;
   });
   document.querySelectorAll('[data-opt]').forEach(b=> b.addEventListener('click', ()=> checkQuizOption(b)));
@@ -4184,6 +4189,7 @@ function checkQuizAnswer(id){
     else {
       paintExercise({p:[...pg], s:[...secondaryGroups(q.ex)]});   /* 把這個動作的主要（紅）／輔助（銀）肌群全部亮出來 */
       msg = q.type === 'stretch' ? `答對了！${q.ex.name}主要拉長：${[...pg].map(g=> muscleData[g].name).join('、')}。`
+        : q.type === 'joint' ? `答對了！${q.ex.name}的主動肌：${[...pg].map(g=> muscleData[g].name).join('、')}。`
         : `答對了！${q.ex.name}的主要發力：${[...pg].map(g=> muscleData[g].name).join('、')}。`;
     }
     if(slot) slot.innerHTML = `<div class="quiz-feedback correct">${msg}<button class="quiz-next-btn" id="quizNextBtn">下一題</button></div>`;
@@ -4192,6 +4198,9 @@ function checkQuizAnswer(id){
   } else {
     flashMuscle(id, false);
     const msg = q.type === 'find' ? `不對喔，這是「${name}」，再試試看！`
+      : q.type === 'joint' ? (new Set(q.ex.ant.map(it=> muscleData[it] ? it : (labIndex().byBase[it] || {}).group)).has(id)
+          ? `「${name}」是拮抗肌，做${q.ex.name}時它在另一側放鬆、被拉長，再找找主動肌！`
+          : secondaryGroups(q.ex).has(id) ? `「${name}」是協同肌，會幫忙，但不是主要負責的，再找找！` : `「${name}」不是${q.ex.name}的主動肌，再試試看！`)
       : q.type === 'stretch' ? (secondaryGroups(q.ex).has(id) ? `「${name}」也會拉到一點，但不是主要的，再找找！` : `「${name}」不是${q.ex.name}主要拉長的地方，再試試看！`)
       : secondaryGroups(q.ex).has(id) ? `「${name}」在${q.ex.name}裡是輔助穩定，再找找主要發力的！`
       : `「${name}」不是${q.ex.name}的主要肌群，再試試看！`;
