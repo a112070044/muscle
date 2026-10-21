@@ -459,7 +459,7 @@
   @media (pointer: coarse){
     .ghost-btn{min-height:44px; min-width:44px; padding:0 12px;}
     .seg button{min-width:44px;}
-    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn{min-height:44px;}
+    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn{min-height:44px;}
     .rail-search input{height:44px; font-size:16px;}
   }
   @media (max-width:760px){ .leader, .leader-label{display:none;} }
@@ -481,10 +481,36 @@
   .ex-head h3{font-size:22px; font-weight:600; line-height:1.3;}
   .ex-head .en{margin:0;}
   /* 實驗協定分頁：訓練／伸展 */
-  .move-tabs{display:grid; grid-template-columns:1fr 1fr; gap:2px; padding:3px; margin:12px 0 4px; background:var(--seg-bg); border-radius:10px;}
+  .move-tabs{display:grid; grid-template-columns:repeat(3, 1fr); gap:2px; padding:3px; margin:12px 0 4px; background:var(--seg-bg); border-radius:10px;}
   .move-tabs button{background:none; border:none; border-radius:8px; padding:9px 10px; color:var(--text-soft); font:600 13.5px var(--sans); cursor:pointer;}
   .move-tabs button small{font:500 10px var(--mono); letter-spacing:.14em; color:var(--text-faint); margin-left:4px;}
   .move-tabs button.on{background:var(--seg-active); color:var(--text);}
+  /* 訓練紀錄 */
+  .log-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:12px 0 0;}
+  .log-btn{padding:8px 14px; border-radius:8px; border:1px solid var(--scan); background:none; color:var(--text); font:600 13px var(--sans); cursor:pointer;}
+  .log-btn:hover{background:var(--sel);}
+  .log-btn.done{animation:logPop .5s var(--ease);}
+  @keyframes logPop{0%{background:var(--scan); color:#fff;} 100%{background:none;}}
+  .log-note{font-size:12.5px; color:var(--text-faint);}
+  .log-note b{color:var(--text); font-weight:600;}
+  .log-note .link-btn{margin:0 0 0 2px; font-size:12.5px; color:var(--text-soft);}
+  .log-sum{margin:14px 0 6px; font-size:14px; color:var(--text-soft);}
+  .log-sum b{font:600 22px var(--display); color:var(--text); margin-right:2px;}
+  .log-sum span{font:500 10.5px var(--mono); letter-spacing:.12em; color:var(--text-faint); margin-left:6px;}
+  .heat-legend{display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--text-faint);}
+  .heat-legend i{flex:1; max-width:180px; height:6px; border-radius:3px; background:linear-gradient(90deg, var(--seg-active), var(--scan));}
+  .heat-bars{display:grid; gap:4px;}
+  .heat-bars button{display:grid; grid-template-columns:7.5em 1fr 2.6em; align-items:center; gap:10px; padding:6px 4px; border:none; background:none; color:var(--text); font-size:13.5px; text-align:left; cursor:pointer; border-radius:6px;}
+  .heat-bars button:hover{background:var(--hover);}
+  .heat-bars i{height:6px; border-radius:3px; background:var(--seg-bg); overflow:hidden;}
+  .heat-bars i b{display:block; height:100%; background:var(--scan); border-radius:3px;}
+  .heat-bars small{font:500 12px var(--mono); color:var(--text-soft); text-align:right;}
+  .log-list{list-style:none; display:grid; gap:2px;}
+  .log-list li{display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .log-list time{font:400 11.5px var(--mono); color:var(--text-faint);}
+  .log-list button{width:28px; height:28px; border:none; border-radius:6px; background:none; color:var(--text-faint); font-size:16px; cursor:pointer;}
+  .log-list button:hover{background:var(--hover); color:var(--text);}
+  .log-empty{margin-top:14px; padding:16px; border:1px dashed var(--line-hi); border-radius:10px; font-size:13.5px; line-height:1.7; color:var(--text-soft);}
   /* 肌肉說明裡的伸展卡片 */
   .stretch-list{display:grid; gap:8px;}
   .st-card{padding:11px 13px; border:1px solid var(--line); border-radius:10px; background:var(--seg-bg);}
@@ -2189,17 +2215,117 @@ function exerciseLabel(item){
   const part = clickableParts.find(p=> baseKey(p.key) === item);
   return part ? part.meta.zh : item;
 }
-let moveTab = 'train';   /* 實驗協定分頁：訓練動作 或 伸展 */
+/* ---- 訓練紀錄：按「記錄一次」存在這台裝置；熱圖用最近 7 天的量替肌肉染色 ---- */
+const LOG_KEY = 'muscle-log', WEEK_MS = 7 * 864e5;
+let trainLog = [];
+try{ trainLog = (JSON.parse(localStorage.getItem(LOG_KEY) || '[]') || []).filter(e=> e && typeof e.t === 'number' && EXERCISE_LIB.some(x=> x.id === e.id)); }catch(e){ trainLog = []; }
+function saveLog(){ try{ localStorage.setItem(LOG_KEY, JSON.stringify(trainLog.slice(-500))); }catch(e){} }
+const weekLog = ()=> trainLog.filter(e=> Date.now() - e.t < WEEK_MS);
+const weekCount = id=> weekLog().filter(e=> e.id === id).length;
+/* 每一筆紀錄：主要發力的肌肉 +1，輔助穩定 +0.5 */
+function heatByPart(){
+  const heat = new Map();
+  weekLog().forEach(e=>{
+    const ex = EXERCISE_LIB.find(x=> x.id === e.id);
+    clickableParts.forEach(p=>{ const r = exerciseRole(p, ex); if(r) heat.set(p, (heat.get(p) || 0) + (r === 'p' ? 1 : 0.5)); });
+  });
+  return heat;
+}
+function heatByGroup(){
+  const g = {};
+  weekLog().forEach(e=>{
+    const ex = EXERCISE_LIB.find(x=> x.id === e.id), roles = {};
+    clickableParts.forEach(p=>{ const r = exerciseRole(p, ex); if(r && roles[p.id] !== 'p') roles[p.id] = r; });
+    Object.entries(roles).forEach(([id, r])=>{ g[id] = (g[id] || 0) + (r === 'p' ? 1 : 0.5); });
+  });
+  return g;
+}
+function paintHeat(){
+  const heat = heatByPart(), top = Math.max(3, ...heat.values()), A = new THREE.Color(TH.accent);
+  glowParts = [];
+  setBulgeParts(null);
+  clickableParts.forEach(p=>{
+    const v = heat.get(p) || 0, m = p.material, t = v ? 0.3 + 0.7 * Math.min(1, v / top) : 0;
+    _hlColor.setHex(p.baseColor);
+    if(t){ if(p.meta.k !== 't') _hlColor.lerp(A, t); m.emissive.copy(A); p._baseEmissive = 0.04 + 0.14 * t; }
+    else { _hlColor.lerp(_ghost, TH.ghostMixEx); m.emissive.setHex(0x000000); p._baseEmissive = 0; }
+    m.color.copy(_hlColor); m.emissiveIntensity = p._baseEmissive;
+  });
+  if(boneMesh) boneMesh.material.color.setHex(BONE_COLOR).multiplyScalar(TH.boneDim);
+}
+const MAJOR_GROUPS = ['chest','lats','rhomboids','shoulders','biceps','triceps','abs','glutes','quads','hamstrings','calf'];
+function relTime(t){
+  const d = new Date(t), now = new Date(), hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  const days = Math.round((new Date(now.toDateString()) - new Date(d.toDateString())) / 864e5);
+  return days === 0 ? '今天 ' + hm : days === 1 ? '昨天 ' + hm : days + ' 天前';
+}
+function renderLogPanel(infoEl){
+  const week = weekLog(), g = heatByGroup(), ranked = Object.entries(g).sort((a, b)=> b[1] - a[1]);
+  const max = ranked.length ? ranked[0][1] : 1, fmt = v=> (Math.round(v * 10) / 10).toString();
+  const missing = MAJOR_GROUPS.filter(id=> !g[id]);
+  const suggest = missing.map(id=> ({id, ex:EXERCISE_LIB.find(ex=> protocolRole(ex, id, null) === 'p')})).filter(x=> x.ex);
+  const recent = trainLog.slice(-12).reverse();
+  return week.length ? `
+    <div class="log-sum"><b>${week.length}</b> 次訓練 · <b>${ranked.length}</b> 個肌群 <span>最近 7 天</span></div>
+    <div class="heat-legend" aria-hidden="true"><span>少</span><i></i><span>多</span></div>
+    <section class="mi-sec">
+      <h6>練最多的部位</h6>
+      <div class="heat-bars">${ranked.slice(0, 8).map(([id, v])=> `<button data-heat-go="${id}"><span>${muscleData[id].name}</span><i><b style="width:${(v / max * 100).toFixed(0)}%"></b></i><small>${fmt(v)}</small></button>`).join('')}</div>
+    </section>
+    ${missing.length ? `<section class="mi-sec">
+      <h6>這週還沒練到</h6>
+      <div class="proto-list">${suggest.map(({id, ex})=> `<button data-proto="${ex.id}"><span class="pc">${muscleData[id].name}</span><b>${ex.name}</b><small>${protocolCode(ex.id)}</small></button>`).join('')}</div>
+    </section>` : '<p class="tip">這週主要肌群都練到了，記得安排休息日讓肌肉恢復。</p>'}
+    <section class="mi-sec">
+      <h6>最近的紀錄</h6>
+      <ul class="log-list">${recent.map(e=> { const ex = EXERCISE_LIB.find(x=> x.id === e.id); return `<li><span>${ex.name}</span><time>${relTime(e.t)}</time><button data-del="${e.t}" aria-label="刪除這筆紀錄">×</button></li>`; }).join('')}</ul>
+      <button class="link-btn" id="logClear">清除全部紀錄</button>
+    </section>` : `
+    <div class="log-empty">還沒有紀錄。到「訓練」選一個動作，按「＋ 記錄一次」，這裡就會出現本週的訓練熱圖。</div>`;
+}
+function bindLogPanel(infoEl){
+  infoEl.querySelectorAll('[data-heat-go]').forEach(b=> b.addEventListener('click', ()=>{ setMode('explore'); selectMuscle(b.dataset.heatGo); }));
+  infoEl.querySelectorAll('[data-proto]').forEach(b=> b.addEventListener('click', ()=> selectExercise(b.dataset.proto)));
+  infoEl.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', ()=>{
+    const t = +b.dataset.del;
+    trainLog = trainLog.filter(e=> e.t !== t); saveLog(); renderMovePanel(true);
+  }));
+  const clr = infoEl.querySelector('#logClear');
+  if(clr) clr.addEventListener('click', ()=>{
+    if(!window.confirm('確定要清除這台裝置上的所有訓練紀錄嗎？')) return;
+    trainLog = []; saveLog(); renderMovePanel(true);
+  });
+}
+
+let moveTab = 'train';   /* 實驗協定分頁：訓練動作、伸展、紀錄 */
 function renderMovePanel(noSelect){
-  const infoEl = document.getElementById('muscleInfo'), st = moveTab === 'stretch';
+  const infoEl = document.getElementById('muscleInfo'), st = moveTab === 'stretch', lg = moveTab === 'log';
   const list = st ? STRETCH_DEMOS : EXERCISE_LIB;
+  const tab = (id, zh, en)=> `<button role="tab" data-mtab="${id}" aria-selected="${moveTab === id}" class="${moveTab === id ? 'on' : ''}">${zh} <small>${en}</small></button>`;
+  const tabs = `<div class="move-tabs" role="tablist" aria-label="動作類型">${tab('train', '訓練', 'TRAIN')}${tab('stretch', '伸展', 'STRETCH')}${tab('log', '紀錄', 'LOG')}</div>`;
+  if(lg){
+    /* 紀錄分頁：模型回到站姿，顯示熱圖 */
+    poseAnim.def = null; poseAnim.playing = false;
+    infoEl.innerHTML = `
+      <span class="mi-region">動作連動</span>
+      <h2>本週訓練熱圖</h2>
+      ${tabs}
+      <p class="func">在訓練動作裡按「記錄一次」，模型會依最近 7 天的訓練量替肌肉染色，越紅代表練得越多（主要發力算 1、輔助穩定算 0.5）。紀錄只存在這台裝置。</p>
+      ${renderLogPanel(infoEl)}`;
+    infoEl.classList.remove('refresh'); void infoEl.offsetWidth; infoEl.classList.add('refresh');
+    infoEl.scrollTop = 0;
+    infoEl.querySelectorAll('[data-mtab]').forEach(b=> b.addEventListener('click', ()=>{ if(b.dataset.mtab !== moveTab){ moveTab = b.dataset.mtab; renderMovePanel(); } }));
+    bindLogPanel(infoEl);
+    paintHeat();
+    targetRotY = 0; targetRotX = 0;   /* 正面看全身；背面可用工具列切換 */
+    focusWholeBody();
+    syncHash();
+    return;
+  }
   infoEl.innerHTML = `
     <span class="mi-region">動作連動</span>
     <h2>${st ? '選一個伸展動作' : '選一個訓練動作'}</h2>
-    <div class="move-tabs" role="tablist" aria-label="動作類型">
-      <button role="tab" data-mtab="train" aria-selected="${!st}" class="${st ? '' : 'on'}">訓練 <small>TRAIN</small></button>
-      <button role="tab" data-mtab="stretch" aria-selected="${st}" class="${st ? 'on' : ''}">伸展 <small>STRETCH</small></button>
-    </div>
+    ${tabs}
     <p class="func">${st
       ? '3D 人體會示範伸展，被拉長的肌肉會亮起並變扁：<i class="key key-p"></i>主要伸展　<i class="key key-s"></i>也會拉到。'
       : '3D 人體會跟著做動作，並亮起參與的肌肉：<i class="key key-p"></i>主要發力　<i class="key key-s"></i>輔助穩定。主要發力的肌肉縮短時會鼓起來，被拉長時會變扁。'}</p>
@@ -2211,17 +2337,18 @@ function renderMovePanel(noSelect){
   infoEl.querySelectorAll('[data-mtab]').forEach(b=> b.addEventListener('click', ()=>{
     if(b.dataset.mtab === moveTab) return;
     moveTab = b.dataset.mtab;
-    renderMovePanel(true);
+    renderMovePanel();
   }));
   const cur = currentExercise && protocolById(currentExercise);
   if(!noSelect && cur && (cur.kind === 'stretch') === st) selectExercise(currentExercise, true);
+  else if(!noSelect){ stopExercise(); paintExercise(null); syncHash(); }
 }
 function selectExercise(id, keepView){
   const ex = protocolById(id);
   if(!ex || (ex.kind === 'stretch' && !ex.pose)) return;
   const isStretch = ex.kind === 'stretch';
   /* 從別的地方（肌肉說明、分享連結）點進來時，先切到對的分頁 */
-  if(isStretch !== (moveTab === 'stretch')){ moveTab = isStretch ? 'stretch' : 'train'; renderMovePanel(true); }
+  if(isStretch !== (moveTab === 'stretch') || moveTab === 'log'){ moveTab = isStretch ? 'stretch' : 'train'; renderMovePanel(true); }
   currentExercise = id;
   userInteracted = true;
   document.querySelectorAll('.ex-grid button').forEach(b=> b.classList.toggle('active', b.dataset.ex === id));
@@ -2242,12 +2369,23 @@ function selectExercise(id, keepView){
     <div class="ex-kicker">${protocolCode(ex.id)}</div>
     <div class="ex-head"><h3>${ex.name}</h3><span class="en">${ex.en}</span><button class="share-btn" data-share aria-label="分享這個動作的連結"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.5V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4.5h9V8.5"/></svg>分享</button></div>
     <div class="ex-phase" id="exPhase" aria-hidden="true"><span class="ph-end">${isStretch ? '放鬆' : '拉長'}</span><span class="ph-bar"><i></i></span><span class="ph-end">${isStretch ? '伸展' : '收縮'}</span><span class="ph-text">${isStretch ? '放鬆 ↔ 伸展' : '收縮 ↔ 拉長'}</span></div>
+    ${isStretch ? '' : `<div class="log-row"><button class="log-btn" data-log>＋ 記錄一次</button><span class="log-note">本週 <b data-log-count>${weekCount(ex.id)}</b> 次 · <button class="link-btn" data-log-view>看訓練熱圖</button></span></div>`}
     <div class="ex-ctrl"><button id="exPlay">${poseAnim.playing ? '暫停' : '播放'}</button><span class="speed" role="group" aria-label="播放速度">${[0.5, 1].map(v=> `<button data-speed="${v}" class="${(poseAnim.speed || 1) === v ? 'on' : ''}" aria-pressed="${(poseAnim.speed || 1) === v}">${v}×</button>`).join('')}</span><span>模型動作為簡化示意，不是標準姿勢教學</span></div>
     <section class="mi-sec"><h6><i class="key key-p"></i>${isStretch ? '主要伸展' : '主要發力'}</h6>${chips(ex.p, 'p')}</section>
     ${ex.s.length ? `<section class="mi-sec"><h6><i class="key key-s"></i>${isStretch ? '也會拉到' : '輔助穩定'}</h6>${chips(ex.s, 's')}</section>` : ''}
     <p class="tip">${isStretch ? ex.how : ex.cue}</p>
     <p class="ex-note">${isStretch ? STRETCH_TIP + '<br>' : ''}點上面的肌肉名稱，可以跳到它的說明。</p>`;
   slot.querySelector('[data-share]').addEventListener('click', shareCurrent);
+  const logBtn = slot.querySelector('[data-log]');
+  if(logBtn) logBtn.addEventListener('click', ()=>{
+    trainLog.push({id:ex.id, t:Date.now()}); saveLog();
+    const n = weekCount(ex.id);
+    slot.querySelector('[data-log-count]').textContent = n;
+    logBtn.classList.remove('done'); void logBtn.offsetWidth; logBtn.classList.add('done');
+    showToast('已記錄：' + ex.name + '（本週第 ' + n + ' 次）');
+  });
+  const logView = slot.querySelector('[data-log-view]');
+  if(logView) logView.addEventListener('click', ()=>{ moveTab = 'log'; renderMovePanel(); });
   slot.querySelectorAll('[data-speed]').forEach(b=> b.addEventListener('click', ()=>{
     poseAnim.speed = +b.dataset.speed;
     slot.querySelectorAll('[data-speed]').forEach(x=>{ const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
@@ -2493,7 +2631,7 @@ function setLabTheme(name){
   scene.fog.color.setHex(TH.fog);
   _ghost.setHex(TH.ghost);
   clickableParts.forEach(p=>{ p.baseColor = p.meta.k === 't' ? TENDON_COLOR : MUSCLE_RED; });
-  if(currentMode === 'move') paintExercise(EXERCISE_LIB.find(e=> e.id === currentExercise) || null);
+  if(currentMode === 'move'){ if(moveTab === 'log') paintHeat(); else paintExercise((currentExercise && protocolById(currentExercise)) || null); }
   else updateHighlight(currentMode === 'explore' ? currentMuscle : null);
   const btn = document.getElementById('themeBtn');
   btn.innerHTML = name === 'dark' ? '☀<span class="tb-label"> 日間</span>' : '☾<span class="tb-label"> 夜間</span>';
@@ -2508,7 +2646,7 @@ document.getElementById('themeBtn').innerHTML = document.documentElement.dataset
   const label = document.getElementById('labEnterText'), status = document.getElementById('liStatus');
   let seen = false; try{ seen = sessionStorage.getItem('lab-entered') === '1'; }catch(e){}
   /* 從分享連結進來：直接看到分享的內容，入口畫面和導覽這次先不出現 */
-  const linked = /^#(p|m|g|s)=/.test(location.hash);
+  const linked = /^#((p|m|g|s)=|log$)/.test(location.hash);
   if(linked && !seen){ seen = true; try{ sessionStorage.setItem('lab-entered', '1'); }catch(e){} }
   if(seen && !linked){
     const wait = setInterval(()=>{ if(window.modelReadyFlag){ clearInterval(wait); setTimeout(()=> maybeStartTour(), 600); } }, 300);
@@ -2734,7 +2872,11 @@ function protocolRole(ex, groupId, base){
 const SITE_URL = 'https://a112070044.github.io/muscle/';
 let deepLinkApplied = false;
 function linkHash(){
-  if(currentMode === 'move'){ const e = currentExercise && protocolById(currentExercise); return e ? (e.kind === 'stretch' ? 's=' : 'p=') + e.id : ''; }
+  if(currentMode === 'move'){
+    if(moveTab === 'log') return 'log';
+    const e = currentExercise && protocolById(currentExercise);
+    return e && poseAnim.def ? (e.kind === 'stretch' ? 's=' : 'p=') + e.id : '';
+  }
   if(currentMode !== 'explore' || !currentMuscle) return '';
   return currentPart && currentPart.id === currentMuscle ? 'm=' + baseKey(currentPart.key) : 'g=' + currentMuscle;
 }
@@ -2746,6 +2888,7 @@ function syncHash(){
 }
 function parseLink(hash){
   const q = new URLSearchParams(String(hash || '').replace(/^#/, ''));
+  if(String(hash).replace(/^#/, '') === 'log') return {type:'log'};
   const p = q.get('p'), m = q.get('m'), g = q.get('g'), st = q.get('s');
   if(p && EXERCISE_LIB.some(e=> e.id === p)) return {type:'protocol', id:p};
   if(st && STRETCH_DEMOS.some(e=> e.id === st)) return {type:'protocol', id:st};
@@ -2755,6 +2898,7 @@ function parseLink(hash){
 }
 function openLink(link){
   if(!link) return false;
+  if(link.type === 'log'){ moveTab = 'log'; if(currentMode === 'move') renderMovePanel(); else setMode('move'); return true; }
   if(link.type === 'protocol'){
     setMode('move'); selectExercise(link.id);
     /* 電腦版：資訊欄直接捲到這個動作的說明 */
