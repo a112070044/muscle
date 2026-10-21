@@ -235,6 +235,11 @@
   @keyframes swap{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
   .placeholder{color:var(--text-soft); font-size:14.5px; line-height:1.8;}
   .mi-region{font-size:12px; color:var(--text-faint);}
+  /* 分享按鈕：資訊卡右上角 */
+  .share-btn{float:right; display:inline-flex; align-items:center; gap:6px; margin:-4px 0 0 10px; padding:6px 11px; border-radius:8px; border:1px solid var(--line-hi); background:var(--seg-bg); color:var(--text-soft); font:500 12px var(--sans); cursor:pointer;}
+  .share-btn:hover{color:var(--text); border-color:var(--text-faint);}
+  .share-btn svg{width:13px; height:13px;}
+  .ex-head .share-btn{margin:0 0 0 auto; align-self:center; float:none;}
   .muscle-info h2{font-size:30px; line-height:1.2; font-weight:600; margin:4px 0 2px; letter-spacing:.01em;}
   .en{display:block; font:400 12.5px var(--mono); color:var(--text-soft); margin-bottom:16px;}
   .lock{display:flex; gap:11px; align-items:flex-start; padding:10px 13px; margin-bottom:16px; background:var(--ice-dim); border-left:2px solid var(--scan); font-size:14px;}
@@ -1508,6 +1513,7 @@ async function loadAnatomyModels(){
     updateHighlight(currentMuscle);
     renderer.compile(scene, camera);
     modelReady = true; window.modelReadyFlag = true;
+    applyDeepLink();
     // reflections are the most expensive step, so they are built after the body is already on screen
     setTimeout(()=>{ try{ buildStudioEnv(); }catch(e){ console.warn('env skipped', e); } }, 600);
     document.body.classList.add('ready');
@@ -2051,13 +2057,14 @@ function selectExercise(id, keepView){
   const slot = document.getElementById('exDetail');
   slot.innerHTML = `
     <div class="ex-kicker">${protocolCode(ex.id)}</div>
-    <div class="ex-head"><h3>${ex.name}</h3><span class="en">${ex.en}</span></div>
+    <div class="ex-head"><h3>${ex.name}</h3><span class="en">${ex.en}</span><button class="share-btn" data-share aria-label="分享這個動作的連結"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.5V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4.5h9V8.5"/></svg>分享</button></div>
     <div class="ex-phase" id="exPhase" aria-hidden="true"><span class="ph-end">拉長</span><span class="ph-bar"><i></i></span><span class="ph-end">收縮</span><span class="ph-text">收縮 ↔ 拉長</span></div>
     <div class="ex-ctrl"><button id="exPlay">${poseAnim.playing ? '暫停' : '播放'}</button><span class="speed" role="group" aria-label="播放速度">${[0.5, 1].map(v=> `<button data-speed="${v}" class="${(poseAnim.speed || 1) === v ? 'on' : ''}" aria-pressed="${(poseAnim.speed || 1) === v}">${v}×</button>`).join('')}</span><span>模型動作為簡化示意，不是標準姿勢教學</span></div>
     <section class="mi-sec"><h6><i class="key key-p"></i>主要發力</h6>${chips(ex.p, 'p')}</section>
     <section class="mi-sec"><h6><i class="key key-s"></i>輔助穩定</h6>${chips(ex.s, 's')}</section>
     <p class="tip">${ex.cue}</p>
     <p class="ex-note">點上面的肌肉名稱，可以跳到它的說明。</p>`;
+  slot.querySelector('[data-share]').addEventListener('click', shareCurrent);
   slot.querySelectorAll('[data-speed]').forEach(b=> b.addEventListener('click', ()=>{
     poseAnim.speed = +b.dataset.speed;
     slot.querySelectorAll('[data-speed]').forEach(x=>{ const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
@@ -2072,6 +2079,7 @@ function selectExercise(id, keepView){
     if(muscleData[it]) selectMuscle(it);
     else { const part = clickableParts.find(p=> baseKey(p.key) === it); if(part) selectMuscle(part.id, part); }
   }));
+  syncHash();
 }
 function stopExercise(){
   poseAnim.def = null; poseAnim.playing = false; poseAnim.blend = 0;
@@ -2316,7 +2324,10 @@ document.getElementById('themeBtn').innerHTML = document.documentElement.dataset
   const intro = document.getElementById('labIntro'), enter = document.getElementById('labEnter');
   const label = document.getElementById('labEnterText'), status = document.getElementById('liStatus');
   let seen = false; try{ seen = sessionStorage.getItem('lab-entered') === '1'; }catch(e){}
-  if(seen){
+  /* 從分享連結進來：直接看到分享的內容，入口畫面和導覽這次先不出現 */
+  const linked = /^#(p|m|g)=/.test(location.hash);
+  if(linked && !seen){ seen = true; try{ sessionStorage.setItem('lab-entered', '1'); }catch(e){} }
+  if(seen && !linked){
     const wait = setInterval(()=>{ if(window.modelReadyFlag){ clearInterval(wait); setTimeout(()=> maybeStartTour(), 600); } }, 300);
   }
   if(!seen){
@@ -2529,6 +2540,62 @@ function protocolRole(ex, groupId, base){
   box.addEventListener('mousedown', e=> e.preventDefault());
   box.addEventListener('click', e=>{ const b = e.target.closest('[data-i]'); if(b) choose(hits[+b.dataset.i]); });
   input.addEventListener('blur', ()=> setTimeout(()=>{ box.hidden = true; }, 150));
+}
+
+/* ---- 分享連結：網址 #g=肌群、#m=單條肌肉、#p=實驗協定，打開就直接到那裡 ---- */
+const SITE_URL = 'https://a112070044.github.io/muscle/';
+let deepLinkApplied = false;
+function linkHash(){
+  if(currentMode === 'move') return currentExercise ? 'p=' + currentExercise : '';
+  if(currentMode !== 'explore' || !currentMuscle) return '';
+  return currentPart && currentPart.id === currentMuscle ? 'm=' + baseKey(currentPart.key) : 'g=' + currentMuscle;
+}
+function syncHash(){
+  if(!deepLinkApplied) return;   /* 打開時帶的連結還沒套用前，不要蓋掉它 */
+  const h = linkHash(), url = location.pathname + location.search + (h ? '#' + h : '');
+  if(url === location.pathname + location.search + location.hash) return;
+  try{ history.replaceState(null, '', url); }catch(e){}
+}
+function parseLink(hash){
+  const q = new URLSearchParams(String(hash || '').replace(/^#/, ''));
+  const p = q.get('p'), m = q.get('m'), g = q.get('g');
+  if(p && EXERCISE_LIB.some(e=> e.id === p)) return {type:'protocol', id:p};
+  if(m && labIndex().byBase[m]) return {type:'muscle', part:labIndex().byBase[m].part};
+  if(g && muscleData[g]) return {type:'group', id:g};
+  return null;
+}
+function openLink(link){
+  if(!link) return false;
+  if(link.type === 'protocol'){
+    setMode('move'); selectExercise(link.id);
+    /* 電腦版：資訊欄直接捲到這個動作的說明 */
+    if(window.innerWidth >= 1080){ const d = document.getElementById('exDetail'); if(d) d.scrollIntoView({block:'start'}); }
+    return true;
+  }
+  if(currentMode !== 'explore') setMode('explore');
+  if(link.type === 'muscle') selectMuscle(link.part.id, link.part); else selectMuscle(link.id);
+  return true;
+}
+function applyDeepLink(){
+  const ok = openLink(parseLink(location.hash));
+  deepLinkApplied = true;
+  if(!ok) syncHash();
+}
+window.addEventListener('hashchange', ()=>{ if(deepLinkApplied) openLink(parseLink(location.hash)); });
+/* 分享：手機用系統分享選單，電腦直接複製連結；預覽環境裡也一律給正式網址 */
+async function shareCurrent(){
+  syncHash();
+  const h = linkHash(), onSite = /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
+  const url = (onSite ? location.origin + location.pathname : SITE_URL) + (h ? '#' + h : '');
+  const ex = currentMode === 'move' && EXERCISE_LIB.find(e=> e.id === currentExercise);
+  const name = ex ? ex.name : (currentPart && currentPart.id === currentMuscle ? currentPart.meta.zh : currentMuscle ? muscleData[currentMuscle].name : '人體肌肉 3D 研究室');
+  const title = name + '｜MUSCLE LAB';
+  const text = ex ? '看 3D 人體示範「' + ex.name + '」，哪些肌肉在發力一目了然' : '在 3D 人體上看「' + name + '」的位置、作用和訓練動作';
+  if(navigator.share && matchMedia('(pointer: coarse)').matches){
+    try{ await navigator.share({title, text, url}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  try{ await navigator.clipboard.writeText(url); showToast('已複製連結，貼給朋友就能直接打開這裡'); }
+  catch(e){ window.prompt('複製這個連結：', url); }
 }
 
 /* ---- 圖鑑引線：從選到的肌肉拉一條細線到標籤 ---- */
@@ -2911,6 +2978,7 @@ function renderMuscleInfo(id){
     </section>
     <h6 class="mi-sec-label">整個${d.name}</h6>` : '';
   infoEl.innerHTML = `
+    <button class="share-btn" data-share aria-label="分享這個頁面的連結"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.5V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4.5h9V8.5"/></svg>分享</button>
     <span class="mi-region">${groupCode(id)} · ${categoryLabels[d.category]}</span>
     <h2>${d.name}</h2>
     <span class="en">${d.en}</span>
@@ -2945,6 +3013,7 @@ function renderMuscleInfo(id){
   infoEl.classList.remove('refresh'); void infoEl.offsetWidth; infoEl.classList.add('refresh');
   infoEl.scrollTop = 0;
   infoEl.querySelectorAll('[data-proto]').forEach(b=> b.addEventListener('click', ()=>{ setMode('move'); selectExercise(b.dataset.proto); }));
+  infoEl.querySelector('[data-share]').addEventListener('click', shareCurrent);
   document.getElementById('factReroll').addEventListener('click', ()=>{
     document.getElementById('factText').textContent = d.facts[Math.floor(Math.random() * d.facts.length)];
   });
@@ -3015,6 +3084,7 @@ function selectMuscle(id, part){
     const act = document.querySelector('.legend button.active');
     if(act) act.scrollIntoView({block:'nearest'});
   }
+  syncHash();
 }
 function clearSelection(){
   if(!currentMuscle) return;
@@ -3025,6 +3095,7 @@ function clearSelection(){
   document.querySelectorAll('.legend button').forEach(b=> b.classList.remove('active'));
   updatePeek();
   focusWholeBody();
+  syncHash();
 }
 
 /* muscle list, grouped by body region */
@@ -3187,6 +3258,7 @@ function setMode(mode){
     document.querySelectorAll('.legend button').forEach(b=> b.classList.toggle('active', b.dataset.id === currentMuscle));
     updatePeek();
   }
+  syncHash();
 }
 document.querySelectorAll('.mode-switch button').forEach(btn=>{
   btn.addEventListener('click', ()=>{
