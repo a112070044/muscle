@@ -283,6 +283,12 @@
   .quiz-prompt{font-size:26px; font-weight:600; line-height:1.3; margin-bottom:8px;}
   .quiz-prompt em{font-style:normal; color:var(--ice);}
   .quiz-sub{font-size:14px; color:var(--text-soft); margin-bottom:16px;}
+  .quiz-options{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;}
+  .quiz-options button{display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:11px 12px; border:1px solid var(--line-hi); border-radius:10px; background:var(--seg-bg); color:var(--text); font:600 14.5px var(--sans); text-align:left; cursor:pointer;}
+  .quiz-options button small{font:400 10.5px var(--mono); color:var(--text-faint);}
+  .quiz-options button:hover:not(:disabled){border-color:var(--text-faint);}
+  .quiz-options button.right{border-color:var(--scan); background:var(--sel);}
+  .quiz-options button.wrong{opacity:.4; text-decoration:line-through;}
   .hint-btn{display:block; width:100%; text-align:left; font-size:13.5px; line-height:1.6; background:transparent; border:1px dashed var(--line-hi); border-radius:8px; color:var(--text-soft); padding:10px 13px; margin-bottom:14px; cursor:pointer;}
   .hint-btn:hover{border-color:var(--text); color:var(--text);}
   .quiz-score-line{font:400 12px var(--mono); color:var(--text-soft); margin-bottom:12px; font-variant-numeric:tabular-nums;}
@@ -465,7 +471,7 @@
   @media (pointer: coarse){
     .ghost-btn{min-height:44px; min-width:44px; padding:0 12px;}
     .seg button{min-width:44px;}
-    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn{min-height:44px;}
+    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .quiz-options button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn{min-height:44px;}
     .rail-search input{height:44px; font-size:16px;}
   }
   @media (max-width:760px){ .leader, .leader-label{display:none;} }
@@ -3161,25 +3167,47 @@ document.addEventListener('keydown', (e)=>{
   if(e.key === 'Escape' && isFocusMode) setFocusMode(false);
 });
 
-const raycaster = new THREE.Raycaster();
-const mouseNDC = new THREE.Vector2();
+/* ---- GPU 點選：用和畫面相同的姿勢（動作、體型、收縮鼓起）把每條肌肉畫成一個代表色，
+   讀出游標下那一個像素就知道點到哪條肌肉；模型在做動作時也點得準 ---- */
+const PICK_LAYER = 5;
+const pickTarget = new THREE.WebGLRenderTarget(1, 1);
+const pickPixel = new Uint8Array(4), _pickClear = new THREE.Color();
+function pickMatFor(part, i){
+  if(!part._pickMat){
+    part._pickMat = applyPose(new THREE.MeshBasicMaterial({color:new THREE.Color().setHex(i + 1), toneMapped:false, fog:false}), armModeFor(part.meta.g), shapeWeightFor(part.meta), part.bulge);
+    part.mesh.layers.enable(PICK_LAYER);
+  }
+  return part._pickMat;
+}
+function pickPart(clientX, clientY){
+  if(!modelReady || !layerState.muscles) return null;
+  const rect = canvas.getBoundingClientRect(), v = camera.view, on = !!(v && v.enabled);
+  const saved = on ? {fw:v.fullWidth, fh:v.fullHeight, ox:v.offsetX, oy:v.offsetY, w:v.width, h:v.height} : null;
+  const fw = on ? v.fullWidth : rect.width, fh = on ? v.fullHeight : rect.height, sx = fw / rect.width, sy = fh / rect.height;
+  camera.setViewOffset(fw, fh, (on ? v.offsetX : 0) + (clientX - rect.left) * sx, (on ? v.offsetY : 0) + (clientY - rect.top) * sy, sx, sy);
+  /* 只畫肌肉：點到露出來的骨頭時，選到的是後面的肌肉（和以前一樣） */
+  const mats = clickableParts.map((p, i)=>{ const m = p.mesh.material; p.mesh.material = pickMatFor(p, i); return m; });
+  const mask = camera.layers.mask, bg = scene.background, ca = renderer.getClearAlpha(), sm = renderer.shadowMap.autoUpdate;
+  renderer.getClearColor(_pickClear);
+  camera.layers.set(PICK_LAYER); scene.background = null; renderer.setClearColor(0x000000, 0); renderer.shadowMap.autoUpdate = false;
+  renderer.setRenderTarget(pickTarget); renderer.clear(); renderer.render(scene, camera);
+  renderer.readRenderTargetPixels(pickTarget, 0, 0, 1, 1, pickPixel);
+  renderer.setRenderTarget(null);
+  camera.layers.mask = mask; scene.background = bg; renderer.setClearColor(_pickClear, ca); renderer.shadowMap.autoUpdate = sm;
+  clickableParts.forEach((p, i)=>{ p.mesh.material = mats[i]; });
+  if(saved) camera.setViewOffset(saved.fw, saved.fh, saved.ox, saved.oy, saved.w, saved.h); else camera.clearViewOffset();
+  const id = (pickPixel[0] << 16) | (pickPixel[1] << 8) | pickPixel[2];
+  return id ? (clickableParts[id - 1] || null) : null;
+}
 function handleTap(clientX, clientY){
-  if(currentMode === 'move' || poseActive) return;
-  const rect = canvas.getBoundingClientRect();
-  mouseNDC.x = ((clientX-rect.left)/rect.width)*2-1;
-  mouseNDC.y = -((clientY-rect.top)/rect.height)*2+1;
-  raycaster.setFromCamera(mouseNDC, camera);
-  const hits = raycaster.intersectObjects(visibleMuscleMeshes());
-  if(hits.length>0){
-    const part = hits[0].object.userData.part;
+  if(currentMode === 'move') return;
+  const part = pickPart(clientX, clientY);
+  if(part){
     if(currentMode === 'quiz') checkQuizAnswer(part.id);
     else selectMuscle(part.id, part);
   } else if(currentMode === 'explore' && currentMuscle){
     clearSelection();
   }
-}
-function visibleMuscleMeshes(){
-  return layerState.muscles ? clickableParts.map(p=>p.mesh) : [];
 }
 
 /* ---- hover tooltip (mouse only): shows the exact muscle name under the cursor ---- */
@@ -3195,14 +3223,10 @@ canvas.addEventListener('pointerleave', ()=>{ hoverPos = null; tooltipEl.classLi
 function updateHover(){
   if(!hoverDirty || !hoverPos || !modelReady) return;
   hoverDirty = false;
-  if(currentMode !== 'explore' || poseActive){ tooltipEl.classList.remove('show'); canvas.style.cursor = ''; return; }
-  const rect = canvas.getBoundingClientRect();
-  mouseNDC.x = (hoverPos.lx/rect.width)*2-1;
-  mouseNDC.y = -(hoverPos.ly/rect.height)*2+1;
-  raycaster.setFromCamera(mouseNDC, camera);
-  const hits = raycaster.intersectObjects(visibleMuscleMeshes());
-  if(hits.length){
-    const p = hits[0].object.userData.part;
+  /* 測驗時不顯示名稱，免得洩漏答案；做動作時也能看是哪條肌肉 */
+  if(currentMode === 'quiz'){ tooltipEl.classList.remove('show'); canvas.style.cursor = ''; return; }
+  const p = pickPart(hoverPos.x, hoverPos.y);
+  if(p){
     tooltipEl.innerHTML = `<b>${p.meta.zh}</b><span>${muscleCode(baseKey(p.key))} · ${p.meta.en} · ${muscleData[p.id].name}</span>`;
     tooltipEl.style.left = (hoverPos.lx + 14) + 'px';
     tooltipEl.style.top = (hoverPos.ly + 14) + 'px';
@@ -3507,21 +3531,35 @@ let quizQueue = [], quizIndex = 0, quizScore = 0, quizTarget = null, quizAwaitin
 
 function primaryGroups(ex){ return new Set(ex.p.map(it=> muscleData[it] ? it : (labIndex().byBase[it] || {}).group).filter(Boolean)); }
 function secondaryGroups(ex){ return new Set(ex.s.map(it=> muscleData[it] ? it : (labIndex().byBase[it] || {}).group).filter(Boolean)); }
-/* 10 題：6 題「找出肌群」＋ 4 題「這個動作主要練哪裡」 */
+/* 10 題：5 題「找出肌群」、2 題「這個動作主要練哪裡」、2 題「看動作猜名稱」、1 題「這個伸展拉到哪裡」 */
+const shuffled = list=> list.map(v=> [Math.random(), v]).sort((a, b)=> a[0] - b[0]).map(x=> x[1]);
 function startQuiz(){
-  const finds = [...muscleOrder].sort(()=> Math.random() - 0.5).slice(0, 6).map(id=> ({type:'find', id}));
-  const protos = EXERCISE_LIB.filter(e=> primaryGroups(e).size).sort(()=> Math.random() - 0.5).slice(0, 4).map(ex=> ({type:'proto', ex}));
-  quizQueue = [...finds, ...protos].sort(()=> Math.random() - 0.5);
+  const finds = shuffled(muscleOrder).slice(0, 5).map(id=> ({type:'find', id}));
+  const exs = shuffled(EXERCISE_LIB.filter(e=> primaryGroups(e).size));
+  const protos = exs.slice(0, 2).map(ex=> ({type:'proto', ex}));
+  const watches = exs.slice(2, 4).map(ex=> ({type:'watch', ex, options:shuffled([ex, ...shuffled(EXERCISE_LIB.filter(o=> o !== ex && o.pose !== ex.pose)).slice(0, 3)])}));
+  const stretches = shuffled(STRETCH_DEMOS).slice(0, 1).map(ex=> ({type:'stretch', ex}));
+  quizQueue = shuffled([...finds, ...protos, ...watches, ...stretches]);
   quizIndex = 0; quizScore = 0; quizAwaitingNext = false;
   updateHighlight(null);
   document.querySelectorAll('.legend button').forEach(b=>b.classList.remove('active'));
   nextQuizQuestion();
 }
+/* 動作類的題目：模型直接示範（不亮肌肉，答完才揭曉） */
+function quizPlay(ex){
+  const def = POSES[ex.pose];
+  prepPose(def);
+  poseAnim.def = def; poseAnim.period = def.period; poseAnim.t = 0; poseAnim.playing = true; poseAnim.blend = 0;
+  targetRotY = def.view; targetRotX = 0;
+  frameExercise(def, def.view);
+}
 function nextQuizQuestion(){
   updateHighlight(null);
-  if(quizIndex >= quizQueue.length){ renderQuizResult(); return; }
+  if(quizIndex >= quizQueue.length){ stopExercise(); renderQuizResult(); return; }
   quizTarget = quizQueue[quizIndex];
   quizAwaitingNext = false;
+  if(quizTarget.type === 'find') { if(poseAnim.def){ stopExercise(); focusWholeBody(); } }
+  else { paintExercise(null); quizPlay(quizTarget.ex); }
   renderQuizPrompt();
 }
 function renderQuizPrompt(){
@@ -3530,9 +3568,18 @@ function renderQuizPrompt(){
     ? `<div class="quiz-round">${round} · 找出肌群</div>
        <div class="quiz-prompt">請找出：<em>${muscleData[q.id].name}</em></div>
        <div class="quiz-sub">在 3D 模型或肌群清單中，點選你認為對應的部位（${muscleData[q.id].en}）</div>`
+    : q.type === 'watch'
+    ? `<div class="quiz-round">${round} · 看動作猜名稱</div>
+       <div class="quiz-prompt">模型正在做哪個動作？</div>
+       <div class="quiz-sub">看看 3D 人體的動作，從下面四個選一個</div>
+       <div class="quiz-options">${q.options.map(o=> `<button data-opt="${o.id}">${o.name}<small>${o.en}</small></button>`).join('')}</div>`
+    : q.type === 'stretch'
+    ? `<div class="quiz-round">${round} · ${protocolCode(q.ex.id)}</div>
+       <div class="quiz-prompt"><em>${q.ex.name}</em>主要拉長哪裡？</div>
+       <div class="quiz-sub">模型正在示範這個伸展，點選被拉長的主要肌群（${q.ex.en}）</div>`
     : `<div class="quiz-round">${round} · ${protocolCode(q.ex.id)}</div>
        <div class="quiz-prompt"><em>${q.ex.name}</em>主要練到哪裡？</div>
-       <div class="quiz-sub">點選任一個「主要發力」的肌群（${q.ex.en}），模型或清單都可以</div>`;
+       <div class="quiz-sub">模型正在示範，點選任一個「主要發力」的肌群（${q.ex.en}），模型或清單都可以</div>`;
   document.getElementById('muscleInfo').innerHTML = `
     <div class="quiz-panel">
       ${body}
@@ -3542,9 +3589,32 @@ function renderQuizPrompt(){
     </div>
   `;
   document.getElementById('quizHintBtn').addEventListener('click', function(){
-    this.textContent = '提示：' + (q.type === 'find' ? muscleData[q.id].func : q.ex.cue);
+    this.textContent = '提示：' + (q.type === 'find' ? muscleData[q.id].func : q.type === 'watch' ? '主要練到' + [...primaryGroups(q.ex)].map(g=> muscleData[g].name).join('、') : q.type === 'stretch' ? q.ex.how : q.ex.cue);
     this.disabled = true;
   });
+  document.querySelectorAll('[data-opt]').forEach(b=> b.addEventListener('click', ()=> checkQuizOption(b)));
+}
+function quizCorrect(msg){
+  quizScore++;
+  quizAwaitingNext = true;
+  const slot = document.getElementById('quizFeedbackSlot');
+  if(slot) slot.innerHTML = `<div class="quiz-feedback correct">${msg}<button class="quiz-next-btn" id="quizNextBtn">下一題</button></div>`;
+  const nextBtn = document.getElementById('quizNextBtn');
+  if(nextBtn) nextBtn.addEventListener('click', ()=>{ quizIndex++; nextQuizQuestion(); });
+}
+function checkQuizOption(btn){
+  if(quizAwaitingNext || btn.disabled) return;
+  const q = quizTarget, pick = EXERCISE_LIB.find(e=> e.id === btn.dataset.opt);
+  if(pick === q.ex){
+    btn.classList.add('right');
+    document.querySelectorAll('[data-opt]').forEach(b=> b.disabled = true);
+    paintExercise(q.ex);
+    quizCorrect(`答對了！這是${q.ex.name}（${protocolCode(q.ex.id)}），主要練到${[...primaryGroups(q.ex)].map(g=> muscleData[g].name).join('、')}。`);
+  } else {
+    btn.classList.add('wrong'); btn.disabled = true;
+    const slot = document.getElementById('quizFeedbackSlot');
+    if(slot) slot.innerHTML = `<div class="quiz-feedback wrong">不是${pick.name}喔，再看看模型的動作！</div>`;
+  }
 }
 function flashMuscle(id, isCorrect){
   if(isCorrect){ currentPart = null; updateHighlight(id); return; }
@@ -3557,9 +3627,9 @@ function flashMuscle(id, isCorrect){
   setTimeout(()=>{ if(!quizAwaitingNext) updateHighlight(null); }, 550);
 }
 function checkQuizAnswer(id){
-  if(quizAwaitingNext) return;
+  if(quizAwaitingNext || !quizTarget || quizTarget.type === 'watch') return;
   const slot = document.getElementById('quizFeedbackSlot'), q = quizTarget, name = muscleData[id].name;
-  const pg = q.type === 'proto' ? primaryGroups(q.ex) : null;
+  const pg = q.type !== 'find' ? primaryGroups(q.ex) : null;
   const correct = q.type === 'find' ? id === q.id : pg.has(id);
   if(correct){
     quizScore++;
@@ -3568,7 +3638,8 @@ function checkQuizAnswer(id){
     if(q.type === 'find'){ flashMuscle(id, true); msg = `答對了！這是「${name}」。`; }
     else {
       paintExercise({p:[...pg], s:[...secondaryGroups(q.ex)]});   /* 把這個動作的主要（紅）／輔助（銀）肌群全部亮出來 */
-      msg = `答對了！${q.ex.name}的主要發力：${[...pg].map(g=> muscleData[g].name).join('、')}。`;
+      msg = q.type === 'stretch' ? `答對了！${q.ex.name}主要拉長：${[...pg].map(g=> muscleData[g].name).join('、')}。`
+        : `答對了！${q.ex.name}的主要發力：${[...pg].map(g=> muscleData[g].name).join('、')}。`;
     }
     if(slot) slot.innerHTML = `<div class="quiz-feedback correct">${msg}<button class="quiz-next-btn" id="quizNextBtn">下一題</button></div>`;
     const nextBtn = document.getElementById('quizNextBtn');
@@ -3576,6 +3647,7 @@ function checkQuizAnswer(id){
   } else {
     flashMuscle(id, false);
     const msg = q.type === 'find' ? `不對喔，這是「${name}」，再試試看！`
+      : q.type === 'stretch' ? (secondaryGroups(q.ex).has(id) ? `「${name}」也會拉到一點，但不是主要的，再找找！` : `「${name}」不是${q.ex.name}主要拉長的地方，再試試看！`)
       : secondaryGroups(q.ex).has(id) ? `「${name}」在${q.ex.name}裡是輔助穩定，再找找主要發力的！`
       : `「${name}」不是${q.ex.name}的主要肌群，再試試看！`;
     if(slot) slot.innerHTML = `<div class="quiz-feedback wrong">${msg}</div>`;
@@ -3603,7 +3675,7 @@ function setMode(mode){
   if(mode === currentMode){ setConsoleView('info'); return; }
   const prev = currentMode;
   currentMode = mode;
-  if(prev === 'move') stopExercise();
+  if(prev === 'move' || prev === 'quiz') stopExercise();
   const badge = document.getElementById('progressBadge');
   if(badge) badge.style.visibility = mode === 'explore' ? '' : 'hidden';
   setConsoleView('info');
