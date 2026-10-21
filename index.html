@@ -509,6 +509,10 @@
   .move-tabs button small{font:500 10px var(--mono); letter-spacing:.14em; color:var(--text-faint); margin-left:4px;}
   .move-tabs button.on{background:var(--seg-active); color:var(--text);}
   .move-tabs button small{display:none;}   /* 五個分頁放不下英文，只留中文 */
+  .ex-filter{display:grid; gap:8px; margin:12px 0 10px;}
+  .ex-filter .chip-row button.on{background:var(--ice); color:var(--on-ice); border-color:var(--ice);}
+  .ex-count{font-size:12px; color:var(--text-faint);}
+  .ex-tags{margin-left:10px; padding:2px 8px; border:1px solid var(--line-hi); border-radius:999px; font:500 10.5px var(--sans); letter-spacing:.02em; color:var(--text-soft);}
   .jt-region{margin:16px 0 8px; font-size:12px; color:var(--text-faint); font-weight:500; letter-spacing:.04em;}
   .jt-facts{margin:16px 0 4px;}
   .chip-row.a button{border-style:dashed; color:var(--text-soft);}
@@ -1805,6 +1809,18 @@ const POSES = {
   /* 靠牆深蹲：背靠牆、大腿水平，靜態撐住 */
   wallsit:{A:{thigh:-88, shank:2, torso:0, arm:0}, B:{thigh:-88, shank:2, torso:0, arm:0}, prop:{type:'wall', a:'bladeL', behind:true}, con:'iso', period:3, view:1.57}
 };
+/* 器材（bw 徒手、db 啞鈴、bb 槓鈴、gear 單槓／雙槓／椅子）與難度（1 入門、2 中級、3 進階），參考 MuscleWiki 的篩選方式 */
+const EX_META = {
+  squat:{eq:'bw', lv:1}, rdl:{eq:'bb', lv:2}, lunge:{eq:'bw', lv:2}, hipthrust:{eq:'gear', lv:2}, calfraise:{eq:'bw', lv:1},
+  pushup:{eq:'bw', lv:2}, bench:{eq:'bb', lv:2}, ohp:{eq:'bb', lv:2}, frontraise:{eq:'db', lv:1}, pullup:{eq:'gear', lv:3},
+  row:{eq:'bb', lv:2}, curl:{eq:'db', lv:1}, plank:{eq:'bw', lv:1}, shrug:{eq:'db', lv:1}, deadlift:{eq:'bb', lv:3},
+  lateral:{eq:'db', lv:1}, bridge:{eq:'bw', lv:1}, situp:{eq:'bw', lv:1}, dips:{eq:'gear', lv:3}, ohext:{eq:'bb', lv:2},
+  hammer:{eq:'db', lv:1}, uprow:{eq:'bb', lv:2}, revfly:{eq:'db', lv:2}, legraise:{eq:'bw', lv:2}, superman:{eq:'bw', lv:1}, wallsit:{eq:'bw', lv:1}
+};
+const EQ_LABEL = {bw:'徒手', db:'啞鈴', bb:'槓鈴', gear:'器材'}, LV_LABEL = {1:'入門', 2:'中級', 3:'進階'};
+let exFilter = {eq:'all', lv:'all'};
+try{ const f = JSON.parse(localStorage.getItem('muscle-ex-filter') || '{}'); if(f.eq in EQ_LABEL || f.eq === 'all') exFilter.eq = f.eq; if(f.lv in LV_LABEL || f.lv === 'all') exFilter.lv = String(f.lv); }catch(e){}
+const exMatches = e=> (exFilter.eq === 'all' || EX_META[e.id].eq === exFilter.eq) && (exFilter.lv === 'all' || String(EX_META[e.id].lv) === exFilter.lv);
 /* 每個動作的常見錯誤（miss）與調整難度（easy 變簡單、hard 變困難） */
 const EXERCISE_EXTRA = {
   squat:{miss:['膝蓋往內夾：膝蓋要和腳尖同方向','腳跟離地，重心跑到腳尖','蹲低時下背拱起：背部保持中立'], easy:'坐到椅子上再站起（箱式深蹲），或手扶東西減輕負擔。', hard:'加上槓鈴（背蹲舉）或抱著啞鈴（高腳杯深蹲），或改成單腳的保加利亞分腿蹲。'},
@@ -2798,11 +2814,19 @@ function renderMovePanel(noSelect){
     <p class="func">${st
       ? '3D 人體會示範伸展，被拉長的肌肉會亮起並變扁：<i class="key key-p"></i>主要伸展　<i class="key key-s"></i>也會拉到。'
       : '3D 人體會跟著做動作，並亮起參與的肌肉：<i class="key key-p"></i>主要發力　<i class="key key-s"></i>輔助穩定。主要發力的肌肉縮短時會鼓起來，被拉長時會變扁。'}</p>
-    <div class="ex-grid">${list.map(e=>`<button data-ex="${e.id}"${e.id===currentExercise?' class="active"':''}>${e.name}<small>${protocolCode(e.id, true)} · ${e.en}</small></button>`).join('')}</div>
+    ${st ? '' : `<div class="ex-filter">
+      <div class="plan-row"><span>器材</span><div class="chip-row">${['all', ...Object.keys(EQ_LABEL)].map(k=> `<button data-feq="${k}" class="${exFilter.eq === k ? 'on' : ''}" aria-pressed="${exFilter.eq === k}">${k === 'all' ? '全部' : EQ_LABEL[k]}</button>`).join('')}</div></div>
+      <div class="plan-row"><span>難度</span><div class="chip-row">${['all', '1', '2', '3'].map(k=> `<button data-flv="${k}" class="${exFilter.lv === k ? 'on' : ''}" aria-pressed="${exFilter.lv === k}">${k === 'all' ? '全部' : LV_LABEL[k]}</button>`).join('')}</div></div>
+      <p class="ex-count">顯示 ${list.filter(exMatches).length} / ${list.length} 個動作</p>
+    </div>`}
+    <div class="ex-grid">${(st ? list : list.filter(exMatches)).map(e=>`<button data-ex="${e.id}"${e.id===currentExercise?' class="active"':''}>${e.name}<small>${protocolCode(e.id, true)} · ${e.en}</small></button>`).join('') || '<p class="proto-none">沒有符合條件的動作，換個篩選試試。</p>'}</div>
     <div id="exDetail"></div>`;
   infoEl.classList.remove('refresh'); void infoEl.offsetWidth; infoEl.classList.add('refresh');
   infoEl.scrollTop = 0;
   infoEl.querySelectorAll('[data-ex]').forEach(b=> b.addEventListener('click', ()=> selectExercise(b.dataset.ex)));
+  const refilter = ()=>{ try{ localStorage.setItem('muscle-ex-filter', JSON.stringify(exFilter)); }catch(e){} renderMovePanel(); };
+  infoEl.querySelectorAll('[data-feq]').forEach(b=> b.addEventListener('click', ()=>{ exFilter.eq = b.dataset.feq; refilter(); }));
+  infoEl.querySelectorAll('[data-flv]').forEach(b=> b.addEventListener('click', ()=>{ exFilter.lv = b.dataset.flv; refilter(); }));
   infoEl.querySelectorAll('[data-mtab]').forEach(b=> b.addEventListener('click', ()=>{
     if(b.dataset.mtab === moveTab) return;
     moveTab = b.dataset.mtab;
@@ -2839,7 +2863,7 @@ function selectExercise(id, keepView){
   const inPlan = planSession && planSession.list[planSession.i] === id;
   slot.innerHTML = `
     ${inPlan ? '<div class="plan-bar now" aria-live="polite"></div>' : ''}
-    <div class="ex-kicker">${protocolCode(ex.id)}</div>
+    <div class="ex-kicker">${protocolCode(ex.id)}${EX_META[ex.id] ? `<span class="ex-tags">${EQ_LABEL[EX_META[ex.id].eq]} · ${LV_LABEL[EX_META[ex.id].lv]}</span>` : ''}</div>
     <div class="ex-head"><h3>${ex.name}</h3><span class="en">${ex.en}</span><button class="share-btn" data-share aria-label="分享這個動作的連結"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.5V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4.5h9V8.5"/></svg>分享</button></div>
     <div class="ex-phase" id="exPhase" aria-hidden="true"><span class="ph-end">${isStretch ? '放鬆' : '拉長'}</span><span class="ph-bar"><i></i></span><span class="ph-end">${isStretch ? '伸展' : '收縮'}</span><span class="ph-text">${isStretch ? '放鬆 ↔ 伸展' : '收縮 ↔ 拉長'}</span></div>
     ${isStretch || isJoint ? '' : `<div class="log-row"><button class="log-btn" data-log>＋ 記錄一次</button><span class="log-note">本週 <b data-log-count>${weekCount(ex.id)}</b> 次 · <button class="link-btn" data-log-view>看訓練熱圖</button></span></div>`}
