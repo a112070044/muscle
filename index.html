@@ -845,7 +845,7 @@ setTimeout(function(){
       </div>
     </div>
     <div class="rail-search">
-      <input type="search" id="muscleSearch" placeholder="搜尋肌肉：中文、英文或編號" autocomplete="off" spellcheck="false" aria-label="搜尋肌肉" aria-controls="searchResults">
+      <input type="search" id="muscleSearch" placeholder="搜尋肌肉或動作：中文、英文或編號" autocomplete="off" spellcheck="false" aria-label="搜尋肌肉或動作" aria-controls="searchResults">
       <div class="search-results" id="searchResults" role="listbox" hidden></div>
     </div>
     <div class="legend" id="legend"></div>
@@ -3348,6 +3348,9 @@ function protocolRole(ex, groupId, base){
     if(!n || !modelReady) return [];
     const groups = muscleOrder.map(id=> ({type:'group', id, code:groupCode(id), zh:muscleData[id].name, en:muscleData[id].en, sub:'肌群 · ' + categoryLabels[muscleData[id].category]}));
     const muscles = labIndex().muscles.map(m=> ({type:'muscle', part:m.part, code:m.code, zh:m.zh, en:m.en, sub:muscleData[m.group].name + ' · ' + m.en}));
+    /* 也能搜動作：訓練、伸展示範、關節動作 */
+    const kindLabel = {stretch:'伸展', joint:'關節動作'};
+    const moves = [...EXERCISE_LIB, ...STRETCH_DEMOS, ...JOINT_LIB].map(e=> ({type:'move', id:e.id, code:protocolCode(e.id, true), zh:e.name, en:e.en, sub:(kindLabel[e.kind] || '訓練動作') + ' · ' + e.en}));
     const score = e=>{
       const z = norm(e.zh), en = norm(e.en), c = norm(e.code);
       if(z.startsWith(n) || c === n) return 0;
@@ -3356,7 +3359,7 @@ function protocolRole(ex, groupId, base){
       if(en.includes(n)) return 3;
       return 9;
     };
-    return [...groups, ...muscles].map(e=> [score(e), e]).filter(x=> x[0] < 9).sort((a, b)=> a[0] - b[0]).slice(0, 8).map(x=> x[1]);
+    return [...groups, ...muscles, ...moves].map(e=> [score(e), e]).filter(x=> x[0] < 9).sort((a, b)=> a[0] - b[0]).slice(0, 8).map(x=> x[1]);
   }
   function render(){
     const q = input.value.trim();
@@ -3368,6 +3371,11 @@ function protocolRole(ex, groupId, base){
   }
   function choose(e){
     if(!e) return;
+    if(e.type === 'move'){
+      setMode('move'); selectExercise(e.id);
+      input.value = ''; hits = []; box.hidden = true; input.blur();
+      return;
+    }
     if(currentMode !== 'explore') setMode('explore');
     if(e.type === 'group') selectMuscle(e.id); else selectMuscle(e.part.id, e.part);
     input.value = ''; hits = []; box.hidden = true; input.blur();
