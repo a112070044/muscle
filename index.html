@@ -1431,7 +1431,8 @@ async function fetchPack(){
   return u;
 }
 async function decodePack(){
-  const u = await fetchPack();
+  /* 單檔版本（例如離線預覽）會把模型資料直接以 base64 嵌在網頁裡，就不用另外下載 */
+  const u = typeof ANATOMY_PACK_B64 === 'string' ? Uint8Array.from(atob(ANATOMY_PACK_B64), c=> c.charCodeAt(0)) : await fetchPack();
   /* 伺服器若已自動解壓縮（沒有 gzip 標頭），直接使用 */
   if(!(u[0] === 0x1f && u[1] === 0x8b)) return u.buffer;
   setStage('解壓縮模型資料');
