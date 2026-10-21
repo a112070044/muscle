@@ -16,6 +16,10 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="MUSCLE LAB 標誌與 3D 人體肌肉標本，胸大肌以紅色標示">
 <meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://a112070044.github.io/muscle/">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"MUSCLE LAB｜人體肌肉 3D 研究室","alternateName":"MUSCLE LAB","url":"https://a112070044.github.io/muscle/","inLanguage":"zh-Hant","applicationCategory":"EducationalApplication","operatingSystem":"Any (web browser)","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"image":"https://a112070044.github.io/muscle/brand/og-image.jpg","description":"333 條肌肉的 3D 解剖圖鑑：點選肌肉看位置、起止點、神經與作用；20 個訓練動作與 10 個伸展的 3D 示範，肌肉收縮會鼓起、伸展會變扁；還有肌肉測驗與每週訓練熱圖。"}
+</script>
 <meta name="theme-color" content="#0B0B0B" id="themeColorMeta">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preload" href="data/anatomy.bin" as="fetch" type="application/octet-stream" crossorigin>
@@ -44,7 +48,7 @@
     --line-hi:rgba(255,255,255,.18);
     --text:#E6E6E6;
     --text-soft:#9A9A9A;
-    --text-faint:#666666;
+    --text-faint:#828282;
     --ice:#E6E6E6;
     --on-ice:#0B0B0B;
     --ice-dim:rgba(255,255,255,.07);
@@ -79,7 +83,7 @@
     --line-hi:rgba(17,17,17,.24);
     --text:#111111;
     --text-soft:#4B4A46;
-    --text-faint:#8A8882;
+    --text-faint:#6E6C67;
     --ice:#111111;
     --on-ice:#FFFFFF;
     --ice-dim:rgba(17,17,17,.06);
@@ -108,6 +112,8 @@
   }
   button{font-family:var(--sans); color:inherit;}
   :focus-visible{outline:2px solid var(--text); outline-offset:2px;}
+  .noscript{max-width:640px; margin:60px auto; padding:0 20px; color:var(--text); font-family:var(--sans); line-height:1.8;}
+  .noscript h1{font-size:24px; margin-bottom:12px;} .noscript h2{font-size:16px; margin:18px 0 4px;} .noscript p{color:var(--text-soft);}
   ::selection{background:var(--sel);}
 
   /* ---------- stage (mobile-first: stacked) ---------- */
@@ -606,6 +612,15 @@
 </style>
 </head>
 <body>
+<noscript>
+  <div class="noscript">
+    <h1>MUSCLE LAB｜人體肌肉 3D 研究室</h1>
+    <p>這個網站需要開啟 JavaScript 才能顯示可旋轉的 3D 人體肌肉模型。開啟後可以點選 333 條肌肉，查看位置、起點、止點、神經與作用，觀看訓練動作與伸展的 3D 示範，並用測驗和每週訓練熱圖複習。</p>
+    <h2>肌群</h2><p>頭臉部、頸部、斜方肌、肩部、旋轉肌袖、肱二頭肌群、肱三頭肌群、前臂屈肌群、前臂伸肌群、手部肌群、胸部、前鋸肌、腹部、腹斜肌、背闊肌、菱形肌群、豎脊肌群、臀大肌、臀中肌群、深層外旋肌群、髖屈肌群、股四頭肌、膕繩肌、內收肌群、小腿後側、小腿前側、腓骨肌群、足部肌群</p>
+    <h2>訓練動作</h2><p>深蹲、羅馬尼亞硬舉、弓箭步、臀推、站姿提踵、伏地挺身、臥推、肩推、啞鈴前平舉、引體向上、俯身划船、二頭彎舉、棒式、聳肩、傳統硬舉、啞鈴側平舉、臀橋、仰臥起坐、雙槓撐體、過頭三頭伸展</p>
+    <h2>伸展</h2><p>站姿前彎、跪姿髖屈肌伸展、扶牆小腿伸展、仰躺抱膝、背後擴胸伸展、嬰兒式、過頭三頭肌伸展、前臂屈肌伸展、前臂伸肌伸展、眼鏡蛇式</p>
+  </div>
+</noscript>
 <script>
 window.__stage = '讀取頁面';
 window.__reportLoadError = function(msg){
@@ -683,7 +698,7 @@ setTimeout(function(){
 
 <div class="stage" id="stage">
   <div class="chamber" id="chamber">
-    <canvas id="canvas3d"></canvas>
+    <canvas id="canvas3d" role="img" aria-label="可旋轉的 3D 人體肌肉模型；也可以用左側的肌群清單或搜尋框選擇肌肉"></canvas>
     <svg class="leader off" id="leaderSvg" aria-hidden="true"><line id="leaderLine"/><circle id="leaderDot" r="4"/></svg>
     <div class="leader-label off" id="leaderLabel" aria-hidden="true"></div>
     <div class="height-ruler" id="heightRuler"></div>
@@ -1740,8 +1755,8 @@ Object.assign(POSES, {
   st_fold:{A:{torso:45}, B:{torso:98}, con:'stretch', period:5, view:1.57},
   st_hipkneel:{A:{torso:0, shankL:4, thighR:6, shankR:90, footR:170, arm:-8}, B:{torso:-6, shankL:24, thighR:28, shankR:92, footR:170, arm:-8},
     solve:{field:'thighL', a:'heelL', b:'kneeR', range:[-140, 0]}, contacts:['heelL','kneeR','shinR'], con:'stretch', period:5, view:1.57},
-  st_calf:{A:{torso:18, thighL:-22, shankL:14, thighR:14, shankR:14, footR:0, arm:-78, wrist:80}, B:{torso:26, thighL:-30, shankL:24, thighR:24, shankR:24, footR:0, arm:-72, wrist:80},
-    solve:{field:'shankL', a:'heelL', b:'heelR', range:[-10, 60]}, contacts:['heelL','heelR','toeL'], prop:{type:'wall', a:'palmL'}, con:'stretch', period:5, view:1.3},
+  st_calf:{A:{torso:18, thighL:-22, shankL:14, thighR:14, shankR:14, footR:0, arm:-78, pron:180, wrist:80}, B:{torso:26, thighL:-30, shankL:24, thighR:24, shankR:24, footR:0, arm:-72, pron:180, wrist:80},
+    solve:{field:'shankL', a:'heelL', b:'heelR', range:[-10, 60]}, contacts:['heelL','heelR','toeL'], prop:{type:'wall', a:'palmL'}, con:'stretch', period:5, view:1.57},
   st_kneechest:{A:{torso:-90, thigh:-205, shank:-78, arm:-132, elbow:-70}, B:{torso:-90, thigh:-225, shank:-70, arm:-140, elbow:-85},
     contacts:['bladeL','bladeR','sacrum'], con:'stretch', period:5, view:1.57},
   st_chest:{A:{abd:45, arm:15}, B:{torso:-6, abd:70, arm:40}, con:'stretch', period:5, view:0.6},
@@ -1994,7 +2009,8 @@ const propMat = new THREE.MeshStandardMaterial({color:0x30353D, roughness:0.75, 
 const benchMesh = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), propMat);
 const barGroup = new THREE.Group();
 const dipGroup = new THREE.Group();   /* 雙槓：兩根前後方向的平行槓 */
-const wallMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.1, 0.08), propMat);   /* 牆：扶牆伸展用，放在手掌前面 */
+/* 牆：扶牆伸展用，放在手掌前面；半透明，從正面轉過來也看得到人 */
+const wallMesh = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.1, 0.06), new THREE.MeshStandardMaterial({color:0x30353D, roughness:0.75, metalness:0.1, transparent:true, opacity:0.45, depthWrite:false}));
 const barbell = new THREE.Group();   /* 槓鈴：跟著兩手握點移動 */
 const dumbbells = [new THREE.Group(), new THREE.Group()];   /* 啞鈴：左右手各一個，握把沿著拳頭方向 */
 {
@@ -2028,7 +2044,7 @@ function updateProps(def, U){
   barGroup.visible = !!(prop && prop.type === 'bar');
   dipGroup.visible = !!(prop && prop.type === 'dips');
   wallMesh.visible = !!(prop && prop.type === 'wall');
-  if(wallMesh.visible){ const a = landmark(prop.a, U); wallMesh.position.set(0, 1.05 + POSE_FLOOR, a[2] + 0.045); }
+  if(wallMesh.visible){ const a = landmark(prop.a, U); wallMesh.position.set(0, 1.05 + POSE_FLOOR, a[2] + 0.03); }
   barbell.visible = !!(def && def.barbell);
   if(barbell.visible){
     const g = landmark('gripL', U), pr = (def.barbell.plate || 0.12) / 0.12;   /* 硬舉用標準大槓片，槓片放在地上 */
@@ -3395,6 +3411,7 @@ function showToast(text){
     toast = document.createElement('div');
     toast.id = 'appToast';
     toast.className = 'app-toast';
+    toast.setAttribute('role', 'status'); toast.setAttribute('aria-live', 'polite');
     document.body.appendChild(toast);
   }
   toast.textContent = text;
