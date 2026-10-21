@@ -474,6 +474,12 @@
   .ex-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; padding-top:18px; border-top:1px solid var(--line);}
   .ex-head h3{font-size:22px; font-weight:600; line-height:1.3;}
   .ex-head .en{margin:0;}
+  /* 收縮／拉長指示條：跟著動作即時移動 */
+  .ex-phase{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:4px 8px; margin:12px 0 0; font:500 10.5px var(--mono); letter-spacing:.08em; color:var(--text-faint);}
+  .ph-bar{position:relative; height:6px; border-radius:3px; background:var(--seg-bg); overflow:hidden; box-shadow:inset 0 0 0 1px var(--line);}
+  .ph-bar i{position:absolute; inset:0 auto 0 0; width:0; background:var(--scan); border-radius:3px;}
+  .ph-text{grid-column:1 / -1; font:500 12px var(--sans); letter-spacing:0; color:var(--text-soft);}
+  .ex-phase[data-dir="in"] .ph-text, .ex-phase[data-dir="iso"] .ph-text{color:var(--text);}
   .ex-ctrl{display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; margin:10px 0 18px; font-size:12px; color:var(--text-faint);}
   .ex-ctrl > button{flex-shrink:0; font-size:13.5px; font-weight:600; color:var(--on-ice); background:var(--ice); border:none; border-radius:8px; padding:8px 18px; cursor:pointer;}
   .ex-note{font-size:12.5px; color:var(--text-faint); margin:8px 0 18px;}
@@ -1448,10 +1454,11 @@ async function loadAnatomyModels(){
           });
           const mesh = new THREE.Mesh(geo, mat);
           mesh.name = name; mesh.castShadow = true;
-          applyPose(mat, armModeFor(meta.g), shapeWeightFor(meta));
-          mesh.customDepthMaterial = poseDepthMaterial(armModeFor(meta.g), shapeWeightFor(meta));
+          const bulge = bulgeUniforms();
+          applyPose(mat, armModeFor(meta.g), shapeWeightFor(meta), bulge);
+          mesh.customDepthMaterial = poseDepthMaterial(armModeFor(meta.g), shapeWeightFor(meta), bulge);
           mesh.frustumCulled = false;
-          const part = {id: meta.g, key:name, mesh, group:mesh, material:mat, meta, baseColor: isTendon ? TENDON_COLOR : MUSCLE_RED};
+          const part = {id: meta.g, key:name, mesh, group:mesh, material:mat, meta, bulge, baseColor: isTendon ? TENDON_COLOR : MUSCLE_RED};
           mesh.userData.part = part;
           clickableParts.push(part);
           modelRoot.add(mesh);
@@ -1539,35 +1546,36 @@ const EXERCISE_LIB = [
     cue:'手臂自然垂下，把肩膀往耳朵方向垂直提起，停一秒再慢慢放下，不要轉肩。'}
 ];
 /* 示範姿勢：A、B 兩個關鍵姿勢之間來回（沒寫 A 就是站姿）。角度是各段身體相對站姿的旋轉(度)，正值往前傾；
-   L/R 結尾只套用在左/右腳。solve 會自動調整一個角度讓兩個身體點等高；contacts 是要貼地的點，第一個點固定前後位置。 */
+   L/R 結尾只套用在左/右腳。solve 會自動調整一個角度讓兩個身體點等高；contacts 是要貼地的點，第一個點固定前後位置。
+   con：主要發力肌肉在 A 或 B 姿勢時最短（收縮鼓起）；iso 是撐住不動的等長收縮。 */
 const POSES = {
-  squat:{B:{shank:35, thigh:-85, torso:40, arm:-80}, period:2.8, view:0.85},
-  hinge:{A:{grip:1, pron:180}, B:{shank:6, thigh:-14, torso:78, grip:1, pron:180}, period:3.0, view:1.2},
+  squat:{B:{shank:35, thigh:-85, torso:40, arm:-80}, con:'A', period:2.8, view:0.85},
+  hinge:{A:{grip:1, pron:180}, B:{shank:6, thigh:-14, torso:78, grip:1, pron:180}, con:'A', period:3.0, view:1.2},
   lunge:{A:{thighL:-22, shankL:4, thighR:12, shankR:22, footR:38}, B:{torso:4, thighL:-82, shankL:8, thighR:2, shankR:78, footR:52},
-    solve:{field:'thighR', a:'toeR', b:'heelL', range:[-40,70]}, contacts:['heelL','toeR'], period:3.0, view:1.45},
+    solve:{field:'thighR', a:'toeR', b:'heelL', range:[-40,70]}, contacts:['heelL','toeR'], con:'A', period:3.0, view:1.45},
   hipthrust:{A:{thigh:-125, shank:-12, armRel:0}, B:{thigh:-90, shank:0, armRel:0},
     solve:{field:'torso', a:'bladeL', b:'heelL', target:0.40, range:[-160,-20]}, contacts:['heelL','heelR'],
-    prop:{type:'bench', a:'bladeL', b:'bladeL', pad:0.17}, period:2.6, view:1.57},
-  calf:{B:{foot:22}, contacts:['toeL','toeR'], period:2.0, view:0.9},
+    prop:{type:'bench', a:'bladeL', b:'bladeL', pad:0.17}, con:'B', period:2.6, view:1.57},
+  calf:{B:{foot:22}, contacts:['toeL','toeR'], con:'B', period:2.0, view:0.9},
   /* 伏地挺身：掌心平貼地面、手指朝前（手腕伸展 ~90°），手在肩膀正下方；下降時手肘往後外約 45° */
   pushup:{A:{arm:-64, wrist:84, pron:180}, B:{arm:38, elbow:-128, abd:28, wrist:84, pron:180}, solve:{field:'root', a:'palmL', b:'toeL', target:0.004, range:[20,120]},
-    contacts:['toeL','toeR','palmL:0.004','palmR:0.004'], period:2.4, view:1.35},
+    contacts:['toeL','toeR','palmL:0.004','palmR:0.004'], con:'A', period:2.4, view:1.35},
   /* 臥推：槓從肩膀正上方垂直降到胸口下緣，前臂全程垂直、手肘外展約 60° */
   bench:{A:{torso:-90, thigh:-90, grip:1, pron:180}, B:{torso:-90, thigh:-90, grip:1, pron:180}, contacts:['heelL','heelR'],
     ik:{from:[0.34, 1.31, 0.52], to:[0.35, 1.19, 0.17], dir:[0,0,1], seed:[-75, 30, -40, 0]},
-    prop:{type:'bench', a:'sacrum', b:'bladeL', pad:0.22}, barbell:true, period:2.6, view:1.05},
+    prop:{type:'bench', a:'sacrum', b:'bladeL', pad:0.22}, barbell:true, con:'A', period:2.6, view:1.05},
   /* 肩推：槓從下巴前方（鎖骨高度）垂直推到頭頂，前臂全程垂直、手肘在槓的正下方略往前 */
   ohp:{A:{grip:1, pron:180}, B:{grip:1, pron:180}, ik:{from:[0.30, 1.46, 0.15], to:[0.29, 1.94, 0.0], dir:[0,1,0], seed:[-70, 25, -90, 0]},
-    barbell:true, period:2.8, view:0.55},
-  raise:{A:{grip:1, pron:180}, B:{arm:-90, grip:1, pron:180}, period:2.6, view:1.05},
+    barbell:true, con:'B', period:2.8, view:0.55},
+  raise:{A:{grip:1, pron:180}, B:{arm:-90, grip:1, pron:180}, con:'B', period:2.6, view:1.05},
   pullup:{A:{abd:158, grip:1, thigh:-10, shank:25}, B:{abd:35, elbowZ:145, grip:1, thigh:-10, shank:25}, hang:{hand:'gripL', clear:0.06},
-    prop:{type:'bar'}, period:3.0, view:0.5},
-  row:{A:{torso:65, thigh:-18, shank:12, grip:1, pron:180}, B:{torso:65, thigh:-18, shank:12, arm:60, elbow:-60, grip:1, pron:180}, period:2.4, view:1.35},
-  curl:{A:{grip:1}, B:{elbow:-130, grip:1}, period:2.2, view:1.1},
+    prop:{type:'bar'}, con:'B', period:3.0, view:0.5},
+  row:{A:{torso:65, thigh:-18, shank:12, grip:1, pron:180}, B:{torso:65, thigh:-18, shank:12, arm:60, elbow:-60, grip:1, pron:180}, con:'B', period:2.4, view:1.35},
+  curl:{A:{grip:1}, B:{elbow:-130, grip:1}, con:'B', period:2.2, view:1.1},
   /* 棒式：前臂平貼地面、掌心朝下，手肘在肩膀正下方 */
   plank:{A:{arm:-82, elbow:-74, grip:0.25, pron:180}, B:{arm:-82, elbow:-74, grip:0.25, pron:180}, solve:{field:'root', a:'elbowL', b:'toeL', target:0.035, range:[20,120]},
-    contacts:['toeL','toeR','elbowL:0.035','elbowR:0.035'], period:3.0, view:1.57},
-  shrug:{A:{grip:1, pron:90}, B:{shrug:0.06, grip:1, pron:90}, period:2.0, view:0.6}
+    contacts:['toeL','toeR','elbowL:0.035','elbowR:0.035'], con:'iso', period:3.0, view:1.57},
+  shrug:{A:{grip:1, pron:90}, B:{shrug:0.06, grip:1, pron:90}, con:'B', period:2.0, view:0.6}
 };
 const ARM_GROUPS = new Set(['biceps','triceps','forearmFlex','forearmExt','hand']);
 const baseKey = k => k.replace(/_[LRC]$/, '');
@@ -1589,6 +1597,8 @@ vec3 poseRZ(vec3 v, float a){ float c = cos(a), s = sin(a); return vec3(v.x*c - 
 vec3 poseRA(vec3 v, vec3 k, float a){ float c = cos(a), s = sin(a); return v*c + cross(k, v)*s + k*dot(k, v)*(1.0 - c); }
 uniform float uShapeW; /* 這個網格受肌肉厚度影響的程度 */
 uniform float uArmMode; /* 1=手臂肌肉 0=非手臂 0.5=依位置判斷(骨骼、三角肌) */
+/* 肌肉收縮：肌腹中心(xyz)與鼓起量(w，公尺，負值=被拉長變扁)；U、V 把位置換算成沿肌肉長軸／寬度的 -1..1 */
+uniform vec4 uBulgeC; uniform vec3 uBulgeU; uniform vec3 uBulgeV;
 vec3 poseRX(vec3 v, float a){ float c = cos(a), s = sin(a); return vec3(v.x, v.y*c - v.z*s, v.y*s + v.z*c); }
 float poseArm(vec3 p){
   return uArmMode > 0.75 ? 1.0 : (uArmMode < 0.25 ? 0.0 :
@@ -1598,6 +1608,12 @@ vec3 poseApply(vec3 v, vec3 p, float isPoint){
   float arm = poseArm(p), na = 1.0 - arm;
   /* 體型：沿法線加厚肌肉（上下半身分開），在站姿空間先做 */
   v += normal * mix(uShape.y, uShape.x, max(arm, smoothstep(0.80, 1.00, p.y))) * uShapeW * isPoint;
+  /* 收縮鼓起：肌腹中間最鼓、往兩端肌腱漸漸消失；法線也跟著傾斜，正面看才看得出隆起。
+     全部用 step／max 算，不需要分支 */
+  vec3 bd = p - uBulgeC.xyz;
+  float bu = dot(bd, uBulgeU), bv = dot(bd, uBulgeV), fu = max(0.0, 1.0 - bu*bu), fv = max(0.0, 1.0 - bv*bv);
+  vec3 bg = (-2.0 * bu * fv * step(bu*bu, 1.0) * uBulgeU - 2.0 * bv * fu * step(bv*bv, 1.0) * uBulgeV) * uBulgeC.w;
+  v += normal * (uBulgeC.w * fu * fv * isPoint) - (bg - dot(bg, v) * v) * (1.0 - isPoint);
   float wT = smoothstep(0.05, 0.085, p.z) * (1.0 - smoothstep(0.06, 0.12, p.y)) * na;
   float wA = (1.0 - smoothstep(0.045, 0.105, p.y)) * na;
   float wK = (1.0 - smoothstep(0.45, 0.55, p.y)) * na;
@@ -1636,19 +1652,20 @@ vec3 poseApply(vec3 v, vec3 p, float isPoint){
   return v + vec3(0.0, uOff.x, uOff.y) * isPoint;
 }
 `;
-function applyPose(material, armMode, shapeW){
+function bulgeUniforms(){ return {uBulgeC:{value:new THREE.Vector4(0, 0, 0, 0)}, uBulgeU:{value:new THREE.Vector3()}, uBulgeV:{value:new THREE.Vector3()}}; }
+function applyPose(material, armMode, shapeW, bulge){
   material.onBeforeCompile = (shader)=>{
-    Object.assign(shader.uniforms, POSE_U, {uArmMode:{value: armMode}, uShapeW:{value: shapeW || 0}});
+    Object.assign(shader.uniforms, POSE_U, {uArmMode:{value: armMode}, uShapeW:{value: shapeW || 0}}, bulge || bulgeUniforms());
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\n' + POSE_GLSL)
       .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n  objectNormal = poseApply(objectNormal, position, 0.0);')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed = poseApply(position, position, 1.0);');
   };
-  material.customProgramCacheKey = ()=> 'pose-v3';
+  material.customProgramCacheKey = ()=> 'pose-v4';
   return material;
 }
-function poseDepthMaterial(armMode, shapeW){
-  return applyPose(new THREE.MeshDepthMaterial({depthPacking: THREE.RGBADepthPacking}), armMode, shapeW);
+function poseDepthMaterial(armMode, shapeW, bulge){
+  return applyPose(new THREE.MeshDepthMaterial({depthPacking: THREE.RGBADepthPacking}), armMode, shapeW, bulge);
 }
 /* 肌腱、臉部薄肌只微微加厚，避免變形 */
 function shapeWeightFor(meta){ return meta.k === 't' ? 0.25 : (meta.g === 'head' ? 0.15 : 1); }
@@ -1845,6 +1862,7 @@ function updatePose(){
     if(poseAnim.playing) poseAnim.t += dt * (poseAnim.speed || 1);
     const s = reduceMotion ? 1 : (1 - Math.cos(2*Math.PI*poseAnim.t/poseAnim.period))/2;
     U = poseAt(poseAnim.def, s);
+    poseAnim.s = s;
   }
   /* 切換動作時平滑過渡，之後直接套用，避免手腳離地 */
   setPoseUniforms(U, poseAnim.blend < 1 ? 0.18 : 1);
@@ -1891,7 +1909,84 @@ function paintExercise(ex){
     p._baseEmissive = emis; m.color.copy(_hlColor); m.emissiveIntensity = emis;
   });
   if(boneMesh) boneMesh.material.color.setHex(BONE_COLOR).multiplyScalar(ex ? TH.boneDim : 1);
+  setBulgeParts(ex);
 }
+
+/* ---- 肌肉收縮的鼓起：主要發力的肌肉縮短時鼓起、被拉長時變扁；輔助穩定的肌肉只微微出力 ---- */
+let bulgeParts = [];
+const NO_BULGE_GROUPS = new Set(['hand', 'foot', 'head']);
+/* 用主成分分析找出肌肉的長軸與寬度方向，鼓起量依肌肉厚度決定 */
+function bulgeFrame(part){
+  if(part._bf) return part._bf;
+  const pos = part.mesh.geometry.attributes.position, n = pos.count, c = new THREE.Vector3(), q = new THREE.Vector3();
+  for(let i = 0; i < n; i++) c.add(q.fromBufferAttribute(pos, i));
+  c.divideScalar(n);
+  const C = [0,0,0,0,0,0];
+  for(let i = 0; i < n; i++){
+    q.fromBufferAttribute(pos, i).sub(c);
+    C[0] += q.x*q.x; C[1] += q.x*q.y; C[2] += q.x*q.z; C[3] += q.y*q.y; C[4] += q.y*q.z; C[5] += q.z*q.z;
+  }
+  const M = new THREE.Matrix3().set(C[0], C[1], C[2], C[1], C[3], C[4], C[2], C[4], C[5]);
+  const power = (start, ex)=>{
+    const v = start.clone();
+    for(let k = 0; k < 60; k++){ v.applyMatrix3(M); if(ex) v.addScaledVector(ex, -v.dot(ex)); v.normalize(); }
+    return v;
+  };
+  const e1 = power(new THREE.Vector3(0.3, 1, 0.2));
+  const s2 = new THREE.Vector3(1, -0.2, 0.4); s2.addScaledVector(e1, -s2.dot(e1)).normalize();
+  const e2 = power(s2, e1), e3 = new THREE.Vector3().crossVectors(e1, e2);
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity], E = [e1, e2, e3];
+  for(let i = 0; i < n; i++){
+    q.fromBufferAttribute(pos, i).sub(c);
+    E.forEach((e, k)=>{ const t = q.dot(e); lo[k] = Math.min(lo[k], t); hi[k] = Math.max(hi[k], t); });
+  }
+  const mid = E.reduce((o, e, k)=> o.addScaledVector(e, (lo[k] + hi[k])/2), c.clone());
+  const h1 = (hi[0] - lo[0])/2 * 1.02, h2 = (hi[1] - lo[1])/2 * 1.02, w3 = hi[2] - lo[2];
+  /* 扇形、片狀的肌肉（胸大肌、背闊肌）寬度方向也要漸漸收掉；紡錘狀的肌肉整圈一起鼓 */
+  const flat = 2*h2 > 1.8*w3;
+  /* 片狀肌肉的厚度方向包含了彎曲的弧度，所以比例要小一點 */
+  part._bf = {amp: Math.min(0.016, Math.max(0.004, (flat ? 0.2 : 0.34) * w3))};
+  part.bulge.uBulgeC.value.set(mid.x, mid.y, mid.z, 0);
+  part.bulge.uBulgeU.value.copy(e1).divideScalar(h1);
+  part.bulge.uBulgeV.value.copy(e2).multiplyScalar(flat ? 1/h2 : 0);
+  return part._bf;
+}
+function setBulgeParts(ex){
+  bulgeParts.forEach(b=>{ b.part.bulge.uBulgeC.value.w = 0; });
+  bulgeParts = [];
+  if(!ex) return;
+  clickableParts.forEach(p=>{
+    if(p.meta.k === 't' || NO_BULGE_GROUPS.has(p.id)) return;
+    const role = exerciseRole(p, ex);
+    if(role){ bulgeFrame(p); bulgeParts.push({part:p, role}); }
+  });
+}
+/* 0 = 主要肌肉最長（拉長），1 = 最短（收縮） */
+function contractionOf(def, s){ return def.con === 'iso' ? 0.75 : (def.con === 'A' ? 1 - s : s); }
+let phaseK = null, phaseDir = 0;
+function updateBulge(){
+  const def = poseAnim.def;
+  if(!bulgeParts.length && !def) return;
+  const k = def ? contractionOf(def, poseAnim.s ?? 0) : 0, iso = def && def.con === 'iso', fade = def ? poseAnim.blend : 0;
+  const cP = (iso ? 0.75 : -0.35 + 1.35 * k*k*(3 - 2*k)) * fade, cS = (iso ? 0.3 : 0.1 + 0.25*k) * fade;
+  bulgeParts.forEach(({part, role})=>{
+    const c = role === 'p' ? cP : cS;
+    part.bulge.uBulgeC.value.w = part._bf.amp * c;
+    /* 收縮時亮一點，取代原本的呼吸光 */
+    if(def) part.material.emissiveIntensity = (part._baseEmissive || 0) * (0.5 + 0.9 * Math.max(0, c));
+  });
+  updatePhaseMeter(def, k, iso);
+}
+function updatePhaseMeter(def, k, iso){
+  const el = document.getElementById('exPhase');
+  if(!el || !def) return;
+  if(phaseK !== null && Math.abs(k - phaseK) > 0.0004) phaseDir = k > phaseK ? 1 : -1;
+  phaseK = k;
+  const text = iso ? '等長收縮 · 撐住不動' : (phaseDir > 0 ? '收縮中 · 肌肉變短鼓起' : (phaseDir < 0 ? '拉長中 · 肌肉變長變扁' : '收縮 ↔ 拉長'));
+  if(el._t !== text){ el._t = text; el.querySelector('.ph-text').textContent = text; el.dataset.dir = iso ? 'iso' : (phaseDir > 0 ? 'in' : 'out'); }
+  el.querySelector('.ph-bar i').style.width = (k * 100).toFixed(1) + '%';
+}
+
 function exerciseLabel(item){
   if(muscleData[item]) return muscleData[item].name;
   const part = clickableParts.find(p=> baseKey(p.key) === item);
@@ -1902,7 +1997,7 @@ function renderMovePanel(){
   infoEl.innerHTML = `
     <span class="mi-region">動作連動</span>
     <h2>選一個訓練動作</h2>
-    <p class="func">3D 人體會跟著做動作，並亮起參與的肌肉：<i class="key key-p"></i>主要發力　<i class="key key-s"></i>輔助穩定。</p>
+    <p class="func">3D 人體會跟著做動作，並亮起參與的肌肉：<i class="key key-p"></i>主要發力　<i class="key key-s"></i>輔助穩定。主要發力的肌肉縮短時會鼓起來，被拉長時會變扁。</p>
     <div class="ex-grid">${EXERCISE_LIB.map((e, i)=>`<button data-ex="${e.id}"${e.id===currentExercise?' class="active"':''}>${e.name}<small>P${String(i+1).padStart(2,'0')} · ${e.en}</small></button>`).join('')}</div>
     <div id="exDetail"></div>`;
   infoEl.classList.remove('refresh'); void infoEl.offsetWidth; infoEl.classList.add('refresh');
@@ -1932,6 +2027,7 @@ function selectExercise(id, keepView){
   slot.innerHTML = `
     <div class="ex-kicker">${protocolCode(ex.id)}</div>
     <div class="ex-head"><h3>${ex.name}</h3><span class="en">${ex.en}</span></div>
+    <div class="ex-phase" id="exPhase" aria-hidden="true"><span class="ph-end">拉長</span><span class="ph-bar"><i></i></span><span class="ph-end">收縮</span><span class="ph-text">收縮 ↔ 拉長</span></div>
     <div class="ex-ctrl"><button id="exPlay">${poseAnim.playing ? '暫停' : '播放'}</button><span class="speed" role="group" aria-label="播放速度">${[0.5, 1].map(v=> `<button data-speed="${v}" class="${(poseAnim.speed || 1) === v ? 'on' : ''}" aria-pressed="${(poseAnim.speed || 1) === v}">${v}×</button>`).join('')}</span><span>模型動作為簡化示意，不是標準姿勢教學</span></div>
     <section class="mi-sec"><h6><i class="key key-p"></i>主要發力</h6>${chips(ex.p, 'p')}</section>
     <section class="mi-sec"><h6><i class="key key-s"></i>輔助穩定</h6>${chips(ex.s, 's')}</section>
@@ -1954,6 +2050,7 @@ function selectExercise(id, keepView){
 }
 function stopExercise(){
   poseAnim.def = null; poseAnim.playing = false; poseAnim.blend = 0;
+  setBulgeParts(null);
   clearGlow();
 }
 
@@ -3156,6 +3253,7 @@ function animate(){
     glowParts.forEach(p=>{ p.material.emissiveIntensity = (p._baseEmissive || 0) * (0.55 + pulse*0.75); });
   }
   updatePose();
+  updateBulge();
   updateHover();
   updateBeam();
   if(Math.abs(shiftTarget - shiftCur) > 0.05){ shiftCur += (shiftTarget - shiftCur) * 0.12; applyViewOffset(); }
