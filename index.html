@@ -520,6 +520,8 @@
   .plan-bar > button:not(.link-btn){padding:7px 14px; border:none; border-radius:8px; background:var(--ice); color:var(--on-ice); font:600 13px var(--sans); cursor:pointer;}
   .plan-bar .link-btn{margin:0; font-size:12.5px;}
   .plan-bar.now{margin-top:18px;}
+  .plan-bar .plan-clock{font:600 18px var(--mono); color:var(--text); margin:0 2px;}
+  .plan-bar[data-state="rest"]{border-left-color:var(--text-faint);}
   /* 訓練紀錄 */
   .log-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:12px 0 0;}
   .log-btn{padding:8px 14px; border-radius:8px; border:1px solid var(--scan); background:none; color:var(--text); font:600 13px var(--sans); cursor:pointer;}
@@ -2560,14 +2562,63 @@ function bindPlanPanel(infoEl){
   const gen = infoEl.querySelector('#planGen'); if(gen) gen.addEventListener('click', ()=>{ buildPlan(); renderMovePanel(); });
   infoEl.querySelectorAll('[data-plan-ex]').forEach(b=> b.addEventListener('click', ()=> selectExercise(b.dataset.planEx)));
   const start = infoEl.querySelector('#planStart');
-  if(start) start.addEventListener('click', ()=>{ planSession = {list:currentPlan.list.map(e=> e.id), i:0, done:0}; selectExercise(planSession.list[0]); });
+  if(start) start.addEventListener('click', ()=>{ clearPlanTimer(); planSession = {list:currentPlan.list.map(e=> e.id), i:0, set:0, done:0}; selectExercise(planSession.list[0]); });
   const resume = infoEl.querySelector('[data-plan-resume]');
   if(resume) resume.addEventListener('click', ()=> selectExercise(planSession.list[planSession.i]));
 }
+/* 組數與休息：每組做完按一下，自動倒數組間休息；撐住不動的動作直接倒數撐住的秒數 */
+const PLAN_SETS = 3, HOLD_SEC = 30;
+const restSecFor = ex=> POSES[ex.pose].con === 'iso' ? 45 : (COMPOUND.has(ex.id) ? 90 : 60);
+let planTimer = null;
+function clearPlanTimer(){ if(planTimer){ clearInterval(planTimer.id); planTimer = null; } }
+const mmss = sec=> Math.floor(sec / 60) + ':' + String(Math.max(0, Math.ceil(sec) % 60)).padStart(2, '0');
+function renderPlanBar(ex){
+  const bar = document.querySelector('.plan-bar.now');
+  if(!bar || !planSession) return;
+  const n = planSession.list.length, last = planSession.i === n - 1, setNo = planSession.set + 1, iso = POSES[ex.pose].con === 'iso';
+  const t = planTimer, left = t ? (t.until - Date.now()) / 1000 : 0;
+  bar.dataset.state = t ? t.kind : 'set';
+  bar.innerHTML = t && t.kind === 'rest'
+    ? `<span>課表 ${planSession.i + 1} / ${n} · 組間休息 <b class="plan-clock">${mmss(left)}</b> · 接著第 ${setNo} / ${PLAN_SETS} 組</span><button data-plan-act="skiprest">跳過休息</button>`
+    : t && t.kind === 'hold'
+    ? `<span>課表 ${planSession.i + 1} / ${n} · 第 ${setNo} / ${PLAN_SETS} 組 · 撐住 <b class="plan-clock">${mmss(left)}</b></span><button data-plan-act="endhold">提早結束這組</button>`
+    : `<span>課表 ${planSession.i + 1} / ${n} · 第 ${setNo} / ${PLAN_SETS} 組 · <b>${iso ? '每組撐 ' + HOLD_SEC + ' 秒' : planDose(ex).replace(/^.*× /, '')}</b></span><button data-plan-act="${iso ? 'hold' : 'set'}">${iso ? '開始撐 ' + HOLD_SEC + ' 秒' : (setNo === PLAN_SETS ? (last ? '完成最後一組 ✓' : '完成，下一個動作 →') : '完成這組 ✓')}</button><button class="link-btn" data-plan-act="skip">${last ? '結束課表' : '跳過這個動作'}</button>`;
+  bar.querySelectorAll('[data-plan-act]').forEach(b=> b.addEventListener('click', ()=> planAct(b.dataset.planAct, ex)));
+}
+function startPlanTimer(kind, sec, ex){
+  clearPlanTimer();
+  planTimer = {kind, until: Date.now() + sec * 1000};
+  planTimer.id = setInterval(()=>{
+    if(!planSession || planSession.list[planSession.i] !== ex.id){ clearPlanTimer(); return; }
+    const left = (planTimer.until - Date.now()) / 1000, clock = document.querySelector('.plan-bar.now .plan-clock');
+    if(clock) clock.textContent = mmss(left);
+    if(left <= 0){
+      const k = planTimer.kind;
+      clearPlanTimer();
+      try{ navigator.vibrate && navigator.vibrate(k === 'rest' ? [180, 80, 180] : 250); }catch(e){}
+      if(k === 'hold') finishSet(ex);
+      else { showToast('休息結束，開始第 ' + (planSession.set + 1) + ' 組'); renderPlanBar(ex); }
+    }
+  }, 250);
+  renderPlanBar(ex);
+}
+function finishSet(ex){
+  planSession.set++;
+  if(planSession.set >= PLAN_SETS){ planStep(true); return; }
+  startPlanTimer('rest', restSecFor(ex), ex);
+}
+function planAct(act, ex){
+  if(act === 'set') finishSet(ex);
+  else if(act === 'hold') startPlanTimer('hold', HOLD_SEC, ex);
+  else if(act === 'endhold'){ clearPlanTimer(); finishSet(ex); }
+  else if(act === 'skiprest'){ clearPlanTimer(); renderPlanBar(ex); }
+  else if(act === 'skip'){ clearPlanTimer(); planStep(false); }
+}
 function planStep(advance){
+  clearPlanTimer();
   const ex = EXERCISE_LIB.find(e=> e.id === planSession.list[planSession.i]);
   if(advance){ trainLog.push({id:ex.id, t:Date.now()}); saveLog(); planSession.done++; }
-  planSession.i++;
+  planSession.i++; planSession.set = 0;
   if(planSession.i < planSession.list.length){ selectExercise(planSession.list[planSession.i]); return; }
   const n = planSession.done;
   planSession = null;
@@ -2659,9 +2710,9 @@ function selectExercise(id, keepView){
   }
   const chips = (list, cls)=> `<div class="chip-row ${cls}">${list.map(it=>`<button data-go="${it}">${exerciseLabel(it)}</button>`).join('')}</div>`;
   const slot = document.getElementById('exDetail');
-  const inPlan = planSession && planSession.list[planSession.i] === id, lastStep = inPlan && planSession.i === planSession.list.length - 1;
+  const inPlan = planSession && planSession.list[planSession.i] === id;
   slot.innerHTML = `
-    ${inPlan ? `<div class="plan-bar now"><span>課表 ${planSession.i + 1} / ${planSession.list.length} · <b>${planDose(ex)}</b></span><button data-plan-next>${lastStep ? '完成，結束課表 ✓' : '完成，下一個 →'}</button><button class="link-btn" data-plan-skip>${lastStep ? '結束' : '跳過'}</button></div>` : ''}
+    ${inPlan ? '<div class="plan-bar now" aria-live="polite"></div>' : ''}
     <div class="ex-kicker">${protocolCode(ex.id)}</div>
     <div class="ex-head"><h3>${ex.name}</h3><span class="en">${ex.en}</span><button class="share-btn" data-share aria-label="分享這個動作的連結"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.5V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4.5h9V8.5"/></svg>分享</button></div>
     <div class="ex-phase" id="exPhase" aria-hidden="true"><span class="ph-end">${isStretch ? '放鬆' : '拉長'}</span><span class="ph-bar"><i></i></span><span class="ph-end">${isStretch ? '伸展' : '收縮'}</span><span class="ph-text">${isStretch ? '放鬆 ↔ 伸展' : '收縮 ↔ 拉長'}</span></div>
@@ -2675,10 +2726,7 @@ function selectExercise(id, keepView){
     <section class="mi-sec"><h6>調整難度</h6><dl class="mdetail level"><dt>變簡單</dt><dd>${EXERCISE_EXTRA[ex.id].easy}</dd><dt>變困難</dt><dd>${EXERCISE_EXTRA[ex.id].hard}</dd></dl></section>` : ''}
     <p class="ex-note">${isStretch ? STRETCH_TIP + '<br>' : ''}點上面的肌肉名稱，可以跳到它的說明。</p>`;
   slot.querySelector('[data-share]').addEventListener('click', shareCurrent);
-  const pn = slot.querySelector('[data-plan-next]'), ps = slot.querySelector('[data-plan-skip]');
-  if(pn) pn.addEventListener('click', ()=> planStep(true));
-  if(ps) ps.addEventListener('click', ()=> planStep(false));
-  if(inPlan) slot.scrollIntoView({block:'nearest'});
+  if(inPlan){ renderPlanBar(ex); slot.scrollIntoView({block:'nearest'}); }
   const logBtn = slot.querySelector('[data-log]');
   if(logBtn) logBtn.addEventListener('click', ()=>{
     trainLog.push({id:ex.id, t:Date.now()}); saveLog();
