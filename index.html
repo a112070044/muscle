@@ -332,6 +332,13 @@
   .chat-input-row button:disabled{opacity:.4; cursor:default;}
 
   .hints{list-style:none; margin-top:14px;}
+  .daily{padding:16px 16px 14px; margin-bottom:18px; border:1px solid var(--line-hi); border-left:2px solid var(--scan); border-radius:0 12px 12px 0; background:var(--ice-dim);}
+  .daily h3{font-size:22px; font-weight:600; margin:4px 0 8px; line-height:1.3;}
+  .daily h3 small{display:block; font:400 11.5px var(--mono); color:var(--text-faint); margin-top:2px;}
+  .daily p{font-size:14px; line-height:1.75; color:var(--text-soft);}
+  .daily-acts{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px;}
+  .daily-acts button{padding:7px 12px; border-radius:8px; border:1px solid var(--line-hi); background:none; color:var(--text); font:500 13px var(--sans); cursor:pointer;}
+  .daily-acts button:first-child{background:var(--ice); color:var(--on-ice); border-color:var(--ice);}
   .hints li{padding:13px 0; border-top:1px solid var(--line); font-size:14px; line-height:1.7; color:var(--text-soft);}
   .hints b{display:block; font-weight:500; color:var(--text); margin-bottom:2px;}
   .fineprint{padding:12px 24px 15px; border-top:1px solid var(--line); font-size:11.5px; line-height:1.65; color:var(--text-faint);}
@@ -477,7 +484,7 @@
   @media (pointer: coarse){
     .ghost-btn{min-height:44px; min-width:44px; padding:0 12px;}
     .seg button{min-width:44px;}
-    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .quiz-options button, .plan-list button, .mi-tools button, .unhide-btn, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn{min-height:44px;}
+    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .quiz-options button, .plan-list button, .mi-tools button, .daily-acts button, .unhide-btn, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn{min-height:44px;}
     .rail-search input{height:44px; font-size:16px;}
   }
   @media (max-width:760px){ .leader, .leader-label{display:none;} }
@@ -1626,6 +1633,7 @@ async function loadAnatomyModels(){
     renderer.compile(scene, camera);
     modelReady = true; window.modelReadyFlag = true;
     markShadowsDirty();
+    if(currentMode === 'explore' && !currentMuscle) showPlaceholder();
     applyDeepLink();
     // reflections are the most expensive step, so they are built after the body is already on screen
     setTimeout(()=>{ try{ buildStudioEnv(); }catch(e){ console.warn('env skipped', e); } }, 600);
@@ -3845,7 +3853,44 @@ function previewGroup(id){
   paintHighlight(currentMuscle, id === currentMuscle ? null : id);
 }
 
-const PLACEHOLDER_HTML = '<p class="placeholder">從這裡開始，選一種方式：</p><ul class="hints"><li><b>點人體上的一條肌肉</b>看它負責什麼、怎麼練</li><li><b>從肌群清單挑一個</b>3D 會亮起那個肌群並自動對焦</li><li><b>打開「透視」</b>看骨骼和肌肉怎麼疊在一起</li></ul>';
+const PLACEHOLDER_HINTS = '<p class="placeholder">從這裡開始，選一種方式：</p><ul class="hints"><li><b>點人體上的一條肌肉</b>看它負責什麼、怎麼練</li><li><b>從肌群清單挑一個</b>3D 會亮起那個肌群並自動對焦</li><li><b>打開「透視」</b>看骨骼和肌肉怎麼疊在一起</li></ul>';
+/* 今日肌肉：每天換一個肌群，附一則冷知識、一個示範動作和一個伸展（同一天每個人看到的都一樣） */
+function dailyPick(){
+  const d = new Date(), day = Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  const h = n=> ((day * 2654435761 + n * 40503) >>> 0);
+  const id = muscleOrder[h(1) % muscleOrder.length], g = muscleData[id];
+  let ex = EXERCISE_LIB.filter(e=> protocolRole(e, id, null) === 'p');
+  if(!ex.length) ex = EXERCISE_LIB.filter(e=> protocolRole(e, id, null) === 's');   /* 沒有主要練它的動作，就找有用到它的 */
+  const st = STRETCH_DEMOS.filter(x=> x.for.includes(id)), jt = JOINT_LIB.filter(j=> protocolRole(j, id, null) === 'p');
+  return {id, g, fact: g.facts[h(2) % g.facts.length], ex: ex.length ? ex[h(3) % ex.length] : null, st: st.length ? st[h(4) % st.length] : null, jt: jt.length ? jt[h(5) % jt.length] : null};
+}
+function placeholderHTML(){
+  if(!modelReady) return PLACEHOLDER_HINTS;
+  const P = dailyPick(), d = new Date();
+  return `
+    <div class="daily">
+      <span class="mi-region">今日肌肉 · ${d.getMonth() + 1}/${d.getDate()}</span>
+      <h3>${P.g.name}<small>${groupCode(P.id)} · ${P.g.en}</small></h3>
+      <p>${P.fact}</p>
+      <div class="daily-acts">
+        <button data-daily="muscle">看這個肌群</button>
+        ${P.ex ? `<button data-daily="ex">示範：${P.ex.name}</button>` : ''}
+        ${P.st ? `<button data-daily="st">伸展：${P.st.name}</button>` : ''}
+        ${P.jt ? `<button data-daily="jt">肌動學：${P.jt.name}</button>` : ''}
+      </div>
+    </div>
+    ${PLACEHOLDER_HINTS}`;
+}
+function showPlaceholder(){
+  const el = document.getElementById('muscleInfo');
+  el.innerHTML = placeholderHTML();
+  const P = modelReady ? dailyPick() : null;
+  el.querySelectorAll('[data-daily]').forEach(b=> b.addEventListener('click', ()=>{
+    const k = b.dataset.daily;
+    if(k === 'muscle') selectMuscle(P.id);
+    else { setMode('move'); selectExercise((k === 'ex' ? P.ex : k === 'st' ? P.st : P.jt).id); }
+  }));
+}
 const consoleEl = document.getElementById('console');
 const railEl = document.getElementById('rail');
 const peekEl = document.getElementById('peekCard');
@@ -4033,7 +4078,7 @@ function clearSelection(){
   currentMuscle = null; currentPart = null;
   setLeaderAnchor();
   updateHighlight(null);
-  document.getElementById('muscleInfo').innerHTML = PLACEHOLDER_HTML;
+  showPlaceholder();
   document.querySelectorAll('.legend button').forEach(b=> b.classList.remove('active'));
   updatePeek();
   focusWholeBody();
@@ -4255,7 +4300,7 @@ function setMode(mode){
   } else {
     updateHighlight(currentMuscle);
     if(currentMuscle){ renderMuscleInfo(currentMuscle); focusOnMuscle(currentMuscle); }
-    else document.getElementById('muscleInfo').innerHTML = PLACEHOLDER_HTML;
+    else showPlaceholder();
     document.querySelectorAll('.legend button').forEach(b=> b.classList.toggle('active', b.dataset.id === currentMuscle));
     updatePeek();
   }
