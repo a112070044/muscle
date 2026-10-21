@@ -471,7 +471,7 @@
   @media (pointer: coarse){
     .ghost-btn{min-height:44px; min-width:44px; padding:0 12px;}
     .seg button{min-width:44px;}
-    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .quiz-options button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn{min-height:44px;}
+    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .quiz-options button, .plan-list button, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn{min-height:44px;}
     .rail-search input{height:44px; font-size:16px;}
   }
   @media (max-width:760px){ .leader, .leader-label{display:none;} }
@@ -493,10 +493,33 @@
   .ex-head h3{font-size:22px; font-weight:600; line-height:1.3;}
   .ex-head .en{margin:0;}
   /* 實驗協定分頁：訓練／伸展 */
-  .move-tabs{display:grid; grid-template-columns:repeat(3, 1fr); gap:2px; padding:3px; margin:12px 0 4px; background:var(--seg-bg); border-radius:10px;}
+  .move-tabs{display:grid; grid-template-columns:repeat(4, 1fr); gap:2px; padding:3px; margin:12px 0 4px; background:var(--seg-bg); border-radius:10px;}
   .move-tabs button{background:none; border:none; border-radius:8px; padding:9px 10px; color:var(--text-soft); font:600 13.5px var(--sans); cursor:pointer;}
   .move-tabs button small{font:500 10px var(--mono); letter-spacing:.14em; color:var(--text-faint); margin-left:4px;}
   .move-tabs button.on{background:var(--seg-active); color:var(--text);}
+  @media (max-width: 420px){ .move-tabs button small{display:none;} }
+  /* 課表 */
+  .plan-opts{display:grid; gap:10px; margin:14px 0 4px;}
+  .plan-row{display:grid; grid-template-columns:2.6em 1fr; align-items:start; gap:8px;}
+  .plan-row > span{font-size:12.5px; color:var(--text-faint); padding-top:6px;}
+  .plan-opts .chip-row button.on{background:var(--ice); color:var(--on-ice); border-color:var(--ice);}
+  .plan-bw{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--text-soft); cursor:pointer;}
+  .plan-bw input{width:16px; height:16px; accent-color:var(--scan);}
+  .plan-list{list-style:none; display:grid; gap:6px;}
+  .plan-list button{width:100%; display:grid; grid-template-columns:1.8em 1fr auto; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line-hi); border-radius:8px; background:transparent; color:var(--text); text-align:left; cursor:pointer;}
+  .plan-list button:hover{border-color:var(--text-faint);}
+  .plan-list .pi{font:600 13px var(--mono); color:var(--text-faint);}
+  .plan-list b{font-size:14.5px; font-weight:600;}
+  .plan-list b small{display:block; font:400 10.5px var(--mono); color:var(--text-faint); margin-top:2px;}
+  .plan-list em{font-style:normal; font-size:12.5px; color:var(--text-soft); white-space:nowrap;}
+  .plan-actions{display:flex; flex-wrap:wrap; gap:10px; margin:16px 0 4px;}
+  .plan-start{padding:10px 18px; border:none; border-radius:8px; background:var(--ice); color:var(--on-ice); font:600 14px var(--sans); cursor:pointer;}
+  .plan-reroll{padding:10px 16px; border:1px solid var(--line-hi); border-radius:8px; background:none; color:var(--text); font:500 13.5px var(--sans); cursor:pointer;}
+  .plan-bar{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:14px 0 4px; padding:10px 12px; border-left:2px solid var(--scan); background:var(--ice-dim); border-radius:0 8px 8px 0; font-size:13.5px; color:var(--text-soft);}
+  .plan-bar span{flex:1; min-width:10em;} .plan-bar b{color:var(--text); font-weight:600;}
+  .plan-bar > button:not(.link-btn){padding:7px 14px; border:none; border-radius:8px; background:var(--ice); color:var(--on-ice); font:600 13px var(--sans); cursor:pointer;}
+  .plan-bar .link-btn{margin:0; font-size:12.5px;}
+  .plan-bar.now{margin-top:18px;}
   /* 訓練紀錄 */
   .log-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:12px 0 0;}
   .log-btn{padding:8px 14px; border-radius:8px; border:1px solid var(--scan); background:none; color:var(--text); font:600 13px var(--sans); cursor:pointer;}
@@ -2345,12 +2368,122 @@ function bindLogPanel(infoEl){
   });
 }
 
-let moveTab = 'train';   /* 實驗協定分頁：訓練動作、伸展、紀錄 */
+/* ---- 今天練什麼：依目標部位、時間、器材產生課表，優先安排這週練得少的肌群 ---- */
+const PLAN_FOCUS = {
+  full:{zh:'全身', groups:['chest','lats','rhomboids','shoulders','quads','hamstrings','glutes','abs','biceps','triceps','calf','erector']},
+  upper:{zh:'上半身', groups:['chest','lats','rhomboids','shoulders','biceps','triceps','traps']},
+  lower:{zh:'下半身', groups:['quads','hamstrings','glutes','calf','adductors','gluteMed']},
+  push:{zh:'推', groups:['chest','shoulders','triceps']},
+  pull:{zh:'拉', groups:['lats','rhomboids','biceps','traps']},
+  core:{zh:'核心', groups:['abs','obliques','erector','hipflexor']}
+};
+const PLAN_LEN = {15:3, 30:5, 45:7};
+const BODYWEIGHT = new Set(['squat','lunge','calfraise','pushup','plank','bridge','situp','legraise','superman','wallsit']);
+const COMPOUND = new Set(['squat','rdl','lunge','hipthrust','pushup','bench','ohp','pullup','row','deadlift','dips','uprow']);
+function planDose(ex){
+  if(POSES[ex.pose].con === 'iso') return '3 組 × 30–45 秒';
+  if(COMPOUND.has(ex.id)) return BODYWEIGHT.has(ex.id) ? '3 組 × 10–15 下' : '3–4 組 × 6–10 下';
+  return '3 組 × 10–15 下';
+}
+let planPrefs = {focus:'full', min:30, bw:false};
+try{ const sv = JSON.parse(localStorage.getItem('muscle-plan') || '{}'); if(PLAN_FOCUS[sv.focus]) planPrefs.focus = sv.focus; if(PLAN_LEN[sv.min]) planPrefs.min = sv.min; planPrefs.bw = !!sv.bw; }catch(e){}
+let currentPlan = null, planSession = null;   /* planSession：跟著課表做時的進度 {list, i} */
+function buildPlan(){
+  const F = PLAN_FOCUS[planPrefs.focus], n = PLAN_LEN[planPrefs.min], heat = heatByGroup(), covered = {}, picks = [];
+  const pool = EXERCISE_LIB.filter(ex=> !planPrefs.bw || BODYWEIGHT.has(ex.id));
+  for(let k = 0; k < n; k++){
+    let best = null;
+    pool.forEach(ex=>{
+      if(picks.includes(ex)) return;
+      const pg = [...primaryGroups(ex)].filter(g=> F.groups.includes(g));
+      if(!pg.length) return;
+      /* 這週練得少、這份課表還沒練到的肌群分數高；多關節動作優先；再加一點隨機，每次換一組都不太一樣 */
+      let score = pg.reduce((t, g)=> t + 1 / (1 + (heat[g] || 0) * 0.5) / (1 + (covered[g] || 0) * 1.5), 0);
+      score *= (COMPOUND.has(ex.id) ? 1.25 : 1) * (0.75 + Math.random() * 0.5);
+      if(!best || score > best[0]) best = [score, ex, pg];
+    });
+    if(!best) break;
+    picks.push(best[1]);
+    best[2].forEach(g=>{ covered[g] = (covered[g] || 0) + 1; });
+  }
+  picks.sort((a, b)=> (COMPOUND.has(b.id) ? 1 : 0) - (COMPOUND.has(a.id) ? 1 : 0));
+  const stretches = [];
+  Object.keys(covered).sort((a, b)=> covered[b] - covered[a]).forEach(g=>{
+    const st = STRETCH_DEMOS.find(x=> x.for.includes(g) && !stretches.includes(x));
+    if(st && stretches.length < 2) stretches.push(st);
+  });
+  currentPlan = {focus:planPrefs.focus, list:picks, stretches};
+  return currentPlan;
+}
+function savePlanPrefs(){ try{ localStorage.setItem('muscle-plan', JSON.stringify(planPrefs)); }catch(e){} }
+function renderPlanPanel(){
+  if(!currentPlan || currentPlan.focus !== planPrefs.focus) buildPlan();
+  const P = currentPlan, chip = (attr, val, on, label)=> `<button data-${attr}="${val}" class="${on ? 'on' : ''}" aria-pressed="${on}">${label}</button>`;
+  return `
+    <div class="plan-opts">
+      <div class="plan-row"><span>部位</span><div class="chip-row">${Object.entries(PLAN_FOCUS).map(([k, f])=> chip('focus', k, k === planPrefs.focus, f.zh)).join('')}</div></div>
+      <div class="plan-row"><span>時間</span><div class="chip-row">${Object.keys(PLAN_LEN).map(m=> chip('min', m, +m === +planPrefs.min, m + ' 分鐘')).join('')}</div></div>
+      <label class="plan-bw"><input type="checkbox" id="planBw" ${planPrefs.bw ? 'checked' : ''}> 只用徒手動作（不需要器材）</label>
+    </div>
+    ${planSession ? `<div class="plan-bar"><span>課表進行中 ${planSession.i + 1} / ${planSession.list.length}</span><button data-plan-resume>繼續 →</button></div>` : ''}
+    <section class="mi-sec">
+      <h6>課表 · ${PLAN_FOCUS[P.focus].zh} · ${P.list.length} 個動作</h6>
+      ${P.list.length ? `<ol class="plan-list">${P.list.map((ex, i)=> `<li><button data-plan-ex="${ex.id}"><span class="pi">${i + 1}</span><b>${ex.name}<small>${protocolCode(ex.id)}</small></b><em>${planDose(ex)}</em></button></li>`).join('')}</ol>
+      ${P.list.length < PLAN_LEN[planPrefs.min] ? `<p class="proto-none">符合條件的動作只有 ${P.list.length} 個${planPrefs.bw ? '（徒手動作比較少，關掉「只用徒手」會有更多選擇）' : ''}。</p>` : ''}
+      <p class="st-note">組間休息 60–90 秒；重量選最後兩下有點吃力、但姿勢不跑掉的程度。新手先從比較少的組數開始。</p>`
+      : '<p class="proto-none">這個條件下沒有合適的動作，試試關掉「只用徒手」。</p>'}
+    </section>
+    ${P.stretches.length ? `<section class="mi-sec"><h6>練完伸展</h6><div class="proto-list">${P.stretches.map(st=> `<button data-plan-ex="${st.id}"><span class="pc">${protocolCode(st.id)}</span><b>${st.name}</b><small>20–30 秒 × 2</small></button>`).join('')}</div></section>` : ''}
+    <div class="plan-actions">
+      ${P.list.length ? '<button class="plan-start" id="planStart">▶ 跟著課表開始</button>' : ''}
+      <button class="plan-reroll" id="planGen">換一組</button>
+    </div>`;
+}
+function bindPlanPanel(infoEl){
+  const rerender = ()=>{ savePlanPrefs(); buildPlan(); renderMovePanel(); };
+  infoEl.querySelectorAll('[data-focus]').forEach(b=> b.addEventListener('click', ()=>{ planPrefs.focus = b.dataset.focus; rerender(); }));
+  infoEl.querySelectorAll('[data-min]').forEach(b=> b.addEventListener('click', ()=>{ planPrefs.min = +b.dataset.min; rerender(); }));
+  const bw = infoEl.querySelector('#planBw'); if(bw) bw.addEventListener('change', ()=>{ planPrefs.bw = bw.checked; rerender(); });
+  const gen = infoEl.querySelector('#planGen'); if(gen) gen.addEventListener('click', ()=>{ buildPlan(); renderMovePanel(); });
+  infoEl.querySelectorAll('[data-plan-ex]').forEach(b=> b.addEventListener('click', ()=> selectExercise(b.dataset.planEx)));
+  const start = infoEl.querySelector('#planStart');
+  if(start) start.addEventListener('click', ()=>{ planSession = {list:currentPlan.list.map(e=> e.id), i:0, done:0}; selectExercise(planSession.list[0]); });
+  const resume = infoEl.querySelector('[data-plan-resume]');
+  if(resume) resume.addEventListener('click', ()=> selectExercise(planSession.list[planSession.i]));
+}
+function planStep(advance){
+  const ex = EXERCISE_LIB.find(e=> e.id === planSession.list[planSession.i]);
+  if(advance){ trainLog.push({id:ex.id, t:Date.now()}); saveLog(); planSession.done++; }
+  planSession.i++;
+  if(planSession.i < planSession.list.length){ selectExercise(planSession.list[planSession.i]); return; }
+  const n = planSession.done;
+  planSession = null;
+  showToast(n ? '課表完成！已記錄 ' + n + ' 個動作，看看本週熱圖' : '課表結束');
+  moveTab = 'log'; renderMovePanel();
+}
+
+let moveTab = 'train';   /* 實驗協定分頁：訓練動作、伸展、課表、紀錄 */
 function renderMovePanel(noSelect){
   const infoEl = document.getElementById('muscleInfo'), st = moveTab === 'stretch', lg = moveTab === 'log';
   const list = st ? STRETCH_DEMOS : EXERCISE_LIB;
   const tab = (id, zh, en)=> `<button role="tab" data-mtab="${id}" aria-selected="${moveTab === id}" class="${moveTab === id ? 'on' : ''}">${zh} <small>${en}</small></button>`;
-  const tabs = `<div class="move-tabs" role="tablist" aria-label="動作類型">${tab('train', '訓練', 'TRAIN')}${tab('stretch', '伸展', 'STRETCH')}${tab('log', '紀錄', 'LOG')}</div>`;
+  const tabs = `<div class="move-tabs" role="tablist" aria-label="動作類型">${tab('train', '訓練', 'TRAIN')}${tab('stretch', '伸展', 'STRETCH')}${tab('plan', '課表', 'PLAN')}${tab('log', '紀錄', 'LOG')}</div>`;
+  if(moveTab === 'plan'){
+    /* 課表分頁：模型回到站姿 */
+    stopExercise(); paintExercise(null);
+    infoEl.innerHTML = `
+      <span class="mi-region">動作連動</span>
+      <h2>今天練什麼</h2>
+      ${tabs}
+      <p class="func">選要練的部位和時間，會參考這週的訓練紀錄，優先安排練得比較少的肌群。點動作可以看 3D 示範，或直接跟著課表一個一個做。</p>
+      ${renderPlanPanel()}`;
+    infoEl.classList.remove('refresh'); void infoEl.offsetWidth; infoEl.classList.add('refresh');
+    infoEl.scrollTop = 0;
+    infoEl.querySelectorAll('[data-mtab]').forEach(b=> b.addEventListener('click', ()=>{ if(b.dataset.mtab !== moveTab){ moveTab = b.dataset.mtab; renderMovePanel(); } }));
+    bindPlanPanel(infoEl);
+    syncHash();
+    return;
+  }
   if(lg){
     /* 紀錄分頁：模型回到站姿，顯示熱圖 */
     poseAnim.def = null; poseAnim.playing = false;
@@ -2396,7 +2529,7 @@ function selectExercise(id, keepView){
   if(!ex || (ex.kind === 'stretch' && !ex.pose)) return;
   const isStretch = ex.kind === 'stretch';
   /* 從別的地方（肌肉說明、分享連結）點進來時，先切到對的分頁 */
-  if(isStretch !== (moveTab === 'stretch') || moveTab === 'log'){ moveTab = isStretch ? 'stretch' : 'train'; renderMovePanel(true); }
+  if(isStretch !== (moveTab === 'stretch') || moveTab === 'log' || moveTab === 'plan'){ moveTab = isStretch ? 'stretch' : 'train'; renderMovePanel(true); }
   currentExercise = id;
   userInteracted = true;
   document.querySelectorAll('.ex-grid button').forEach(b=> b.classList.toggle('active', b.dataset.ex === id));
@@ -2413,7 +2546,9 @@ function selectExercise(id, keepView){
   }
   const chips = (list, cls)=> `<div class="chip-row ${cls}">${list.map(it=>`<button data-go="${it}">${exerciseLabel(it)}</button>`).join('')}</div>`;
   const slot = document.getElementById('exDetail');
+  const inPlan = planSession && planSession.list[planSession.i] === id, lastStep = inPlan && planSession.i === planSession.list.length - 1;
   slot.innerHTML = `
+    ${inPlan ? `<div class="plan-bar now"><span>課表 ${planSession.i + 1} / ${planSession.list.length} · <b>${planDose(ex)}</b></span><button data-plan-next>${lastStep ? '完成，結束課表 ✓' : '完成，下一個 →'}</button><button class="link-btn" data-plan-skip>${lastStep ? '結束' : '跳過'}</button></div>` : ''}
     <div class="ex-kicker">${protocolCode(ex.id)}</div>
     <div class="ex-head"><h3>${ex.name}</h3><span class="en">${ex.en}</span><button class="share-btn" data-share aria-label="分享這個動作的連結"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.5V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4.5h9V8.5"/></svg>分享</button></div>
     <div class="ex-phase" id="exPhase" aria-hidden="true"><span class="ph-end">${isStretch ? '放鬆' : '拉長'}</span><span class="ph-bar"><i></i></span><span class="ph-end">${isStretch ? '伸展' : '收縮'}</span><span class="ph-text">${isStretch ? '放鬆 ↔ 伸展' : '收縮 ↔ 拉長'}</span></div>
@@ -2424,6 +2559,10 @@ function selectExercise(id, keepView){
     <p class="tip">${isStretch ? ex.how : ex.cue}</p>
     <p class="ex-note">${isStretch ? STRETCH_TIP + '<br>' : ''}點上面的肌肉名稱，可以跳到它的說明。</p>`;
   slot.querySelector('[data-share]').addEventListener('click', shareCurrent);
+  const pn = slot.querySelector('[data-plan-next]'), ps = slot.querySelector('[data-plan-skip]');
+  if(pn) pn.addEventListener('click', ()=> planStep(true));
+  if(ps) ps.addEventListener('click', ()=> planStep(false));
+  if(inPlan) slot.scrollIntoView({block:'nearest'});
   const logBtn = slot.querySelector('[data-log]');
   if(logBtn) logBtn.addEventListener('click', ()=>{
     trainLog.push({id:ex.id, t:Date.now()}); saveLog();
@@ -2694,7 +2833,7 @@ document.getElementById('themeBtn').innerHTML = document.documentElement.dataset
   const label = document.getElementById('labEnterText'), status = document.getElementById('liStatus');
   let seen = false; try{ seen = sessionStorage.getItem('lab-entered') === '1'; }catch(e){}
   /* 從分享連結進來：直接看到分享的內容，入口畫面和導覽這次先不出現 */
-  const linked = /^#((p|m|g|s)=|log$)/.test(location.hash);
+  const linked = /^#((p|m|g|s)=|log$|plan$)/.test(location.hash);
   if(linked && !seen){ seen = true; try{ sessionStorage.setItem('lab-entered', '1'); }catch(e){} }
   if(seen && !linked){
     const wait = setInterval(()=>{ if(window.modelReadyFlag){ clearInterval(wait); setTimeout(()=> maybeStartTour(), 600); } }, 300);
@@ -2921,7 +3060,7 @@ const SITE_URL = 'https://a112070044.github.io/muscle/';
 let deepLinkApplied = false;
 function linkHash(){
   if(currentMode === 'move'){
-    if(moveTab === 'log') return 'log';
+    if(moveTab === 'log' || moveTab === 'plan') return moveTab;
     const e = currentExercise && protocolById(currentExercise);
     return e && poseAnim.def ? (e.kind === 'stretch' ? 's=' : 'p=') + e.id : '';
   }
@@ -2936,7 +3075,8 @@ function syncHash(){
 }
 function parseLink(hash){
   const q = new URLSearchParams(String(hash || '').replace(/^#/, ''));
-  if(String(hash).replace(/^#/, '') === 'log') return {type:'log'};
+  const bare = String(hash).replace(/^#/, '');
+  if(bare === 'log' || bare === 'plan') return {type:'tab', tab:bare};
   const p = q.get('p'), m = q.get('m'), g = q.get('g'), st = q.get('s');
   if(p && EXERCISE_LIB.some(e=> e.id === p)) return {type:'protocol', id:p};
   if(st && STRETCH_DEMOS.some(e=> e.id === st)) return {type:'protocol', id:st};
@@ -2946,7 +3086,7 @@ function parseLink(hash){
 }
 function openLink(link){
   if(!link) return false;
-  if(link.type === 'log'){ moveTab = 'log'; if(currentMode === 'move') renderMovePanel(); else setMode('move'); return true; }
+  if(link.type === 'tab'){ moveTab = link.tab; if(currentMode === 'move') renderMovePanel(); else setMode('move'); return true; }
   if(link.type === 'protocol'){
     setMode('move'); selectExercise(link.id);
     /* 電腦版：資訊欄直接捲到這個動作的說明 */
