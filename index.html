@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MUSCLE LAB｜人體肌肉 3D 研究室</title>
-<meta name="description" content="MUSCLE LAB 人體肌肉 3D 研究室：333 條肌肉的 3D 解剖、14 個訓練動作示範、體型調整與 AI 研究員問答。">
+<meta name="description" content="MUSCLE LAB 人體肌肉 3D 研究室：333 條肌肉的 3D 解剖、20 個訓練動作示範、體型調整與 AI 研究員問答。">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MUSCLE LAB">
 <meta property="og:locale" content="zh_TW">
 <meta property="og:title" content="MUSCLE LAB｜人體肌肉 3D 研究室">
-<meta property="og:description" content="點一條肌肉，看它亮起來。333 條肌肉的 3D 解剖圖鑑、14 項訓練實驗協定，從結構到動作一層一層拆解。">
+<meta property="og:description" content="點一條肌肉，看它亮起來。333 條肌肉的 3D 解剖圖鑑、20 項訓練實驗協定，從結構到動作一層一層拆解。">
 <meta property="og:url" content="https://a112070044.github.io/muscle/">
 <meta property="og:image" content="https://a112070044.github.io/muscle/brand/og-image.jpg">
 <meta property="og:image:width" content="1200">
@@ -1574,14 +1574,26 @@ const EXERCISE_LIB = [
   {id:'plank', name:'棒式', en:'Plank', pose:'plank', p:['abs','obliques'], s:['clavicular_part_of_deltoid_muscle','serratus','glutes','quads','erector'],
     cue:'前臂撐地、手肘在肩膀正下方，從頭到腳跟保持一直線，不要塌腰或翹臀。這是靜態撐住的動作。'},
   {id:'shrug', name:'聳肩', en:'Shrug', pose:'shrug', p:['descending_part_of_trapezius_muscle','levator_scapulae'], s:['rhomboids','forearmFlex','hand'],
-    cue:'手臂自然垂下，把肩膀往耳朵方向垂直提起，停一秒再慢慢放下，不要轉肩。'}
+    cue:'手臂自然垂下，把肩膀往耳朵方向垂直提起，停一秒再慢慢放下，不要轉肩。'},
+  {id:'deadlift', name:'傳統硬舉', en:'Deadlift', pose:'deadlift', p:['glutes','hamstrings','erector','quads'], s:['adductors','lats','traps','rhomboids','forearmFlex','abs','obliques'],
+    cue:'槓鈴在腳掌中段上方、貼近小腿，背打直、胸口挺起，用腿推地讓槓沿著腿往上走，站直時髖部前推鎖定；下放時臀部先往後。'},
+  {id:'lateral', name:'啞鈴側平舉', en:'Lateral Raise', pose:'lateral', p:['acromial_part_of_deltoid_muscle'], s:['supraspinatus_muscle','clavicular_part_of_deltoid_muscle','descending_part_of_trapezius_muscle','serratus_anterior_muscle'],
+    cue:'手肘微彎，把啞鈴往身體兩側舉到與肩同高，停一下再慢慢放下；不要聳肩，也不要用身體甩重量。'},
+  {id:'bridge', name:'臀橋', en:'Glute Bridge', pose:'bridge', p:['glutes'], s:['hamstrings','gluteMed','erector','abs','adductors'],
+    cue:'仰躺、膝蓋彎曲、腳掌踩地，用臀部把骨盆往上推到肩膀、髖部和膝蓋成一直線，頂端夾緊臀部，再慢慢放下。'},
+  {id:'situp', name:'仰臥起坐', en:'Sit-up', pose:'situp', p:['rectus_abdominis_muscle','hipflexor'], s:['obliques','rectus_femoris_muscle','pyramidalis_muscle'],
+    cue:'仰躺屈膝，收緊腹部把上身捲起來坐起，再慢慢一節一節躺回去；不要用手拉脖子，也不要甩動身體。'},
+  {id:'dips', name:'雙槓撐體', en:'Parallel Bar Dip', pose:'dips', p:['sternocostal_head_of_pectoralis_major_muscle','abdominal_part_of_pectoralis_major_muscle','triceps'], s:['clavicular_part_of_deltoid_muscle','pectoralis_minor_muscle','lats','rhomboids','abs'],
+    cue:'雙手撐在雙槓上、手臂伸直，身體微微前傾，彎曲手肘下降到上臂約與地面平行，再把身體推回起點；肩膀不舒服就不要降太低。'},
+  {id:'ohext', name:'過頭三頭伸展', en:'Overhead Triceps Extension', pose:'ohext', p:['triceps'], s:['abs','rotator','forearmFlex'],
+    cue:'雙手握槓舉到頭頂，上臂固定在耳朵兩側不動，只彎曲手肘把槓放到頭後方，再伸直手肘推回。'}
 ];
 /* 示範姿勢：A、B 兩個關鍵姿勢之間來回（沒寫 A 就是站姿）。角度是各段身體相對站姿的旋轉(度)，正值往前傾；
    L/R 結尾只套用在左/右腳。solve 會自動調整一個角度讓兩個身體點等高；contacts 是要貼地的點，第一個點固定前後位置。
    con：主要發力肌肉在 A 或 B 姿勢時最短（收縮鼓起）；iso 是撐住不動的等長收縮。 */
 const POSES = {
   squat:{B:{shank:35, thigh:-85, torso:40, arm:-80}, con:'A', period:2.8, view:0.85},
-  hinge:{A:{grip:1, pron:180}, B:{shank:6, thigh:-14, torso:78, grip:1, pron:180}, con:'A', period:3.0, view:1.2},
+  hinge:{A:{grip:1, pron:180}, B:{shank:6, thigh:-14, torso:78, grip:1, pron:180}, barbell:{plate:0.2}, con:'A', period:3.0, view:1.2},
   lunge:{A:{thighL:-22, shankL:4, thighR:12, shankR:22, footR:38}, B:{torso:4, thighL:-82, shankL:8, thighR:2, shankR:78, footR:52},
     solve:{field:'thighR', a:'toeR', b:'heelL', range:[-40,70]}, contacts:['heelL','toeR'], con:'A', period:3.0, view:1.45},
   hipthrust:{A:{thigh:-125, shank:-12, armRel:0}, B:{thigh:-90, shank:0, armRel:0},
@@ -1598,15 +1610,31 @@ const POSES = {
   /* 肩推：槓從下巴前方（鎖骨高度）垂直推到頭頂，前臂全程垂直、手肘在槓的正下方略往前 */
   ohp:{A:{grip:1, pron:180}, B:{grip:1, pron:180}, ik:{from:[0.30, 1.46, 0.15], to:[0.29, 1.94, 0.0], dir:[0,1,0], seed:[-70, 25, -90, 0]},
     barbell:true, con:'B', period:2.8, view:0.55},
-  raise:{A:{grip:1, pron:180}, B:{arm:-90, grip:1, pron:180}, con:'B', period:2.6, view:1.05},
+  raise:{A:{grip:1, pron:180}, B:{arm:-90, grip:1, pron:180}, dumbbell:true, con:'B', period:2.6, view:1.05},
   pullup:{A:{abd:158, grip:1, thigh:-10, shank:25}, B:{abd:35, elbowZ:145, grip:1, thigh:-10, shank:25}, hang:{hand:'gripL', clear:0.06},
     prop:{type:'bar'}, con:'B', period:3.0, view:0.5},
-  row:{A:{torso:65, thigh:-18, shank:12, grip:1, pron:180}, B:{torso:65, thigh:-18, shank:12, arm:60, elbow:-60, grip:1, pron:180}, con:'B', period:2.4, view:1.35},
-  curl:{A:{grip:1}, B:{elbow:-130, grip:1}, con:'B', period:2.2, view:1.1},
+  row:{A:{torso:65, thigh:-18, shank:12, grip:1, pron:180}, B:{torso:65, thigh:-18, shank:12, arm:60, elbow:-60, grip:1, pron:180}, barbell:{plate:0.2}, con:'B', period:2.4, view:1.35},
+  curl:{A:{grip:1}, B:{elbow:-130, grip:1}, dumbbell:true, con:'B', period:2.2, view:1.1},
   /* 棒式：前臂平貼地面、掌心朝下，手肘在肩膀正下方 */
   plank:{A:{arm:-82, elbow:-74, grip:0.25, pron:180}, B:{arm:-82, elbow:-74, grip:0.25, pron:180}, solve:{field:'root', a:'elbowL', b:'toeL', target:0.035, range:[20,120]},
     contacts:['toeL','toeR','elbowL:0.035','elbowR:0.035'], con:'iso', period:3.0, view:1.57},
-  shrug:{A:{grip:1, pron:90}, B:{shrug:0.06, grip:1, pron:90}, con:'B', period:2.0, view:0.6}
+  shrug:{A:{grip:1, pron:90}, B:{shrug:0.06, grip:1, pron:90}, dumbbell:true, con:'B', period:2.0, view:0.6},
+  /* 硬舉：槓鈴從地上沿著小腿、大腿垂直往上；M 是槓鈴過膝的位置（先伸膝、再挺髖） */
+  deadlift:{A:{shank:6, thigh:-74, torso:68, arm:4, grip:1, pron:180}, M:{shank:4, thigh:-46, torso:50, arm:4, grip:1, pron:180}, B:{grip:1, pron:180},
+    barbell:{plate:0.21}, con:'B', period:3.2, view:1.3},
+  /* 側平舉：掌心朝內（中立握）開始，舉到頂端時掌心朝下 */
+  lateral:{A:{elbow:-12, grip:1, pron:90}, B:{abd:85, elbow:-12, grip:1, pron:90}, dumbbell:true, con:'B', period:2.6, view:0},
+  /* 臀橋：躺在地上，頭和肩膀貼地（軀幹自動調整讓頭留在地面），用臀部把骨盆推高 */
+  bridge:{A:{thigh:-140, shank:-40, arm:-92}, B:{thigh:-115, shank:-16, arm:-92},
+    solve:{field:'torso', a:'head', b:'heelL', target:0.115, range:[-170,-20]}, contacts:['heelL','heelR','head'], con:'B', period:2.6, view:1.57},
+  /* 仰臥起坐：屈膝躺下，上身整段從地面捲起到接近坐直 */
+  situp:{A:{torso:-90, thigh:-135, shank:-40, armRel:-15}, B:{torso:-28, thigh:-135, shank:-40, armRel:-35},
+    contacts:['heelL','heelR','sacrum'], con:'B', period:2.4, view:1.57},
+  /* 雙槓撐體：手握雙槓、腳離地；下降時肩膀伸展、前臂保持垂直 */
+  dips:{A:{torso:12, thigh:-15, shank:75, grip:1, pron:90}, B:{torso:22, arm:62, elbow:-64, thigh:-15, shank:75, grip:1, pron:90},
+    hang:{hand:'gripL', clear:0.36}, prop:{type:'dips'}, con:'A', period:2.8, view:1.2},
+  /* 過頭三頭伸展：上臂垂直在頭頂兩側，只彎手肘讓槓落到頭後 */
+  ohext:{A:{arm:-172, grip:1, pron:180}, B:{arm:-172, elbow:-120, grip:1, pron:180}, barbell:true, con:'A', period:2.6, view:1.0}
 };
 const ARM_GROUPS = new Set(['biceps','triceps','forearmFlex','forearmExt','hand']);
 const baseKey = k => k.replace(/_[LRC]$/, '');
@@ -1705,9 +1733,11 @@ function armModeFor(group){ return ARM_GROUPS.has(group) ? 1 : (group === 'shoul
 /* 與著色器相同的計算，用在身體上的幾個點：決定貼地位置、道具位置與鏡頭 */
 const LANDMARKS = {
   heelL:[0.085,0.01,-0.07], toeL:[0.09,0.008,0.115], handL:[0.27,0.76,0.0], gripL:[0.275,0.795,0.09], palmL:[0.27,0.80,0.05], elbowL:[0.21,1.08,-0.03], bladeL:[0.10,1.30,-0.12],
-  sacrum:[0,0.92,-0.12], head:[0,1.69,0.0]
+  sacrum:[0,0.92,-0.12], head:[0,1.69,0.0],
+  /* 啞鈴握把：中心比槓鈴握點更貼近掌心；兩端決定啞鈴的方向 */
+  dbL:[0.275,0.782,0.072], dbInL:[0.235,0.782,0.072], dbOutL:[0.315,0.782,0.072]
 };
-['heel','toe','hand','grip','palm','elbow','blade'].forEach(k=>{ const v = LANDMARKS[k+'L']; LANDMARKS[k+'R'] = [-v[0], v[1], v[2]]; });
+['heel','toe','hand','grip','palm','elbow','blade','db','dbIn','dbOut'].forEach(k=>{ const v = LANDMARKS[k+'L']; LANDMARKS[k+'R'] = [-v[0], v[1], v[2]]; });
 const POSE_FLOOR = 0.007;
 const sstep = (a, b, x)=>{ const t = Math.min(1, Math.max(0, (x-a)/(b-a))); return t*t*(3-2*t); };
 function fkPoint(pt, U){
@@ -1800,7 +1830,9 @@ function solveArmIK(def, w, s){
   return {armRel:best.v[0], abd:best.v[1], elbow:best.v[2], elbowZ:best.v[3]};
 }
 function poseAt(def, s){
-  let w = lerpAngles(keyAngles(def.A || {}), keyAngles(def.B || {}), s), root = 0;
+  /* M：可選的中間關鍵姿勢（例如硬舉槓鈴過膝的位置），A→M→B 分兩段內插 */
+  let w = def.M ? (s < 0.5 ? lerpAngles(keyAngles(def.A || {}), keyAngles(def.M), s*2) : lerpAngles(keyAngles(def.M), keyAngles(def.B || {}), s*2 - 1))
+    : lerpAngles(keyAngles(def.A || {}), keyAngles(def.B || {}), s), root = 0;
   const sv = def.solve;
   if(sv){
     const f = v=>{
@@ -1834,15 +1866,17 @@ function prepPose(def){
   if(def.hang && !def._bar){
     const U = anglesToU(keyAngles(def.A || {}));
     const feet = ['heelL','toeL'].map(c=> landmark(c, U)), h = landmark(def.hang.hand, U);
-    def._bar = [0, h[1] + POSE_FLOOR + def.hang.clear - Math.min(...feet.map(p=> p[1])), h[2]];
+    def._bar = [Math.abs(h[0]), h[1] + POSE_FLOOR + def.hang.clear - Math.min(...feet.map(p=> p[1])), h[2]];
   }
 }
 
-/* 道具：臥推椅與單槓（只在需要的動作出現） */
+/* 道具：臥推椅、單槓、雙槓、槓鈴與啞鈴（只在需要的動作出現） */
 const propMat = new THREE.MeshStandardMaterial({color:0x30353D, roughness:0.75, metalness:0.1});
 const benchMesh = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), propMat);
 const barGroup = new THREE.Group();
+const dipGroup = new THREE.Group();   /* 雙槓：兩根前後方向的平行槓 */
 const barbell = new THREE.Group();   /* 槓鈴：跟著兩手握點移動 */
+const dumbbells = [new THREE.Group(), new THREE.Group()];   /* 啞鈴：左右手各一個，握把沿著拳頭方向 */
 {
   const metal = new THREE.MeshStandardMaterial({color:0x8A8F96, roughness:0.35, metalness:0.8});
   const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.3, 16), metal);
@@ -1851,17 +1885,50 @@ const barbell = new THREE.Group();   /* 槓鈴：跟著兩手握點移動 */
   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.9, 16), metal);
   shaft.rotation.z = Math.PI/2; barbell.add(shaft);
   const plateMat = new THREE.MeshStandardMaterial({color:0x2A2A2A, roughness:0.6, metalness:0.2});
-  [-0.7, 0.7].forEach(x=>{ const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 32), plateMat); plate.rotation.z = Math.PI/2; plate.position.x = x; barbell.add(plate); });
+  [-0.7, 0.7].forEach(x=>{ const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 32), plateMat); plate.rotation.z = Math.PI/2; plate.position.x = x; plate.name = 'plate'; barbell.add(plate); });
+  dumbbells.forEach(d=>{
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.0125, 0.0125, 0.15, 12), metal);
+    handle.rotation.z = Math.PI/2; d.add(handle);
+    [-0.085, 0.085].forEach(x=>{ const head = new THREE.Mesh(new THREE.CylinderGeometry(0.043, 0.043, 0.055, 6), plateMat); head.rotation.z = Math.PI/2; head.position.x = x; d.add(head); });
+  });
+  [-1, 1].forEach(sd=>{
+    const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.62, 14), metal);
+    rail.rotation.x = Math.PI/2; rail.name = 'rail'; rail.userData.sd = sd; dipGroup.add(rail);
+    [-0.26, 0.26].forEach(z=>{ const post = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1, 12), propMat); post.name = 'post'; post.userData.sd = sd; post.userData.z = z; dipGroup.add(post); });
+  });
 }
+const _dbX = new THREE.Vector3(1, 0, 0), _dbAxis = new THREE.Vector3();
 /* 等模型量完尺寸才加進來，避免道具影響人體的縮放與置中 */
-[benchMesh, barGroup, barbell].forEach(m=>{ m.visible = false; m.traverse(o=>{ o.castShadow = true; o.receiveShadow = true; }); });
+const PROPS = [benchMesh, barGroup, dipGroup, barbell, ...dumbbells];
+PROPS.forEach(m=>{ m.visible = false; m.traverse(o=>{ o.castShadow = true; o.receiveShadow = true; }); });
 function updateProps(def, U){
-  if(modelReady && !benchMesh.parent){ modelRoot.add(benchMesh); modelRoot.add(barGroup); modelRoot.add(barbell); }
+  if(modelReady && !benchMesh.parent) PROPS.forEach(m=> modelRoot.add(m));
   const prop = def && def.prop;
   benchMesh.visible = !!(prop && prop.type === 'bench');
   barGroup.visible = !!(prop && prop.type === 'bar');
+  dipGroup.visible = !!(prop && prop.type === 'dips');
   barbell.visible = !!(def && def.barbell);
-  if(barbell.visible){ const g = landmark('gripL', U); barbell.position.set(0, g[1], g[2]); }
+  if(barbell.visible){
+    const g = landmark('gripL', U), pr = (def.barbell.plate || 0.12) / 0.12;   /* 硬舉用標準大槓片，槓片放在地上 */
+    barbell.position.set(0, g[1], g[2]);
+    barbell.children.forEach(c=>{ if(c.name === 'plate') c.scale.set(pr, 1, pr); });
+  }
+  const db = !!(def && def.dumbbell);
+  dumbbells.forEach((d, i)=>{
+    d.visible = db;
+    if(!db) return;
+    const sd = i ? 'R' : 'L', g = landmark('db' + sd, U), a = landmark('dbIn' + sd, U), b = landmark('dbOut' + sd, U);
+    d.position.set(g[0], g[1], g[2]);
+    d.quaternion.setFromUnitVectors(_dbX, _dbAxis.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]).normalize());
+  });
+  if(dipGroup.visible){
+    const [bx, by, bz] = def._bar, top = by - 0.03;
+    dipGroup.children.forEach(c=>{
+      const x = c.userData.sd * (bx + 0.012);
+      if(c.name === 'rail') c.position.set(x, top, bz);
+      else { c.scale.y = top - POSE_FLOOR; c.position.set(x, (top + POSE_FLOOR)/2, bz + c.userData.z); }
+    });
+  }
   if(benchMesh.visible){
     const a = landmark(prop.a, U), b = landmark(prop.b, U);
     const top = Math.min(a[1], b[1]), z0 = Math.min(a[2], b[2]) - prop.pad, z1 = Math.max(a[2], b[2]) + prop.pad;
@@ -2969,7 +3036,7 @@ function renderMuscleInfo(id){
     <section class="mi-sec">
       <h6>實驗協定 · 訓練${specific ? '這條肌肉' : '這個肌群'}的動作</h6>
       ${protos.length ? `<div class="proto-list">${protos.map(({ex, role})=> `<button data-proto="${ex.id}"><span class="pc">${protocolCode(ex.id)}</span><b>${ex.name}</b><small><i class="key key-${role}"></i>${role === 'p' ? '主要發力' : '輔助穩定'}</small></button>`).join('')}</div>`
-        : '<p class="proto-none">目前的 14 項實驗協定沒有直接訓練到這裡，可以參考下面的常見訓練動作。</p>'}
+        : `<p class="proto-none">目前的 ${EXERCISE_LIB.length} 項實驗協定沒有直接訓練到這裡，可以參考下面的常見訓練動作。</p>`}
     </section>`;
   const detailHtml = det ? `
     <section class="mi-sec">
