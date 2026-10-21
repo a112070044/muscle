@@ -3053,11 +3053,14 @@ const TOUR_STEPS = [
   {title:'SELECT A MUSCLE', body:'點人體上的任何一條肌肉，它會亮成紅色。也可以從左邊的肌群清單挑。', task:'點選一條肌肉', target:null,
     start:()=>{ if(currentMode !== 'explore') setMode('explore'); tour.m0 = currentMuscle; tour.p0 = currentPart; },
     done:()=> !!currentMuscle && (currentMuscle !== tour.m0 || currentPart !== tour.p0)},
-  {title:'READ THE FILE', body:'標本檔案記錄這條肌肉的起點、止點、神經與功能，還有常見訓練動作與不適原因。', target:'#console',
+  {title:'READ THE FILE', body:'標本檔案記錄這條肌肉的起點、止點、神經與功能，還有訓練它的動作、伸展方法與常見不適原因。', target:'#console',
     start:()=>{ if(currentMode !== 'explore') setMode('explore'); if(!currentMuscle) selectMuscle('chest'); setConsoleView('info'); }},
-  {title:'RUN A PROTOCOL', body:'打開「實驗協定」，選一個訓練動作。模型會示範，並標出參與的肌肉：紅色是主要發力，銀白是輔助。', task:'打開實驗協定，選一個動作',
+  {title:'RUN A PROTOCOL', body:'打開「實驗協定」，選一個訓練動作。模型會示範並標出參與的肌肉：紅色是主要發力（縮短時會鼓起來），銀白是輔助。上方還能切換伸展、今天的課表和本週訓練紀錄。', task:'打開實驗協定，選一個動作',
     target:()=> currentMode === 'move' ? '.ex-grid' : '.mode-switch [data-mode="move"]',
-    start:()=>{ tour.ex0 = currentMode === 'move' ? currentExercise : null; }, done:()=> currentMode === 'move' && !!currentExercise && currentExercise !== tour.ex0},
+    start:()=>{
+      tour.ex0 = currentMode === 'move' ? currentExercise : null;
+      if(moveTab !== 'train'){ moveTab = 'train'; if(currentMode === 'move') renderMovePanel(); }
+    }, done:()=> currentMode === 'move' && !!currentExercise && currentExercise !== tour.ex0},
   {title:'CUSTOMIZE THE SUBJECT', body:'「體型」可以調整身高、上下半身肌肉量與肩寬；「我的頭」可以換上你的臉，做動作時也會跟著動。', target:()=> document.getElementById('shapeBtn').parentElement},
   {title:'ASK THE RESEARCHER', body:'訓練、痠痛、伸展的問題，都可以問研究員。導覽結束，開始你的研究吧。', target:'.mode-switch [data-tab="chat"]', last:true}
 ];
