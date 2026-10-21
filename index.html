@@ -487,6 +487,11 @@
   .ex-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); gap:6px; margin-bottom:22px;}
   .ex-grid button{text-align:left; font-size:13.5px; font-weight:500; line-height:1.35; padding:9px 11px; background:transparent; border:1px solid var(--line-hi); border-radius:8px; color:var(--text); cursor:pointer; transition:border-color .15s ease, background .15s ease;}
   .ex-grid button small{display:block; font-size:11px; font-weight:400; color:var(--text-faint); margin-top:2px;}
+  /* 手機：動作太多，改成兩排左右滑，選完的說明就在正下方 */
+  @media (max-width: 760px){
+    .ex-grid{grid-auto-flow:column; grid-template-rows:repeat(2, auto); grid-template-columns:none; grid-auto-columns:min(42vw, 168px); overflow-x:auto; scroll-snap-type:x proximity; padding-bottom:6px; margin-bottom:16px; scrollbar-width:thin;}
+    .ex-grid button{scroll-snap-align:start;}
+  }
   .ex-grid button:hover{border-color:var(--text);}
   .ex-grid button.active{border-color:var(--text); background:var(--ice-dim);}
   .ex-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; padding-top:18px; border-top:1px solid var(--line);}
@@ -2697,6 +2702,8 @@ function selectExercise(id, keepView){
   currentExercise = id;
   userInteracted = true;
   document.querySelectorAll('.ex-grid button').forEach(b=> b.classList.toggle('active', b.dataset.ex === id));
+  const act = document.querySelector('.ex-grid button.active');
+  if(act && window.innerWidth <= 760){ const g = act.parentElement; g.scrollLeft = Math.max(0, act.offsetLeft - g.offsetLeft - 8); }
   paintExercise(ex);
   const def = POSES[ex.pose];
   prepPose(def);
