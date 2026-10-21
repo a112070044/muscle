@@ -459,7 +459,7 @@
   @media (pointer: coarse){
     .ghost-btn{min-height:44px; min-width:44px; padding:0 12px;}
     .seg button{min-width:44px;}
-    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn{min-height:44px;}
+    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn{min-height:44px;}
     .rail-search input{height:44px; font-size:16px;}
   }
   @media (max-width:760px){ .leader, .leader-label{display:none;} }
@@ -480,6 +480,22 @@
   .ex-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; padding-top:18px; border-top:1px solid var(--line);}
   .ex-head h3{font-size:22px; font-weight:600; line-height:1.3;}
   .ex-head .en{margin:0;}
+  /* 實驗協定分頁：訓練／伸展 */
+  .move-tabs{display:grid; grid-template-columns:1fr 1fr; gap:2px; padding:3px; margin:12px 0 4px; background:var(--seg-bg); border-radius:10px;}
+  .move-tabs button{background:none; border:none; border-radius:8px; padding:9px 10px; color:var(--text-soft); font:600 13.5px var(--sans); cursor:pointer;}
+  .move-tabs button small{font:500 10px var(--mono); letter-spacing:.14em; color:var(--text-faint); margin-left:4px;}
+  .move-tabs button.on{background:var(--seg-active); color:var(--text);}
+  /* 肌肉說明裡的伸展卡片 */
+  .stretch-list{display:grid; gap:8px;}
+  .st-card{padding:11px 13px; border:1px solid var(--line); border-radius:10px; background:var(--seg-bg);}
+  .st-top{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+  .st-top b{display:block; font-size:14.5px; font-weight:600;}
+  .st-top small{display:block; font:400 11px var(--mono); color:var(--text-faint); margin-top:2px;}
+  .st-top button{flex-shrink:0; display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:8px; border:1px solid var(--line-hi); background:none; color:var(--text); font:500 12.5px var(--sans); cursor:pointer;}
+  .st-top button .pc{font:500 10px var(--mono); color:var(--text-faint);}
+  .st-top button:hover{border-color:var(--text-faint);}
+  .st-card p{margin-top:7px; font-size:13.5px; line-height:1.7; color:var(--text-soft);}
+  .st-note{margin-top:8px; font-size:12px; color:var(--text-faint); line-height:1.6;}
   /* 收縮／拉長指示條：跟著動作即時移動 */
   .ex-phase{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:4px 8px; margin:12px 0 0; font:500 10.5px var(--mono); letter-spacing:.08em; color:var(--text-faint);}
   .ph-bar{position:relative; height:6px; border-radius:3px; background:var(--seg-bg); overflow:hidden; box-shadow:inset 0 0 0 1px var(--line);}
@@ -1636,6 +1652,81 @@ const POSES = {
   /* 過頭三頭伸展：上臂垂直在頭頂兩側，只彎手肘讓槓落到頭後 */
   ohext:{A:{arm:-172, grip:1, pron:180}, B:{arm:-172, elbow:-120, grip:1, pron:180}, barbell:true, con:'A', period:2.6, view:1.0}
 };
+/* 伸展：每個肌群都有建議的伸展（for）；有 pose 的會在 3D 人體上示範，被拉長的肌肉（p）會變扁 */
+const STRETCH_LIB = [
+  {id:'fold', name:'站姿前彎', en:'Standing Forward Fold', pose:'st_fold', p:['hamstrings'], s:['erector','calf','glutes'], for:['hamstrings','erector'],
+    how:'雙腳與髖同寬、膝蓋伸直或微彎，從髖部往前折，讓上身和手臂自然垂下，感覺大腿後側被拉長；不要用力把背往下壓。'},
+  {id:'hipkneel', name:'跪姿髖屈肌伸展', en:'Half-kneeling Hip Flexor Stretch', pose:'st_hipkneel', p:['hipflexor','rectus_femoris_muscle'], s:['quads','adductors'], for:['hipflexor','quads'],
+    how:'單膝跪地、前腳踩地成弓箭步，上身挺直並夾緊後腳那側的臀部，把骨盆輕輕往前推，感覺後腳大腿前側到髖部被拉長；不要塌腰。'},
+  {id:'calfwall', name:'扶牆小腿伸展', en:'Wall Calf Stretch', pose:'st_calf', p:['calf'], s:['hamstrings','foot'], for:['calf'],
+    how:'雙手扶牆，一腳往後跨、膝蓋伸直、腳跟踩地，身體往前傾到小腿後側有拉緊感；後膝微彎，可以拉到更深層的比目魚肌。'},
+  {id:'kneechest', name:'仰躺抱膝', en:'Knees-to-Chest', pose:'st_kneechest', p:['glutes','erector'], s:['hamstrings','quadratus_lumborum_muscle'], for:['glutes','erector'],
+    how:'仰躺把雙膝抱向胸口，下背和頭放鬆貼地，可以輕輕左右搖晃，感覺臀部和下背被拉開。'},
+  {id:'chestopen', name:'背後擴胸伸展', en:'Chest Opener', pose:'st_chest', p:['chest','clavicular_part_of_deltoid_muscle'], s:['biceps','coracobrachialis_muscle'], for:['chest','shoulders','biceps'],
+    how:'雙手往身體後方打開、手肘伸直，肩膀下沉、胸口往前上挺，感覺胸前和肩膀前側被拉開；也可以雙手在背後交握。'},
+  {id:'child', name:'嬰兒式', en:"Child's Pose", pose:'st_child', p:['lats','erector'], s:['glutes','teres_major_muscle','serratus_anterior_muscle'], for:['lats','erector','serratus'],
+    how:'跪坐在腳跟上，上身往前趴、雙手往前伸直貼地，臀部往後坐，感覺背部兩側和下背被拉長；雙手往左或往右移，可以加強另一側。'},
+  {id:'tricepsoh', name:'過頭三頭肌伸展', en:'Overhead Triceps Stretch', pose:'st_triceps', p:['triceps'], s:['lats','teres_major_muscle'], for:['triceps'],
+    how:'一手舉高、手肘彎曲讓手掌落到背後，另一手輕壓手肘往後下方，感覺上臂後側被拉長。示範是兩手同時做。'},
+  {id:'wristflex', name:'前臂屈肌伸展', en:'Wrist Flexor Stretch', pose:'st_wristflex', p:['forearmFlex'], s:['hand'], for:['forearmFlex','hand'],
+    how:'手臂往前伸直、掌心朝上，另一手把手指往下、往身體方向輕輕扳，感覺前臂內側被拉長。'},
+  {id:'wristext', name:'前臂伸肌伸展', en:'Wrist Extensor Stretch', pose:'st_wristext', p:['forearmExt'], s:[], for:['forearmExt'],
+    how:'手臂往前伸直、掌心朝下並輕輕握拳，手腕往下彎，另一手把手背往身體方向壓，感覺前臂外側被拉長。'},
+  {id:'cobra', name:'眼鏡蛇式', en:'Cobra Stretch', pose:'st_cobra', p:['abs'], s:['obliques','hipflexor','chest'], for:['abs','obliques'],
+    how:'趴在地上，雙手撐在肩膀下方，慢慢把上身推起、骨盆貼地，感覺腹部被拉長；下背不舒服就降低高度，改用手肘撐地。'},
+  {id:'upperback', name:'抱球上背伸展', en:'Upper Back Stretch', p:['rhomboids','transverse_part_of_trapezius_muscle'], s:['scapular_spinal_part_of_deltoid_muscle','infraspinatus_muscle'], for:['rhomboids','traps'],
+    how:'雙手往前伸直交握，像抱著一顆大球，背部往後拱圓、肩胛骨往兩側打開，感覺兩片肩胛骨之間被拉開。'},
+  {id:'neckside', name:'頸部側拉', en:'Neck Side Stretch', p:['descending_part_of_trapezius_muscle','levator_scapulae'], s:['neck'], for:['neck','traps'],
+    how:'坐直、一手抓住椅子讓肩膀下沉，頭慢慢往另一側倒、耳朵靠近肩膀，感覺脖子側邊到肩膀上方被拉長；不要用手用力拉頭。'},
+  {id:'crossbody', name:'手臂橫拉', en:'Cross-body Shoulder Stretch', p:['scapular_spinal_part_of_deltoid_muscle'], s:['infraspinatus_muscle','teres_minor_muscle','rhomboids'], for:['shoulders','rotator'],
+    how:'一手伸直橫過胸前，另一手勾住手肘往身體拉近，肩膀保持下沉，感覺肩膀後側被拉長。'},
+  {id:'sleeper', name:'側躺內旋伸展', en:'Sleeper Stretch', p:['infraspinatus_muscle','teres_minor_muscle'], s:['scapular_spinal_part_of_deltoid_muscle'], for:['rotator'],
+    how:'側躺壓住下方手臂，上臂與身體成 90 度、手肘彎 90 度，用另一手把前臂慢慢往地面壓，感覺肩膀後側深處被拉長；肩膀會痛就停止。'},
+  {id:'doorway', name:'門框胸肌伸展', en:'Doorway Chest Stretch', p:['chest'], s:['clavicular_part_of_deltoid_muscle'], for:['chest'],
+    how:'前臂貼在門框兩側、手肘約與肩同高，一腳往前跨讓身體穿過門框，感覺胸前被拉開；手肘放高一點會拉到胸大肌下半部。'},
+  {id:'wallbiceps', name:'扶牆二頭肌伸展', en:'Wall Biceps Stretch', p:['biceps'], s:['clavicular_part_of_deltoid_muscle','chest'], for:['biceps'],
+    how:'手臂往後伸直、手掌貼在身後的牆上（拇指朝下），身體慢慢轉離牆壁，感覺上臂前側到肩膀前側被拉長。'},
+  {id:'finger', name:'手掌與手指伸展', en:'Finger Stretch', p:['hand'], s:['forearmFlex'], for:['hand'],
+    how:'雙手在胸前合掌、手指朝上，手腕慢慢往下降、手掌保持貼合，感覺手掌和手指根部被拉開。'},
+  {id:'sidebend', name:'站姿側彎', en:'Standing Side Bend', p:['obliques','lats'], s:['quadratus_lumborum_muscle','serratus_anterior_muscle'], for:['obliques','lats','serratus'],
+    how:'雙腳站穩，一手舉過頭頂，身體往另一側彎，骨盆不要跟著移動，感覺腰側到腋下被拉長。'},
+  {id:'figure4', name:'仰躺 4 字伸展', en:'Figure-4 Stretch', p:['gluteMed','deepRot','glutes'], s:[], for:['glutes','gluteMed','deepRot'],
+    how:'仰躺屈膝，一腳的腳踝放到另一腳的膝蓋上成「4」字，雙手抱住下方大腿往胸口拉，感覺翹起那一側的臀部深處被拉長。'},
+  {id:'butterfly', name:'蝴蝶式', en:'Butterfly Stretch', p:['adductors'], s:[], for:['adductors'],
+    how:'坐直、兩腳腳掌相對貼合並拉近身體，手扶腳踝，讓膝蓋往兩側地板放鬆下沉，感覺大腿內側被拉長；不要用手硬壓膝蓋。'},
+  {id:'quadstand', name:'站姿股四頭肌伸展', en:'Standing Quad Stretch', p:['quads'], s:['hipflexor'], for:['quads'],
+    how:'單腳站立（可以扶牆），另一腳往後彎，用同側手抓住腳背把腳跟拉向臀部，膝蓋朝下、兩膝靠攏，感覺大腿前側被拉長。'},
+  {id:'shinkneel', name:'跪坐脛前伸展', en:'Kneeling Shin Stretch', p:['shin'], s:['foot'], for:['shin'],
+    how:'跪坐在腳跟上、腳背貼地，雙手撐在身後，慢慢把膝蓋抬離地面一點，感覺小腿前側和腳背被拉長。'},
+  {id:'ankleinv', name:'腳踝內翻伸展', en:'Ankle Inversion Stretch', p:['fibularis'], s:['shin'], for:['fibularis'],
+    how:'坐著把一腳放到另一腳的大腿上，用手握住腳掌，慢慢把腳底轉向自己（內翻），感覺小腿外側被拉長。'},
+  {id:'plantar', name:'足底與腳趾伸展', en:'Plantar Fascia Stretch', p:['foot'], s:['calf'], for:['foot'],
+    how:'坐著把一腳放到另一腳的大腿上，用手把腳趾往小腿方向扳，感覺腳底被拉長；也可以用腳底踩著球慢慢滾動放鬆。'},
+  {id:'jaw', name:'下顎與臉部放鬆', en:'Jaw Release', p:['head'], s:['neck'], for:['head'],
+    how:'舌頭輕抵上顎、嘴巴慢慢張開到不痛的範圍，停幾秒再閉上；也可以用指腹在耳朵前方的咀嚼肌畫圈按摩。'}
+];
+STRETCH_LIB.forEach(st=> st.kind = 'stretch');
+const STRETCH_DEMOS = STRETCH_LIB.filter(st=> st.pose);
+const STRETCH_TIP = '每個伸展停 20–30 秒、做 2–3 次，感覺拉緊但不痛；不要彈震，呼吸放慢。';
+const protocolById = id=> EXERCISE_LIB.find(e=> e.id === id) || STRETCH_LIB.find(e=> e.id === id);
+/* 伸展示範的姿勢：A 是剛開始，B 是最深的位置，模型會慢慢在兩者之間呼吸般來回 */
+Object.assign(POSES, {
+  st_fold:{A:{torso:45}, B:{torso:98}, con:'stretch', period:5, view:1.57},
+  st_hipkneel:{A:{torso:0, shankL:4, thighR:6, shankR:90, footR:170, arm:-8}, B:{torso:-6, shankL:24, thighR:28, shankR:92, footR:170, arm:-8},
+    solve:{field:'thighL', a:'heelL', b:'kneeR', range:[-140, 0]}, contacts:['heelL','kneeR','shinR'], con:'stretch', period:5, view:1.57},
+  st_calf:{A:{torso:18, thighL:-22, shankL:14, thighR:14, shankR:14, footR:0, arm:-78, wrist:80}, B:{torso:26, thighL:-30, shankL:24, thighR:24, shankR:24, footR:0, arm:-72, wrist:80},
+    solve:{field:'shankL', a:'heelL', b:'heelR', range:[-10, 60]}, contacts:['heelL','heelR','toeL'], prop:{type:'wall', a:'palmL'}, con:'stretch', period:5, view:1.3},
+  st_kneechest:{A:{torso:-90, thigh:-205, shank:-78, arm:-132, elbow:-70}, B:{torso:-90, thigh:-225, shank:-70, arm:-140, elbow:-85},
+    contacts:['bladeL','bladeR','sacrum'], con:'stretch', period:5, view:1.57},
+  st_chest:{A:{abd:45, arm:15}, B:{torso:-6, abd:70, arm:40}, con:'stretch', period:5, view:0.6},
+  st_child:{A:{torso:94, thigh:-80, shank:90, foot:180, arm:-70, pron:180}, B:{torso:90, thigh:-88, shank:90, foot:180, arm:-72, pron:180},
+    contacts:['shinL','shinR','kneeL','kneeR','palmL','palmR','head'], con:'stretch', period:5, view:1.57},
+  st_triceps:{A:{arm:-150, elbow:-100}, B:{arm:-172, elbow:-145}, con:'stretch', period:5, view:1.0},
+  st_wristflex:{A:{arm:-88, wrist:35}, B:{arm:-90, wrist:85}, con:'stretch', period:5, view:1.2},
+  st_wristext:{A:{arm:-88, pron:180, wrist:-30, grip:0.5}, B:{arm:-90, pron:180, wrist:-75, grip:0.5}, con:'stretch', period:5, view:1.2},
+  st_cobra:{A:{thigh:90, shank:90, foot:180, arm:40, elbow:-80, pron:180, wrist:84}, B:{thigh:90, shank:90, foot:180, arm:4, elbow:-8, pron:180, wrist:84},
+    solve:{field:'torso', a:'palmL', b:'pubis', target:0, range:[15, 95]}, contacts:['pubis','thighFL','palmL','palmR'], con:'stretch', period:5, view:1.57}
+});
 const ARM_GROUPS = new Set(['biceps','triceps','forearmFlex','forearmExt','hand']);
 const baseKey = k => k.replace(/_[LRC]$/, '');
 
@@ -1735,9 +1826,11 @@ const LANDMARKS = {
   heelL:[0.085,0.01,-0.07], toeL:[0.09,0.008,0.115], handL:[0.27,0.76,0.0], gripL:[0.275,0.795,0.09], palmL:[0.27,0.80,0.05], elbowL:[0.21,1.08,-0.03], bladeL:[0.10,1.30,-0.12],
   sacrum:[0,0.92,-0.12], head:[0,1.69,0.0],
   /* 啞鈴握把：中心比槓鈴握點更貼近掌心；兩端決定啞鈴的方向 */
-  dbL:[0.275,0.782,0.072], dbInL:[0.235,0.782,0.072], dbOutL:[0.315,0.782,0.072]
+  dbL:[0.275,0.782,0.072], dbInL:[0.235,0.782,0.072], dbOutL:[0.315,0.782,0.072],
+  /* 跪姿、趴姿貼地用：膝蓋前緣、小腿前側、大腿前側、恥骨前方 */
+  kneeL:[0.09,0.50,0.055], shinL:[0.085,0.30,0.05], thighFL:[0.09,0.70,0.085], pubis:[0,0.875,0.075]
 };
-['heel','toe','hand','grip','palm','elbow','blade','db','dbIn','dbOut'].forEach(k=>{ const v = LANDMARKS[k+'L']; LANDMARKS[k+'R'] = [-v[0], v[1], v[2]]; });
+['heel','toe','hand','grip','palm','elbow','blade','db','dbIn','dbOut','knee','shin','thighF'].forEach(k=>{ const v = LANDMARKS[k+'L']; LANDMARKS[k+'R'] = [-v[0], v[1], v[2]]; });
 const POSE_FLOOR = 0.007;
 const sstep = (a, b, x)=>{ const t = Math.min(1, Math.max(0, (x-a)/(b-a))); return t*t*(3-2*t); };
 function fkPoint(pt, U){
@@ -1875,6 +1968,7 @@ const propMat = new THREE.MeshStandardMaterial({color:0x30353D, roughness:0.75, 
 const benchMesh = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), propMat);
 const barGroup = new THREE.Group();
 const dipGroup = new THREE.Group();   /* 雙槓：兩根前後方向的平行槓 */
+const wallMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.1, 0.08), propMat);   /* 牆：扶牆伸展用，放在手掌前面 */
 const barbell = new THREE.Group();   /* 槓鈴：跟著兩手握點移動 */
 const dumbbells = [new THREE.Group(), new THREE.Group()];   /* 啞鈴：左右手各一個，握把沿著拳頭方向 */
 {
@@ -1899,7 +1993,7 @@ const dumbbells = [new THREE.Group(), new THREE.Group()];   /* 啞鈴：左右�
 }
 const _dbX = new THREE.Vector3(1, 0, 0), _dbAxis = new THREE.Vector3();
 /* 等模型量完尺寸才加進來，避免道具影響人體的縮放與置中 */
-const PROPS = [benchMesh, barGroup, dipGroup, barbell, ...dumbbells];
+const PROPS = [benchMesh, barGroup, dipGroup, wallMesh, barbell, ...dumbbells];
 PROPS.forEach(m=>{ m.visible = false; m.traverse(o=>{ o.castShadow = true; o.receiveShadow = true; }); });
 function updateProps(def, U){
   if(modelReady && !benchMesh.parent) PROPS.forEach(m=> modelRoot.add(m));
@@ -1907,6 +2001,8 @@ function updateProps(def, U){
   benchMesh.visible = !!(prop && prop.type === 'bench');
   barGroup.visible = !!(prop && prop.type === 'bar');
   dipGroup.visible = !!(prop && prop.type === 'dips');
+  wallMesh.visible = !!(prop && prop.type === 'wall');
+  if(wallMesh.visible){ const a = landmark(prop.a, U); wallMesh.position.set(0, 1.05 + POSE_FLOOR, a[2] + 0.045); }
   barbell.visible = !!(def && def.barbell);
   if(barbell.visible){
     const g = landmark('gripL', U), pr = (def.barbell.plate || 0.12) / 0.12;   /* 硬舉用標準大槓片，槓片放在地上 */
@@ -2060,27 +2156,30 @@ function setBulgeParts(ex){
   });
 }
 /* 0 = 主要肌肉最長（拉長），1 = 最短（收縮） */
-function contractionOf(def, s){ return def.con === 'iso' ? 0.75 : (def.con === 'A' ? 1 - s : s); }
+function contractionOf(def, s){ return def.con === 'iso' ? 0.75 : (def.con === 'A' ? 1 - s : s); }   /* 伸展：0 = 放鬆，1 = 拉到最深 */
 let phaseK = null, phaseDir = 0;
 function updateBulge(){
   const def = poseAnim.def;
   if(!bulgeParts.length && !def) return;
   const k = def ? contractionOf(def, poseAnim.s ?? 0) : 0, iso = def && def.con === 'iso', fade = def ? poseAnim.blend : 0;
-  const cP = (iso ? 0.75 : -0.35 + 1.35 * k*k*(3 - 2*k)) * fade, cS = (iso ? 0.3 : 0.1 + 0.25*k) * fade;
+  const stretch = def && def.con === 'stretch', ke = k*k*(3 - 2*k);
+  /* 伸展時被拉長的肌肉變扁、變長；訓練時主要肌肉縮短鼓起 */
+  const cP = (stretch ? -0.75 * ke : iso ? 0.75 : -0.35 + 1.35 * ke) * fade, cS = (stretch ? -0.3 * ke : iso ? 0.3 : 0.1 + 0.25*k) * fade;
   bulgeParts.forEach(({part, role})=>{
     const c = role === 'p' ? cP : cS;
     part.bulge.uBulgeC.value.w = part._bf.amp * c;
     /* 收縮時亮一點，取代原本的呼吸光 */
-    if(def) part.material.emissiveIntensity = (part._baseEmissive || 0) * (0.5 + 0.9 * Math.max(0, c));
+    if(def) part.material.emissiveIntensity = (part._baseEmissive || 0) * (stretch ? 0.55 + 0.6 * ke : 0.5 + 0.9 * Math.max(0, c));
   });
-  updatePhaseMeter(def, k, iso);
+  updatePhaseMeter(def, k, iso, stretch);
 }
-function updatePhaseMeter(def, k, iso){
+function updatePhaseMeter(def, k, iso, stretch){
   const el = document.getElementById('exPhase');
   if(!el || !def) return;
   if(phaseK !== null && Math.abs(k - phaseK) > 0.0004) phaseDir = k > phaseK ? 1 : -1;
   phaseK = k;
-  const text = iso ? '等長收縮 · 撐住不動' : (phaseDir > 0 ? '收縮中 · 肌肉變短鼓起' : (phaseDir < 0 ? '拉長中 · 肌肉變長變扁' : '收縮 ↔ 拉長'));
+  const text = stretch ? (phaseDir < 0 ? '放鬆回來 · 保持呼吸' : '慢慢伸展 · 肌肉被拉長變扁')
+    : iso ? '等長收縮 · 撐住不動' : (phaseDir > 0 ? '收縮中 · 肌肉變短鼓起' : (phaseDir < 0 ? '拉長中 · 肌肉變長變扁' : '收縮 ↔ 拉長'));
   if(el._t !== text){ el._t = text; el.querySelector('.ph-text').textContent = text; el.dataset.dir = iso ? 'iso' : (phaseDir > 0 ? 'in' : 'out'); }
   el.querySelector('.ph-bar i').style.width = (k * 100).toFixed(1) + '%';
 }
@@ -2090,22 +2189,39 @@ function exerciseLabel(item){
   const part = clickableParts.find(p=> baseKey(p.key) === item);
   return part ? part.meta.zh : item;
 }
-function renderMovePanel(){
-  const infoEl = document.getElementById('muscleInfo');
+let moveTab = 'train';   /* 實驗協定分頁：訓練動作 或 伸展 */
+function renderMovePanel(noSelect){
+  const infoEl = document.getElementById('muscleInfo'), st = moveTab === 'stretch';
+  const list = st ? STRETCH_DEMOS : EXERCISE_LIB;
   infoEl.innerHTML = `
     <span class="mi-region">動作連動</span>
-    <h2>選一個訓練動作</h2>
-    <p class="func">3D 人體會跟著做動作，並亮起參與的肌肉：<i class="key key-p"></i>主要發力　<i class="key key-s"></i>輔助穩定。主要發力的肌肉縮短時會鼓起來，被拉長時會變扁。</p>
-    <div class="ex-grid">${EXERCISE_LIB.map((e, i)=>`<button data-ex="${e.id}"${e.id===currentExercise?' class="active"':''}>${e.name}<small>P${String(i+1).padStart(2,'0')} · ${e.en}</small></button>`).join('')}</div>
+    <h2>${st ? '選一個伸展動作' : '選一個訓練動作'}</h2>
+    <div class="move-tabs" role="tablist" aria-label="動作類型">
+      <button role="tab" data-mtab="train" aria-selected="${!st}" class="${st ? '' : 'on'}">訓練 <small>TRAIN</small></button>
+      <button role="tab" data-mtab="stretch" aria-selected="${st}" class="${st ? 'on' : ''}">伸展 <small>STRETCH</small></button>
+    </div>
+    <p class="func">${st
+      ? '3D 人體會示範伸展，被拉長的肌肉會亮起並變扁：<i class="key key-p"></i>主要伸展　<i class="key key-s"></i>也會拉到。'
+      : '3D 人體會跟著做動作，並亮起參與的肌肉：<i class="key key-p"></i>主要發力　<i class="key key-s"></i>輔助穩定。主要發力的肌肉縮短時會鼓起來，被拉長時會變扁。'}</p>
+    <div class="ex-grid">${list.map(e=>`<button data-ex="${e.id}"${e.id===currentExercise?' class="active"':''}>${e.name}<small>${protocolCode(e.id, true)} · ${e.en}</small></button>`).join('')}</div>
     <div id="exDetail"></div>`;
   infoEl.classList.remove('refresh'); void infoEl.offsetWidth; infoEl.classList.add('refresh');
   infoEl.scrollTop = 0;
   infoEl.querySelectorAll('[data-ex]').forEach(b=> b.addEventListener('click', ()=> selectExercise(b.dataset.ex)));
-  if(currentExercise) selectExercise(currentExercise, true);
+  infoEl.querySelectorAll('[data-mtab]').forEach(b=> b.addEventListener('click', ()=>{
+    if(b.dataset.mtab === moveTab) return;
+    moveTab = b.dataset.mtab;
+    renderMovePanel(true);
+  }));
+  const cur = currentExercise && protocolById(currentExercise);
+  if(!noSelect && cur && (cur.kind === 'stretch') === st) selectExercise(currentExercise, true);
 }
 function selectExercise(id, keepView){
-  const ex = EXERCISE_LIB.find(e=> e.id === id);
-  if(!ex) return;
+  const ex = protocolById(id);
+  if(!ex || (ex.kind === 'stretch' && !ex.pose)) return;
+  const isStretch = ex.kind === 'stretch';
+  /* 從別的地方（肌肉說明、分享連結）點進來時，先切到對的分頁 */
+  if(isStretch !== (moveTab === 'stretch')){ moveTab = isStretch ? 'stretch' : 'train'; renderMovePanel(true); }
   currentExercise = id;
   userInteracted = true;
   document.querySelectorAll('.ex-grid button').forEach(b=> b.classList.toggle('active', b.dataset.ex === id));
@@ -2125,12 +2241,12 @@ function selectExercise(id, keepView){
   slot.innerHTML = `
     <div class="ex-kicker">${protocolCode(ex.id)}</div>
     <div class="ex-head"><h3>${ex.name}</h3><span class="en">${ex.en}</span><button class="share-btn" data-share aria-label="分享這個動作的連結"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.5V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4.5h9V8.5"/></svg>分享</button></div>
-    <div class="ex-phase" id="exPhase" aria-hidden="true"><span class="ph-end">拉長</span><span class="ph-bar"><i></i></span><span class="ph-end">收縮</span><span class="ph-text">收縮 ↔ 拉長</span></div>
+    <div class="ex-phase" id="exPhase" aria-hidden="true"><span class="ph-end">${isStretch ? '放鬆' : '拉長'}</span><span class="ph-bar"><i></i></span><span class="ph-end">${isStretch ? '伸展' : '收縮'}</span><span class="ph-text">${isStretch ? '放鬆 ↔ 伸展' : '收縮 ↔ 拉長'}</span></div>
     <div class="ex-ctrl"><button id="exPlay">${poseAnim.playing ? '暫停' : '播放'}</button><span class="speed" role="group" aria-label="播放速度">${[0.5, 1].map(v=> `<button data-speed="${v}" class="${(poseAnim.speed || 1) === v ? 'on' : ''}" aria-pressed="${(poseAnim.speed || 1) === v}">${v}×</button>`).join('')}</span><span>模型動作為簡化示意，不是標準姿勢教學</span></div>
-    <section class="mi-sec"><h6><i class="key key-p"></i>主要發力</h6>${chips(ex.p, 'p')}</section>
-    <section class="mi-sec"><h6><i class="key key-s"></i>輔助穩定</h6>${chips(ex.s, 's')}</section>
-    <p class="tip">${ex.cue}</p>
-    <p class="ex-note">點上面的肌肉名稱，可以跳到它的說明。</p>`;
+    <section class="mi-sec"><h6><i class="key key-p"></i>${isStretch ? '主要伸展' : '主要發力'}</h6>${chips(ex.p, 'p')}</section>
+    ${ex.s.length ? `<section class="mi-sec"><h6><i class="key key-s"></i>${isStretch ? '也會拉到' : '輔助穩定'}</h6>${chips(ex.s, 's')}</section>` : ''}
+    <p class="tip">${isStretch ? ex.how : ex.cue}</p>
+    <p class="ex-note">${isStretch ? STRETCH_TIP + '<br>' : ''}點上面的肌肉名稱，可以跳到它的說明。</p>`;
   slot.querySelector('[data-share]').addEventListener('click', shareCurrent);
   slot.querySelectorAll('[data-speed]').forEach(b=> b.addEventListener('click', ()=>{
     poseAnim.speed = +b.dataset.speed;
@@ -2392,7 +2508,7 @@ document.getElementById('themeBtn').innerHTML = document.documentElement.dataset
   const label = document.getElementById('labEnterText'), status = document.getElementById('liStatus');
   let seen = false; try{ seen = sessionStorage.getItem('lab-entered') === '1'; }catch(e){}
   /* 從分享連結進來：直接看到分享的內容，入口畫面和導覽這次先不出現 */
-  const linked = /^#(p|m|g)=/.test(location.hash);
+  const linked = /^#(p|m|g|s)=/.test(location.hash);
   if(linked && !seen){ seen = true; try{ sessionStorage.setItem('lab-entered', '1'); }catch(e){} }
   if(seen && !linked){
     const wait = setInterval(()=>{ if(window.modelReadyFlag){ clearInterval(wait); setTimeout(()=> maybeStartTour(), 600); } }, 300);
@@ -2535,7 +2651,12 @@ document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && tour.i >= 0) 
 /* ---- 編號系統：MG-xx 肌群、M-xxx 單條肌肉、PROTOCOL xx 實驗協定 ---- */
 const labPad = (n, w)=> String(n).padStart(w, '0');
 const groupCode = id=> 'MG-' + labPad(muscleOrder.indexOf(id) + 1, 2);
-const protocolCode = id=> 'PROTOCOL ' + labPad(EXERCISE_LIB.findIndex(e=> e.id === id) + 1, 2);
+/* 實驗協定編號：訓練動作 PROTOCOL 01…、伸展 STRETCH 01…；short 用在按鈕上的 P01、S01 */
+const protocolCode = (id, short)=>{
+  const i = EXERCISE_LIB.findIndex(e=> e.id === id);
+  if(i >= 0) return (short ? 'P' : 'PROTOCOL ') + labPad(i + 1, 2);
+  return (short ? 'S' : 'STRETCH ') + labPad(STRETCH_DEMOS.findIndex(e=> e.id === id) + 1, 2);
+};
 let _labIndex = null;
 /* 單條肌肉照肌群順序編號（模型載入後才建立） */
 function labIndex(){
@@ -2613,7 +2734,7 @@ function protocolRole(ex, groupId, base){
 const SITE_URL = 'https://a112070044.github.io/muscle/';
 let deepLinkApplied = false;
 function linkHash(){
-  if(currentMode === 'move') return currentExercise ? 'p=' + currentExercise : '';
+  if(currentMode === 'move'){ const e = currentExercise && protocolById(currentExercise); return e ? (e.kind === 'stretch' ? 's=' : 'p=') + e.id : ''; }
   if(currentMode !== 'explore' || !currentMuscle) return '';
   return currentPart && currentPart.id === currentMuscle ? 'm=' + baseKey(currentPart.key) : 'g=' + currentMuscle;
 }
@@ -2625,8 +2746,9 @@ function syncHash(){
 }
 function parseLink(hash){
   const q = new URLSearchParams(String(hash || '').replace(/^#/, ''));
-  const p = q.get('p'), m = q.get('m'), g = q.get('g');
+  const p = q.get('p'), m = q.get('m'), g = q.get('g'), st = q.get('s');
   if(p && EXERCISE_LIB.some(e=> e.id === p)) return {type:'protocol', id:p};
+  if(st && STRETCH_DEMOS.some(e=> e.id === st)) return {type:'protocol', id:st};
   if(m && labIndex().byBase[m]) return {type:'muscle', part:labIndex().byBase[m].part};
   if(g && muscleData[g]) return {type:'group', id:g};
   return null;
@@ -2654,10 +2776,10 @@ async function shareCurrent(){
   syncHash();
   const h = linkHash(), onSite = /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
   const url = (onSite ? location.origin + location.pathname : SITE_URL) + (h ? '#' + h : '');
-  const ex = currentMode === 'move' && EXERCISE_LIB.find(e=> e.id === currentExercise);
+  const ex = currentMode === 'move' && currentExercise && protocolById(currentExercise);
   const name = ex ? ex.name : (currentPart && currentPart.id === currentMuscle ? currentPart.meta.zh : currentMuscle ? muscleData[currentMuscle].name : '人體肌肉 3D 研究室');
   const title = name + '｜MUSCLE LAB';
-  const text = ex ? '看 3D 人體示範「' + ex.name + '」，哪些肌肉在發力一目了然' : '在 3D 人體上看「' + name + '」的位置、作用和訓練動作';
+  const text = ex ? (ex.kind === 'stretch' ? '看 3D 人體示範「' + ex.name + '」，哪裡被拉長一目了然' : '看 3D 人體示範「' + ex.name + '」，哪些肌肉在發力一目了然') : '在 3D 人體上看「' + name + '」的位置、作用和訓練動作';
   if(navigator.share && matchMedia('(pointer: coarse)').matches){
     try{ await navigator.share({title, text, url}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
   }
@@ -3038,6 +3160,18 @@ function renderMuscleInfo(id){
       ${protos.length ? `<div class="proto-list">${protos.map(({ex, role})=> `<button data-proto="${ex.id}"><span class="pc">${protocolCode(ex.id)}</span><b>${ex.name}</b><small><i class="key key-${role}"></i>${role === 'p' ? '主要發力' : '輔助穩定'}</small></button>`).join('')}</div>`
         : `<p class="proto-none">目前的 ${EXERCISE_LIB.length} 項實驗協定沒有直接訓練到這裡，可以參考下面的常見訓練動作。</p>`}
     </section>`;
+  /* 伸展：這個肌群建議的伸展，有 3D 示範的排前面 */
+  const stretches = STRETCH_LIB.filter(st=> st.for.includes(id)).sort((a, b)=> (b.pose ? 1 : 0) - (a.pose ? 1 : 0));
+  const stretchHtml = stretches.length ? `
+    <section class="mi-sec">
+      <h6>伸展 · 放鬆這裡</h6>
+      <div class="stretch-list">${stretches.map(st=> `
+        <div class="st-card">
+          <div class="st-top"><span><b>${st.name}</b><small>${st.en}</small></span>${st.pose ? `<button data-stretch="${st.id}"><span class="pc">${protocolCode(st.id, true)}</span>看示範</button>` : ''}</div>
+          <p>${st.how}</p>
+        </div>`).join('')}</div>
+      <p class="st-note">${STRETCH_TIP}</p>
+    </section>` : '';
   const detailHtml = det ? `
     <section class="mi-sec">
       <h6>這條肌肉</h6>
@@ -3057,6 +3191,7 @@ function renderMuscleInfo(id){
       <h6>其他常見訓練動作</h6>
       <ul class="inline-list">${d.exercises.map(e=>'<li>'+e+'</li>').join('')}</ul>
     </section>
+    ${stretchHtml}
     <section class="mi-sec">
       <h6>常見不適原因</h6>
       <ul class="issue-list">${d.issues.map(i=>'<li>'+i+'</li>').join('')}</ul>
@@ -3081,6 +3216,7 @@ function renderMuscleInfo(id){
   infoEl.scrollTop = 0;
   infoEl.querySelectorAll('[data-proto]').forEach(b=> b.addEventListener('click', ()=>{ setMode('move'); selectExercise(b.dataset.proto); }));
   infoEl.querySelector('[data-share]').addEventListener('click', shareCurrent);
+  infoEl.querySelectorAll('[data-stretch]').forEach(b=> b.addEventListener('click', ()=>{ setMode('move'); selectExercise(b.dataset.stretch); }));
   document.getElementById('factReroll').addEventListener('click', ()=>{
     document.getElementById('factText').textContent = d.facts[Math.floor(Math.random() * d.facts.length)];
   });
