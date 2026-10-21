@@ -2354,6 +2354,7 @@ function exerciseRole(part, ex){
   const b = baseKey(part.key), hit = it => it === part.id || it === b;
   if(ex.p.some(hit)) return 'p';
   if(ex.s.some(hit)) return 's';
+  if(ex.ant && ex.ant.some(hit)) return 'a';   /* 拮抗肌：只有關節動作有 */
   return null;
 }
 function paintExercise(ex){
@@ -2365,6 +2366,7 @@ function paintExercise(ex){
     let emis = 0;
     if(role === 'p'){ if(!isTendon) _hlColor.lerp(P, 0.9); m.emissive.copy(P); emis = 0.2; glowParts.push(p); }
     else if(role === 's'){ if(!isTendon) _hlColor.lerp(Sc, 0.92); m.emissive.copy(Sc); emis = 0.12; glowParts.push(p); }
+    else if(role === 'a'){ m.emissive.setHex(0x000000); }   /* 拮抗肌維持原色（其他肌肉變暗），做動作時會被拉長變扁 */
     else { if(ex) _hlColor.lerp(_ghost, TH.ghostMixEx); m.emissive.setHex(0x000000); }
     p._baseEmissive = emis; m.color.copy(_hlColor); m.emissiveIntensity = emis;
   });
@@ -2432,7 +2434,7 @@ function updateBulge(){
   /* 伸展時被拉長的肌肉變扁、變長；訓練時主要肌肉縮短鼓起 */
   const cP = (stretch ? -0.75 * ke : iso ? 0.75 : -0.35 + 1.35 * ke) * fade, cS = (stretch ? -0.3 * ke : iso ? 0.3 : 0.1 + 0.25*k) * fade;
   bulgeParts.forEach(({part, role})=>{
-    const c = role === 'p' ? cP : cS;
+    const c = role === 'p' ? cP : role === 'a' ? -0.6 * ke * fade : cS;
     part.bulge.uBulgeC.value.w = part._bf.amp * c;
     /* 收縮時亮一點，取代原本的呼吸光 */
     if(def) part.material.emissiveIntensity = (part._baseEmissive || 0) * (stretch ? 0.55 + 0.6 * ke : 0.5 + 0.9 * Math.max(0, c));
@@ -2871,7 +2873,7 @@ function selectExercise(id, keepView){
     ${isJoint ? `<dl class="mdetail jt-facts"><dt>關節</dt><dd>${ex.region}</dd><dt>運動平面</dt><dd>${ex.plane}</dd><dt>正常活動度</dt><dd>${ex.rom}</dd><dt>日常例子</dt><dd>${ex.example}</dd></dl>` : ''}
     <section class="mi-sec"><h6><i class="key key-p"></i>${isStretch ? '主要伸展' : isJoint ? '主動肌 · 主要負責' : '主要發力'}</h6>${chips(ex.p, 'p')}</section>
     ${ex.s.length ? `<section class="mi-sec"><h6><i class="key key-s"></i>${isStretch ? '也會拉到' : isJoint ? '協同肌 · 幫忙' : '輔助穩定'}</h6>${chips(ex.s, 's')}</section>` : ''}
-    ${isJoint ? `<section class="mi-sec"><h6>拮抗肌 · 在另一側放鬆、被拉長</h6>${chips(ex.ant, 'a')}</section>` : ''}
+    ${isJoint ? `<section class="mi-sec"><h6>拮抗肌 · 在另一側放鬆、被拉長（模型上維持原色、會變扁的那些）</h6>${chips(ex.ant, 'a')}</section>` : ''}
     ${isJoint ? '' : `<p class="tip">${isStretch ? ex.how : ex.cue}</p>`}
     ${!isStretch && EXERCISE_EXTRA[ex.id] ? `
     <section class="mi-sec"><h6>常見錯誤</h6><ul class="issue-list">${EXERCISE_EXTRA[ex.id].miss.map(m=> '<li>' + m + '</li>').join('')}</ul></section>
