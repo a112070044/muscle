@@ -2368,6 +2368,7 @@ function renderLogPanel(infoEl){
   return week.length ? `
     <div class="log-sum"><b>${week.length}</b> 次訓練 · <b>${ranked.length}</b> 個肌群 <span>最近 7 天</span></div>
     <div class="heat-legend" aria-hidden="true"><span>少</span><i></i><span>多</span></div>
+    <div class="plan-actions"><button class="plan-reroll" id="heatShare">分享熱圖圖片</button></div>
     <section class="mi-sec">
       <h6>練最多的部位</h6>
       <div class="heat-bars">${ranked.slice(0, 8).map(([id, v])=> `<button data-heat-go="${id}"><span>${muscleData[id].name}</span><i><b style="width:${(v / max * 100).toFixed(0)}%"></b></i><small>${fmt(v)}</small></button>`).join('')}</div>
@@ -2383,7 +2384,84 @@ function renderLogPanel(infoEl){
     </section>` : `
     <div class="log-empty">還沒有紀錄。到「訓練」選一個動作，按「＋ 記錄一次」，這裡就會出現本週的訓練熱圖。</div>`;
 }
+/* ---- 分享本週熱圖：正面＋背面兩張 3D 截圖組成一張圖卡 ---- */
+function snapshotViews(){
+  /* 在同一個 JS 工作裡畫完就讀取畫布，瀏覽器還沒合成前讀得到內容；最後立刻畫回原本的畫面，使用者看不到閃動 */
+  const v = camera.view, saved = {rot:bodyGroup.rotation.clone(), target:viewTarget.clone(), dist:camDist, view: v && v.enabled ? {...v} : null};
+  const k = shape.height / 170, shots = [];
+  camera.clearViewOffset();
+  viewTarget.set(0, 1.7 * (k - 1), 0); camDist = INITIAL_CAM_POS.distanceTo(ORIGIN) * Math.max(1, k) * 1.02;
+  updateCamera();
+  for(const ry of [0, Math.PI]){
+    bodyGroup.rotation.set(0, ry, 0); bodyGroup.updateMatrixWorld(true);
+    renderer.render(scene, camera);
+    const c = document.createElement('canvas'); c.width = canvas.width; c.height = canvas.height;
+    c.getContext('2d').drawImage(canvas, 0, 0);
+    shots.push(c);
+  }
+  bodyGroup.rotation.copy(saved.rot); viewTarget.copy(saved.target); camDist = saved.dist;
+  if(saved.view) camera.setViewOffset(saved.view.fullWidth, saved.view.fullHeight, saved.view.offsetX, saved.view.offsetY, saved.view.width, saved.view.height);
+  updateCamera(); renderer.render(scene, camera);
+  return shots;
+}
+function loadImg(src){ return new Promise(r=>{ const i = new Image(); i.onload = ()=> r(i); i.onerror = ()=> r(null); i.src = src; }); }
+async function makeHeatCard(){
+  const light = document.documentElement.dataset.theme === 'light';
+  const C = light ? {bg:'#ECEBE7', grid:'rgba(17,17,17,.05)', text:'#111111', soft:'#4B4A46', faint:'#6E6C67', bar:'rgba(17,17,17,.08)'} : {bg:'#0B0B0B', grid:'rgba(255,255,255,.035)', text:'#E6E6E6', soft:'#9A9A9A', faint:'#828282', bar:'rgba(255,255,255,.08)'};
+  const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d'), font = (w, px)=> `${w} ${px}px "Inter","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif`;
+  g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+  g.strokeStyle = C.grid; g.lineWidth = 1;
+  for(let x = 0; x <= W; x += 54){ g.beginPath(); g.moveTo(x + .5, 0); g.lineTo(x + .5, H); g.stroke(); }
+  for(let y = 0; y <= H; y += 54){ g.beginPath(); g.moveTo(0, y + .5); g.lineTo(W, y + .5); g.stroke(); }
+  /* 兩張截圖：從畫布中央裁出直式範圍 */
+  const shots = snapshotViews(), ph = 820, pw = 470;
+  shots.forEach((c, i)=>{
+    const sh = c.height * 0.96, sw = sh * pw / ph, sx = (c.width - sw) / 2, sy = (c.height - sh) / 2;
+    g.drawImage(c, sx, sy, sw, sh, 60 + i * (pw + 20), 170, pw, ph);
+    g.fillStyle = C.faint; g.font = font(500, 20); g.fillText(i ? 'BACK 背面' : 'FRONT 正面', 72 + i * (pw + 20), 1008);
+  });
+  const logo = await loadImg('brand/ml-mark.png');
+  if(logo){ g.save(); if(light) g.filter = 'invert(1)'; g.drawImage(logo, 60, 52, 76, 76 * logo.height / logo.width); g.restore(); }
+  g.fillStyle = C.text; g.font = font(700, 40); g.fillText('MUSCLE LAB', 156, 96);
+  g.fillStyle = C.soft; g.font = font(500, 24); g.fillText('本週訓練熱圖 · WEEKLY HEATMAP', 158, 132);
+  const week = weekLog(), gr = heatByGroup(), ranked = Object.entries(gr).sort((a, b)=> b[1] - a[1]);
+  const d0 = new Date(Date.now() - 6 * 864e5), d1 = new Date(), md = d=> (d.getMonth() + 1) + '/' + d.getDate();
+  g.fillStyle = C.text; g.font = font(700, 54); g.fillText(String(week.length), 60, 1100);
+  const w1 = g.measureText(String(week.length)).width;
+  g.font = font(500, 26); g.fillStyle = C.soft; g.fillText('次訓練', 70 + w1, 1100);
+  g.fillStyle = C.text; g.font = font(700, 54); g.fillText(String(ranked.length), 250 + w1, 1100);
+  const w2 = g.measureText(String(ranked.length)).width;
+  g.font = font(500, 26); g.fillStyle = C.soft; g.fillText('個肌群　' + md(d0) + '–' + md(d1), 260 + w1 + w2, 1100);
+  const max = ranked.length ? ranked[0][1] : 1;
+  ranked.slice(0, 5).forEach(([id, v], i)=>{
+    const y = 1150 + i * 34;
+    g.fillStyle = C.text; g.font = font(500, 22); g.fillText(muscleData[id].name, 60, y + 8);
+    g.fillStyle = C.bar; g.fillRect(260, y - 5, 560, 10);
+    g.fillStyle = '#B91C1C'; g.fillRect(260, y - 5, 560 * v / max, 10);
+    g.fillStyle = C.soft; g.font = font(500, 20); g.fillText((Math.round(v * 10) / 10).toString(), 840, y + 8);
+  });
+  g.fillStyle = C.faint; g.font = font(500, 20); g.textAlign = 'right'; g.fillText('a112070044.github.io/muscle', W - 60, 96); g.textAlign = 'left';
+  return cv;
+}
+async function shareHeatCard(btn){
+  if(btn){ btn.disabled = true; btn.textContent = '產生圖片中…'; }
+  try{
+    const cv = await makeHeatCard();
+    const blob = await new Promise(r=> cv.toBlob(r, 'image/png'));
+    const file = new File([blob], 'muscle-lab-heatmap.png', {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]}) && matchMedia('(pointer: coarse)').matches){
+      try{ await navigator.share({files:[file], title:'MUSCLE LAB 本週訓練熱圖', text:'我這週的訓練熱圖'}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=> URL.revokeObjectURL(a.href), 4000);
+    showToast('已下載熱圖圖片');
+  } catch(e){ console.warn(e); showToast('圖片產生失敗，請再試一次'); }
+  finally{ if(btn){ btn.disabled = false; btn.textContent = '分享熱圖圖片'; } }
+}
 function bindLogPanel(infoEl){
+  const hs = infoEl.querySelector('#heatShare'); if(hs) hs.addEventListener('click', ()=> shareHeatCard(hs));
   infoEl.querySelectorAll('[data-heat-go]').forEach(b=> b.addEventListener('click', ()=>{ setMode('explore'); selectMuscle(b.dataset.heatGo); }));
   infoEl.querySelectorAll('[data-proto]').forEach(b=> b.addEventListener('click', ()=> selectExercise(b.dataset.proto)));
   infoEl.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', ()=>{
@@ -3456,6 +3534,30 @@ function goToView(name){
 }
 document.querySelectorAll('.view-presets button[data-view]').forEach(btn=>{
   btn.addEventListener('click', ()=> goToView(btn.dataset.view));
+});
+/* ---- 鍵盤快捷鍵（電腦）：← → 旋轉、1–4 正背左右、+ − 縮放、F 專注、R 重設、空白鍵 暫停動作、? 說明 ---- */
+const KEY_HELP = '快捷鍵：← → 旋轉　1 正面　2 背面　3 左側　4 右側　+ − 縮放　F 專注檢視　R 重設視角　空白鍵 暫停／播放動作';
+document.addEventListener('keydown', e=>{
+  if(e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+  const t = e.target, tag = t && t.tagName;
+  if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+  if(document.body.classList.contains('intro') || tour.i >= 0) return;
+  const k = e.key;
+  if(k === 'ArrowLeft' || k === 'ArrowRight'){
+    userInteracted = true;
+    targetRotY = (targetRotY ?? bodyGroup.rotation.y) + (k === 'ArrowLeft' ? -1 : 1) * Math.PI / 6; targetRotX = targetRotX ?? 0;
+  } else if(k >= '1' && k <= '4') goToView(['front', 'back', 'left', 'right'][+k - 1]);
+  else if(k === '+' || k === '='){ userInteracted = true; applyZoom(-camDist * 0.18); }
+  else if(k === '-' || k === '_'){ userInteracted = true; applyZoom(camDist * 0.18); }
+  else if(k === 'f' || k === 'F') setFocusMode(!isFocusMode);
+  else if(k === 'r' || k === 'R') document.getElementById('resetBtn').click();
+  else if(k === ' ' && currentMode === 'move' && poseAnim.def){
+    const b = document.getElementById('exPlay');
+    if(b && document.activeElement && document.activeElement.tagName === 'BUTTON') return;   /* 焦點在按鈕上時讓空白鍵按那個按鈕 */
+    if(b) b.click(); else poseAnim.playing = !poseAnim.playing;
+  } else if(k === '?') showToast(KEY_HELP);
+  else return;
+  e.preventDefault();
 });
 document.getElementById('randomExplore').addEventListener('click', ()=>{
   if(currentMode !== 'explore') return;
