@@ -1751,6 +1751,7 @@ async function loadAnatomyModels(){
     modelReady = true; window.modelReadyFlag = true;
     markShadowsDirty();
     setTimeout(checkBadges, 1500);   /* 舊進度在這台裝置上已經達成的成就 */
+    try{ if(sessionStorage.getItem('lab-restored')){ sessionStorage.removeItem('lab-restored'); setTimeout(()=> showToast('已匯入備份，紀錄和進度都還原了'), 900); } }catch(e){}
     if(currentMode === 'explore' && !currentMuscle) showPlaceholder();
     applyDeepLink();
     // reflections are the most expensive step, so they are built after the body is already on screen
@@ -2734,7 +2735,45 @@ function renderLogPanel(infoEl){
       <ul class="log-list">${recent.map(e=> { const ex = EXERCISE_LIB.find(x=> x.id === e.id); return `<li><span>${ex.name}</span><time>${relTime(e.t)}</time><button data-del="${e.t}" aria-label="刪除這筆紀錄">×</button></li>`; }).join('')}</ul>
       <button class="link-btn" id="logClear">清除全部紀錄</button>
     </section>` : `
-    <div class="log-empty">還沒有紀錄。到「訓練」選一個動作，按「＋ 記錄一次」，這裡就會出現本週的訓練熱圖。</div>`) + badgesHTML();
+    <div class="log-empty">還沒有紀錄。到「訓練」選一個動作，按「＋ 記錄一次」，這裡就會出現本週的訓練熱圖。</div>`) + badgesHTML() + backupHTML();
+}
+/* ---- 備份與還原：紀錄、成就、閃卡等進度都只存在這台裝置，可以下載成檔案再到別台裝置匯入（不含「我的頭」照片） ---- */
+const BACKUP_KEYS = ['muscle-log','muscle-plan','muscle-ex-filter','muscle-watched','muscle-badges','muscle-counters','muscle-visited','muscle-cards','muscle-quiz-kind','muscle-theme','muscle-shape'];
+const backupHTML = ()=> `
+    <section class="mi-sec">
+      <h6>備份與還原</h6>
+      <p class="st-note">訓練紀錄、成就和閃卡進度都只存在這台裝置的瀏覽器。換手機或清除瀏覽器資料前，先下載一份備份檔，之後在任何裝置匯入就能還原。</p>
+      <div class="plan-actions"><button class="plan-reroll" id="backupSave">下載備份檔</button><button class="plan-reroll" id="backupLoad">匯入備份檔</button><input type="file" id="backupFile" accept=".json,application/json" hidden></div>
+    </section>`;
+function saveBackup(){
+  const data = {};
+  BACKUP_KEYS.forEach(k=>{ try{ const v = localStorage.getItem(k); if(v != null) data[k] = v; }catch(e){} });
+  const d = new Date(), stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  const url = URL.createObjectURL(new Blob([JSON.stringify({app:'muscle-lab', v:1, at:d.toISOString(), data}, null, 1)], {type:'application/json'}));
+  const a = document.createElement('a'); a.href = url; a.download = 'muscle-lab-backup-' + stamp + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 4000);
+  showToast('已下載備份檔，換裝置時在這裡按「匯入備份檔」');
+}
+function loadBackup(file){
+  if(!file) return;
+  if(file.size > 2e6){ showToast('這個檔案太大，不像是 MUSCLE LAB 的備份檔'); return; }
+  const rd = new FileReader();
+  rd.onload = ()=>{
+    let pack = null;
+    try{ pack = JSON.parse(rd.result); }catch(e){}
+    if(!pack || pack.app !== 'muscle-lab' || !pack.data || typeof pack.data !== 'object'){ showToast('讀不懂這個檔案，請選擇 MUSCLE LAB 下載的備份檔'); return; }
+    const keys = BACKUP_KEYS.filter(k=> typeof pack.data[k] === 'string');
+    if(!keys.length){ showToast('這個備份檔裡沒有可以還原的資料'); return; }
+    if(!window.confirm('匯入會取代這台裝置上的訓練紀錄、成就和閃卡進度，確定要匯入嗎？')) return;
+    try{
+      keys.forEach(k=> localStorage.setItem(k, pack.data[k]));
+      sessionStorage.setItem('lab-restored', '1');
+    }catch(e){ showToast('瀏覽器不允許寫入資料，無法匯入'); return; }
+    location.hash = 'log';
+    location.reload();
+  };
+  rd.readAsText(file);
 }
 /* ---- 分享本週熱圖：正面＋背面兩張 3D 截圖組成一張圖卡 ---- */
 function snapshotViews(){
@@ -2814,6 +2853,10 @@ async function shareHeatCard(btn){
 }
 function bindLogPanel(infoEl){
   const hs = infoEl.querySelector('#heatShare'); if(hs) hs.addEventListener('click', ()=> shareHeatCard(hs));
+  const bf = infoEl.querySelector('#backupFile');
+  infoEl.querySelector('#backupSave').addEventListener('click', saveBackup);
+  infoEl.querySelector('#backupLoad').addEventListener('click', ()=> bf.click());
+  bf.addEventListener('change', ()=>{ loadBackup(bf.files[0]); bf.value = ''; });   /* 清空，才能再選同一個檔案 */
   infoEl.querySelectorAll('[data-heat-go]').forEach(b=> b.addEventListener('click', ()=>{ setMode('explore'); selectMuscle(b.dataset.heatGo); }));
   infoEl.querySelectorAll('[data-proto]').forEach(b=> b.addEventListener('click', ()=> selectExercise(b.dataset.proto)));
   infoEl.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', ()=>{
