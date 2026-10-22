@@ -535,6 +535,11 @@
   .nv-grp button{display:inline-flex; align-items:center; gap:8px; padding:6px 11px; border:1px solid var(--line-hi); border-radius:8px; background:none; color:var(--text); font:500 13px var(--sans); text-align:left; cursor:pointer; transition:border-color .15s ease;}
   .nv-grp button:hover{border-color:var(--text);}
   .nv-grp .pc{font:400 10px var(--mono); letter-spacing:.06em; color:var(--text-faint);}
+  .nv-chip.ant::before{display:none;}
+  .ant-list{display:flex; flex-direction:column; gap:10px;}
+  .ant-row{display:grid; grid-template-columns:7.5em 1fr; gap:8px; align-items:start;}
+  .ant-row > span{font-size:12.5px; color:var(--text-soft); padding-top:6px;}
+  @media (max-width:560px){ .ant-row{grid-template-columns:1fr; gap:6px;} .ant-row > span{padding-top:0;} }
   .nv-details{margin-top:18px; border-top:1px solid var(--line); padding-top:14px;}
   .nv-details summary{cursor:pointer; font-size:13.5px; font-weight:500; color:var(--text-soft); margin-bottom:2px;}
   .nv-details summary:hover{color:var(--text);}
@@ -4176,6 +4181,14 @@ function renderMuscleInfo(id){
       <h6>肌動學 · 負責的關節動作</h6>
       <div class="proto-list">${jointActs.map(({j, role})=> `<button data-proto="${j.id}"><span class="pc">${protocolCode(j.id)}</span><b>${j.name}</b><small><i class="key key-${role}"></i>${role === 'p' ? '主動肌' : '協同肌'}</small></button>`).join('')}</div>
     </section>` : '';
+  /* 拮抗肌：這裡當主動肌的關節動作，另一側負責「踩煞車」、會被拉長的肌肉 */
+  const antName = it=> muscleData[it] ? muscleData[it].name : (labIndex().byBase[it] || {}).zh;
+  const antRows = jointActs.filter(x=> x.role === 'p' && x.j.ant && x.j.ant.length).map(({j})=> ({j, ants:j.ant.filter(antName)})).filter(r=> r.ants.length);
+  const antHtml = antRows.length ? `
+    <section class="mi-sec">
+      <h6>拮抗肌 · 動作方向相反、在另一側被拉長的肌肉</h6>
+      <div class="ant-list">${antRows.map(({j, ants})=> `<div class="ant-row"><span>${j.name}</span><div class="nv-row">${ants.map(it=> `<button class="nv-chip ant" data-ant="${it}">${antName(it)}</button>`).join('')}</div></div>`).join('')}</div>
+    </section>` : '';
   const protoHtml = `
     <section class="mi-sec">
       <h6>實驗協定 · 訓練${specific ? '這條肌肉' : '這個肌群'}的動作</h6>
@@ -4222,6 +4235,7 @@ function renderMuscleInfo(id){
     <p class="func">${d.func}</p>
     ${protoHtml}
     ${jointHtml}
+    ${antHtml}
     ${groupNerveHtml}
     <section class="mi-sec">
       <h6>其他常見訓練動作</h6>
@@ -4258,6 +4272,10 @@ function renderMuscleInfo(id){
   }));
   infoEl.querySelectorAll('[data-stretch]').forEach(b=> b.addEventListener('click', ()=>{ setMode('move'); selectExercise(b.dataset.stretch); }));
   bindNerveChips(infoEl);
+  infoEl.querySelectorAll('[data-ant]').forEach(b=> b.addEventListener('click', ()=>{
+    const it = b.dataset.ant, m = labIndex().byBase[it];
+    if(muscleData[it]) selectMuscle(it); else if(m) selectMuscle(m.part.id, m.part);
+  }));
   document.getElementById('factReroll').addEventListener('click', ()=>{
     document.getElementById('factText').textContent = d.facts[Math.floor(Math.random() * d.facts.length)];
   });
