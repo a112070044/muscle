@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MUSCLE LAB｜人體肌肉 3D 研究室</title>
-<meta name="description" content="MUSCLE LAB 人體肌肉 3D 研究室：333 條肌肉的 3D 解剖、29 個訓練動作示範、26 條周邊神經的支配範圍、體型調整與 AI 研究員問答。">
+<meta name="description" content="MUSCLE LAB 人體肌肉 3D 研究室：333 條肌肉的 3D 解剖、32 個訓練動作示範、26 條周邊神經的支配範圍、體型調整與 AI 研究員問答。">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MUSCLE LAB">
 <meta property="og:locale" content="zh_TW">
 <meta property="og:title" content="MUSCLE LAB｜人體肌肉 3D 研究室">
-<meta property="og:description" content="點一條肌肉，看它亮起來。333 條肌肉的 3D 解剖圖鑑、29 項訓練實驗協定，從結構到動作一層一層拆解。">
+<meta property="og:description" content="點一條肌肉，看它亮起來。333 條肌肉的 3D 解剖圖鑑、32 項訓練實驗協定，從結構到動作一層一層拆解。">
 <meta property="og:url" content="https://a112070044.github.io/muscle/">
 <meta property="og:image" content="https://a112070044.github.io/muscle/brand/og-image.jpg">
 <meta property="og:image:width" content="1200">
@@ -18,7 +18,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://a112070044.github.io/muscle/">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"MUSCLE LAB｜人體肌肉 3D 研究室","alternateName":"MUSCLE LAB","url":"https://a112070044.github.io/muscle/","inLanguage":"zh-Hant","applicationCategory":"EducationalApplication","operatingSystem":"Any (web browser)","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"image":"https://a112070044.github.io/muscle/brand/og-image.jpg","description":"333 條肌肉的 3D 解剖圖鑑：點選肌肉看位置、起止點、神經與作用；29 個訓練動作、20 個關節動作（肌動學）與 10 個伸展的 3D 示範，肌肉收縮會鼓起、伸展會變扁；還有依神經瀏覽（26 條周邊神經各支配哪些肌肉）、肌肉測驗與每週訓練熱圖。"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"MUSCLE LAB｜人體肌肉 3D 研究室","alternateName":"MUSCLE LAB","url":"https://a112070044.github.io/muscle/","inLanguage":"zh-Hant","applicationCategory":"EducationalApplication","operatingSystem":"Any (web browser)","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"image":"https://a112070044.github.io/muscle/brand/og-image.jpg","description":"333 條肌肉的 3D 解剖圖鑑：點選肌肉看位置、起止點、神經與作用；32 個訓練動作、20 個關節動作（肌動學）與 10 個伸展的 3D 示範，肌肉收縮會鼓起、伸展會變扁；還有依神經瀏覽（26 條周邊神經各支配哪些肌肉）、肌肉測驗與每週訓練熱圖。"}
 </script>
 <meta name="theme-color" content="#0B0B0B" id="themeColorMeta">
 <link rel="manifest" href="manifest.webmanifest">
@@ -1873,7 +1873,13 @@ const EXERCISE_LIB = [
   {id:'skull', name:'仰臥三頭伸展', en:'Lying Triceps Extension', pose:'skull', p:['triceps'], s:['anconeus_muscle','forearmFlex','rotator'],
     cue:'仰躺在椅子上，雙手握槓伸直在肩膀上方，上臂固定不動，只彎曲手肘把槓慢慢放到額頭後上方，再伸直手肘推回。'},
   {id:'bss', name:'保加利亞分腿蹲', en:'Bulgarian Split Squat', pose:'bss', p:['quads','glutes'], s:['adductors','gluteMed','hamstrings','calf','abs'],
-    cue:'背對椅子站，一腳往後、腳背放在椅面上，前腳踩穩；上身微微前傾，垂直往下蹲到後膝接近地面，再用前腳腳跟把身體推回。'}
+    cue:'背對椅子站，一腳往後、腳背放在椅面上，前腳踩穩；上身微微前傾，垂直往下蹲到後膝接近地面，再用前腳腳跟把身體推回。'},
+  {id:'kickback', name:'跪姿後踢腿', en:'Donkey Kick', pose:'kickback', p:['glutes'], s:['hamstrings','erector','abs'],
+    cue:'四足跪姿，雙手在肩膀正下方、膝蓋在髖部正下方；膝蓋保持彎曲約 90 度，用臀部把一隻腳往後上方推到大腿與地面平行、腳底朝向天花板，再慢慢放回。模型示範單側，兩邊都要做。'},
+  {id:'kneepush', name:'跪姿伏地挺身', en:'Knee Push-up', pose:'kneepush', p:['chest','triceps','clavicular_part_of_deltoid_muscle'], s:['serratus','abs','rotator'],
+    cue:'膝蓋著地、雙手略寬於肩，從頭到膝蓋保持一直線，胸口往地面下降，再把地面推開。這是伏地挺身的入門版本。'},
+  {id:'crunch', name:'捲腹', en:'Crunch', pose:'crunch', p:['rectus_abdominis_muscle'], s:['obliques','pyramidalis_muscle'],
+    cue:'仰躺屈膝、下背貼地，收緊腹部把頭和肩胛骨捲離地面，停一下再慢慢放下。幅度比仰臥起坐小，主要練腹直肌，髖屈肌參與得比較少。'}
 ];
 /* 示範姿勢：A、B 兩個關鍵姿勢之間來回（沒寫 A 就是站姿）。角度是各段身體相對站姿的旋轉(度)，正值往前傾；
    L/R 結尾只套用在左/右腳。solve 會自動調整一個角度讓兩個身體點等高；contacts 是要貼地的點，第一個點固定前後位置。
@@ -1945,7 +1951,16 @@ const POSES = {
   /* 保加利亞分腿蹲：後腳腳背放在椅面上（腳尖比前腳跟高 43 公分、後方約 70 公分），小腿角度自動調整讓後腳留在椅子上 */
   bss:{A:{torso:6, thighL:-14, shankL:4, thighR:35.5, shankR:65, footR:178}, B:{torso:14, thighL:-80, shankL:22, thighR:14, shankR:121.5, footR:178},
     solve:{field:'shankR', a:'toeR', b:'heelL', target:0.43, range:[40,175]}, contacts:['heelL','toeL'], prop:{type:'bench', a:'toeR', b:'toeR', pad:0.14},
-    con:'A', period:3.0, view:1.45}
+    con:'A', period:3.0, view:1.45},
+  /* 跪姿後踢腿：四足跪姿（軀幹角度自動調整讓手掌和膝蓋都貼地），右腳保持屈膝往後上方推到大腿水平 */
+  kickback:{A:{torso:90, thigh:0, shank:90, foot:180, arm:0, wrist:84, pron:180}, B:{torso:90, thighL:0, shankL:90, footL:180, thighR:95, shankR:180, footR:180, arm:0, wrist:84, pron:180},
+    solve:{field:'torso', a:'palmL', b:'kneeL', target:0.004, range:[40, 100]}, contacts:['kneeL','shinL','palmL:0.004','palmR:0.004'], con:'B', period:2.4, view:1.57},
+  /* 跪姿伏地挺身：以膝蓋為支點，手的動作和伏地挺身相同，下降幅度稍小（大腿前側不會壓進地面太多） */
+  kneepush:{A:{arm:-64, wrist:84, pron:180, shank:100, foot:100}, B:{arm:26, elbow:-108, abd:28, wrist:84, pron:180, shank:100, foot:100},
+    solve:{field:'root', a:'palmL', b:'kneeL', target:0.004, range:[0,120]}, contacts:['kneeL','kneeR','palmL:0.004','palmR:0.004'], con:'A', period:2.4, view:1.35},
+  /* 捲腹：上背捲離地面約 30 度，比仰臥起坐的幅度小 */
+  crunch:{A:{torso:-90, thigh:-135, shank:-40, armRel:-15}, B:{torso:-62, thigh:-135, shank:-40, armRel:-20},
+    contacts:['heelL','heelR','sacrum'], con:'B', period:2.2, view:1.57}
 };
 /* 器材（bw 徒手、db 啞鈴、bb 槓鈴、gear 單槓／雙槓／椅子）與難度（1 入門、2 中級、3 進階），參考 MuscleWiki 的篩選方式 */
 const EX_META = {
@@ -1954,7 +1969,7 @@ const EX_META = {
   row:{eq:'bb', lv:2}, curl:{eq:'db', lv:1}, plank:{eq:'bw', lv:1}, shrug:{eq:'db', lv:1}, deadlift:{eq:'bb', lv:3},
   lateral:{eq:'db', lv:1}, bridge:{eq:'bw', lv:1}, situp:{eq:'bw', lv:1}, dips:{eq:'gear', lv:3}, ohext:{eq:'bb', lv:2},
   hammer:{eq:'db', lv:1}, uprow:{eq:'bb', lv:2}, revfly:{eq:'db', lv:2}, legraise:{eq:'bw', lv:2}, superman:{eq:'bw', lv:1}, wallsit:{eq:'bw', lv:1},
-  fly:{eq:'db', lv:2}, skull:{eq:'bb', lv:2}, bss:{eq:'gear', lv:2}
+  fly:{eq:'db', lv:2}, skull:{eq:'bb', lv:2}, bss:{eq:'gear', lv:2}, kickback:{eq:'bw', lv:1}, kneepush:{eq:'bw', lv:1}, crunch:{eq:'bw', lv:1}
 };
 const EQ_LABEL = {bw:'徒手', db:'啞鈴', bb:'槓鈴', gear:'器材'}, LV_LABEL = {1:'入門', 2:'中級', 3:'進階'};
 let exFilter = {eq:'all', lv:'all'};
@@ -1990,7 +2005,10 @@ const EXERCISE_EXTRA = {
   wallsit:{miss:['膝蓋超過腳尖太多','背離開牆面','雙手壓在大腿上借力'], easy:'蹲高一點，大腿不用到水平。', hard:'蹲低一點、延長時間，或手抱重物、改成單腳。'},
   fly:{miss:['手肘彎太多，變成啞鈴臥推','打開太低，肩膀前側被過度拉扯','合起來時聳肩、啞鈴互相撞擊'], easy:'用較輕的啞鈴、縮小打開的幅度，或躺在地板上做（手肘碰地就停）。', hard:'放慢下放到 3 秒，或改成上斜椅飛鳥加強上胸。'},
   skull:{miss:['上臂跟著前後擺動，變成肩膀在出力','手肘往外張開','下放太快，槓太靠近臉'], easy:'改用兩個啞鈴、掌心相對，或減輕重量。', hard:'把槓放到頭後方更遠的位置增加伸展，或放慢下放速度。'},
-  bss:{miss:['前腳離椅子太近，前膝往前太多','後腳出太多力：重量應該在前腳','上身左右晃、骨盆歪斜'], easy:'後腳放在較低的台階上，或手扶牆保持平衡。', hard:'雙手各拿一個啞鈴，或放慢下蹲、在底部停一秒。'}
+  bss:{miss:['前腳離椅子太近，前膝往前太多','後腳出太多力：重量應該在前腳','上身左右晃、骨盆歪斜'], easy:'後腳放在較低的台階上，或手扶牆保持平衡。', hard:'雙手各拿一個啞鈴，或放慢下蹲、在底部停一秒。'},
+  kickback:{miss:['腰往下塌或下背拱起：動作要來自髖部','踢太高讓骨盆往旁邊翻','用甩的、速度太快'], easy:'縮小踢腿的幅度，或先練臀橋。', hard:'在膝窩夾一個輕啞鈴或綁彈力帶，或在頂端停兩秒。'},
+  kneepush:{miss:['屁股翹高，身體沒有成一直線','手肘往外張成 90 度','只做半程，胸口沒有下到接近地面'], easy:'雙手撐在桌子或牆上，做上斜伏地挺身。', hard:'能連續做 15 下以上，就換成標準伏地挺身。'},
+  crunch:{miss:['用手拉脖子','下背離開地面，變成仰臥起坐','憋氣、動作太快'], easy:'雙手放在大腿上往膝蓋方向滑，幅度小一點。', hard:'雙手交叉放在胸前或抱著重物，頂端停兩秒。'}
 };
 /* 伸展：每個肌群都有建議的伸展（for）；有 pose 的會在 3D 人體上示範，被拉長的肌肉（p）會變扁 */
 const STRETCH_LIB = [
@@ -2814,8 +2832,8 @@ const PLAN_FOCUS = {
   core:{zh:'核心', groups:['abs','obliques','erector','hipflexor']}
 };
 const PLAN_LEN = {15:3, 30:5, 45:7};
-const BODYWEIGHT = new Set(['squat','lunge','calfraise','pushup','plank','bridge','situp','legraise','superman','wallsit']);
-const COMPOUND = new Set(['squat','rdl','lunge','hipthrust','pushup','bench','ohp','pullup','row','deadlift','dips','uprow','bss']);
+const BODYWEIGHT = new Set(['squat','lunge','calfraise','pushup','plank','bridge','situp','legraise','superman','wallsit','kickback','kneepush','crunch']);
+const COMPOUND = new Set(['squat','rdl','lunge','hipthrust','pushup','bench','ohp','pullup','row','deadlift','dips','uprow','bss','kneepush']);
 function planDose(ex){
   if(POSES[ex.pose].con === 'iso') return '3 組 × 30–45 秒';
   if(COMPOUND.has(ex.id)) return BODYWEIGHT.has(ex.id) ? '3 組 × 10–15 下' : '3–4 組 × 6–10 下';
