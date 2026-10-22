@@ -519,7 +519,7 @@
   @media (pointer: coarse){
     .ghost-btn{min-height:44px; min-width:44px; padding:0 12px;}
     .seg button{min-width:44px;}
-    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .quiz-options button, .plan-list button, .mi-tools button, .daily-acts button, .unhide-btn, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn, .nv-chip, .nv-grp button, .fc-scope button, .fc-rate button, .quiz-kind button{min-height:44px;}
+    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .quiz-options button, .plan-list button, .mi-tools button, .daily-acts button, .unhide-btn, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn, .nv-chip, .nv-grp button, .fc-scope button, .fc-rate button, .quiz-kind button, .ex-scrub input{min-height:44px;}
     .rail-search input{height:44px; font-size:16px;}
   }
   @media (max-width:760px){ .leader, .leader-label{display:none;} }
@@ -678,6 +678,9 @@
   .ph-text{grid-column:1 / -1; font:500 12px var(--sans); letter-spacing:0; color:var(--text-soft);}
   .ex-phase[data-dir="in"] .ph-text, .ex-phase[data-dir="iso"] .ph-text{color:var(--text);}
   .ex-ctrl{display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; margin:10px 0 18px; font-size:12px; color:var(--text-faint);}
+  .ex-scrub{flex:1 1 100%; display:flex; align-items:center; gap:10px; color:var(--text-soft);}
+  .ex-scrub span{white-space:nowrap;}
+  .ex-scrub input{flex:1; min-width:0; accent-color:var(--scan); cursor:pointer;}
   .ex-ctrl > button{flex-shrink:0; font-size:13.5px; font-weight:600; color:var(--on-ice); background:var(--ice); border:none; border-radius:8px; padding:8px 18px; cursor:pointer;}
   .ex-note{font-size:12.5px; color:var(--text-faint); margin:8px 0 18px;}
   .chip-row{display:flex; flex-wrap:wrap; gap:6px;}
@@ -2523,7 +2526,9 @@ function updatePose(){
   let U = ZERO_U;
   if(poseAnim.def){
     if(poseAnim.playing) poseAnim.t += dt * (poseAnim.speed || 1);
-    const s = reduceMotion ? 1 : (1 - Math.cos(2*Math.PI*poseAnim.t/poseAnim.period))/2;
+    const s = reduceMotion && !poseAnim.manual ? 1 : (1 - Math.cos(2*Math.PI*poseAnim.t/poseAnim.period))/2;   /* 減少動態：停在終點，但可以用拉桿自己看 */
+    const sc = poseAnim.playing && document.getElementById('exScrub');
+    if(sc){ const v = Math.round(((poseAnim.t % poseAnim.period) + poseAnim.period) % poseAnim.period / poseAnim.period * 1000); if(+sc.value !== v) sc.value = v; }
     U = poseAt(poseAnim.def, s);
     poseAnim.s = s;
   }
@@ -2649,7 +2654,11 @@ function updatePhaseMeter(def, k, iso, stretch){
   if(!el || !def) return;
   if(phaseK !== null && Math.abs(k - phaseK) > 0.0004) phaseDir = k > phaseK ? 1 : -1;
   phaseK = k;
-  const text = stretch ? (phaseDir < 0 ? '放鬆回來 · 保持呼吸' : '慢慢伸展 · 肌肉被拉長變扁')
+  /* 暫停（或用拉桿停住）時說明現在的位置，而不是動的方向 */
+  const still = !poseAnim.playing && !iso;
+  const text = still ? (stretch ? (k > 0.85 ? '暫停 · 伸展到最深' : k < 0.15 ? '暫停 · 放鬆的位置' : '暫停 · 伸展途中')
+      : (k > 0.85 ? '暫停 · 收縮到最短，肌肉鼓起' : k < 0.15 ? '暫停 · 拉到最長，肌肉變扁' : '暫停 · 收縮與拉長之間'))
+    : stretch ? (phaseDir < 0 ? '放鬆回來 · 保持呼吸' : '慢慢伸展 · 肌肉被拉長變扁')
     : iso ? '等長收縮 · 撐住不動' : (phaseDir > 0 ? '收縮中 · 肌肉變短鼓起' : (phaseDir < 0 ? '拉長中 · 肌肉變長變扁' : '收縮 ↔ 拉長'));
   if(el._t !== text){ el._t = text; el.querySelector('.ph-text').textContent = text; el.dataset.dir = iso ? 'iso' : (phaseDir > 0 ? 'in' : 'out'); }
   el.querySelector('.ph-bar i').style.width = (k * 100).toFixed(1) + '%';
@@ -3216,7 +3225,7 @@ function selectExercise(id, keepView){
   const def = POSES[ex.pose];
   prepPose(def);
   if(!keepView || poseAnim.def !== def){
-    poseAnim.def = def; poseAnim.period = def.period; poseAnim.t = 0; poseAnim.playing = true; poseAnim.blend = 0;
+    poseAnim.def = def; poseAnim.period = def.period; poseAnim.t = 0; poseAnim.playing = true; poseAnim.blend = 0; poseAnim.manual = false;
   }
   if(!keepView){
     targetRotY = def.view; targetRotX = 0;
@@ -3232,7 +3241,7 @@ function selectExercise(id, keepView){
     <div class="ex-head"><h3>${ex.name}</h3><span class="en">${ex.en}</span><button class="share-btn" data-share aria-label="分享這個動作的連結"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.5V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4.5h9V8.5"/></svg>分享</button></div>
     <div class="ex-phase" id="exPhase" aria-hidden="true"><span class="ph-end">${isStretch ? '放鬆' : '拉長'}</span><span class="ph-bar"><i></i></span><span class="ph-end">${isStretch ? '伸展' : '收縮'}</span><span class="ph-text">${isStretch ? '放鬆 ↔ 伸展' : '收縮 ↔ 拉長'}</span></div>
     ${isStretch || isJoint ? '' : `<div class="log-row"><button class="log-btn" data-log>＋ 記錄一次</button><span class="log-note">本週 <b data-log-count>${weekCount(ex.id)}</b> 次 · <button class="link-btn" data-log-view>看訓練熱圖</button></span></div>`}
-    <div class="ex-ctrl"><button id="exPlay">${poseAnim.playing ? '暫停' : '播放'}</button><span class="speed" role="group" aria-label="播放速度">${[0.5, 1].map(v=> `<button data-speed="${v}" class="${(poseAnim.speed || 1) === v ? 'on' : ''}" aria-pressed="${(poseAnim.speed || 1) === v}">${v}×</button>`).join('')}</span><span>模型動作為簡化示意，不是標準姿勢教學</span></div>
+    <div class="ex-ctrl"><button id="exPlay">${poseAnim.playing ? '暫停' : '播放'}</button><span class="speed" role="group" aria-label="播放速度">${[0.5, 1].map(v=> `<button data-speed="${v}" class="${(poseAnim.speed || 1) === v ? 'on' : ''}" aria-pressed="${(poseAnim.speed || 1) === v}">${v}×</button>`).join('')}</span><label class="ex-scrub"><span>拖動看任一瞬間</span><input type="range" id="exScrub" min="0" max="1000" step="1" value="0" aria-label="動作進度"></label><span>模型動作為簡化示意，不是標準姿勢教學</span></div>
     ${isJoint ? `<dl class="mdetail jt-facts"><dt>關節</dt><dd>${ex.region}</dd><dt>運動平面</dt><dd>${ex.plane}</dd><dt>正常活動度</dt><dd>${ex.rom}</dd><dt>日常例子</dt><dd>${ex.example}</dd></dl>` : ''}
     <section class="mi-sec"><h6><i class="key key-p"></i>${isStretch ? '主要伸展' : isJoint ? '主動肌 · 主要負責' : '主要發力'}</h6>${chips(ex.p, 'p')}</section>
     ${ex.s.length ? `<section class="mi-sec"><h6><i class="key key-s"></i>${isStretch ? '也會拉到' : isJoint ? '協同肌 · 幫忙' : '輔助穩定'}</h6>${chips(ex.s, 's')}</section>` : ''}
@@ -3263,6 +3272,13 @@ function selectExercise(id, keepView){
   document.getElementById('exPlay').addEventListener('click', function(){
     poseAnim.playing = !poseAnim.playing;
     this.textContent = poseAnim.playing ? '暫停' : '播放';
+  });
+  /* 進度拉桿：拖動時暫停，停在動作的任一個瞬間（例如深蹲最低點）看肌肉 */
+  const scrub = document.getElementById('exScrub');
+  scrub.addEventListener('input', ()=>{
+    poseAnim.playing = false; poseAnim.manual = true; poseAnim.blend = 1;
+    poseAnim.t = scrub.value / 1000 * poseAnim.period;
+    document.getElementById('exPlay').textContent = '播放';
   });
   slot.querySelectorAll('[data-go]').forEach(b=> b.addEventListener('click', ()=>{
     const it = b.dataset.go;
