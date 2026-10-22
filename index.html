@@ -498,6 +498,13 @@
   .part-tag.deep i{background:var(--text-faint);}
   .part-tag.deep span{color:var(--text-soft); border-style:dashed; opacity:.75;}
   .part-tag.deep span::after{content:' · 深層／背面'; color:var(--text-faint); font-size:10px;}
+  @media (max-width:760px){
+    .part-tag{font-size:10.5px; padding:8px 0; gap:4px;}   /* 上下留白讓手指比較好點 */
+    .part-tag span{padding:1px 5px 2px;}
+    .part-tag i{width:7px; height:7px;}
+    .part-tag.deep span::after{content:'';}
+    .part-tag.deep{opacity:.8;}
+  }
 
   /* ---------- protocols for this muscle ---------- */
   .proto-list{display:flex; flex-direction:column; gap:6px;}
@@ -2817,7 +2824,7 @@ function calendarHTML(){
     </section>`;
 }
 /* ---- 備份與還原：紀錄、成就、閃卡等進度都只存在這台裝置，可以下載成檔案再到別台裝置匯入（不含「我的頭」照片） ---- */
-const BACKUP_KEYS = ['muscle-log','muscle-plan','muscle-ex-filter','muscle-watched','muscle-badges','muscle-counters','muscle-visited','muscle-cards','muscle-quiz-kind','muscle-theme','muscle-shape','muscle-sound','muscle-labels'];
+const BACKUP_KEYS = ['muscle-log','muscle-plan','muscle-ex-filter','muscle-watched','muscle-badges','muscle-counters','muscle-visited','muscle-cards','muscle-quiz-kind','muscle-theme','muscle-shape','muscle-sound','muscle-labels','muscle-labels-m'];
 const backupHTML = ()=> `
     <section class="mi-sec">
       <h3>備份與還原</h3>
@@ -4000,7 +4007,8 @@ function updateLeader(){
 }
 /* ---- 圖鑑標籤：選一個肌群時，在模型上標出組成它的每一條肌肉；被擋住的（深層或在另一面）變淡，點標籤直接看那一條 ---- */
 const partTagsEl = document.getElementById('partTags');
-let partTagsOn = lsGet('muscle-labels', true) !== false, partTags = [], _tagSig = '', _tagView = '', _tagViewAt = 0, _tagChecked = true;
+/* 電腦預設打開；手機畫面小，預設關閉、要自己按「標示各條肌肉」 */
+let partTagsOn = lsGet('muscle-labels', true) !== false, partTagsOnPhone = lsGet('muscle-labels-m', false) === true, partTags = [], _tagSig = '', _tagView = '', _tagViewAt = 0, _tagChecked = true;
 const _tp = new THREE.Vector3();
 /* 每條肌肉取約 80 個頂點當取樣點；中心點是取樣點的平均 */
 function partSamples(p){
@@ -4015,8 +4023,10 @@ function partSamples(p){
 const partAnchor = p=> (partSamples(p), p._anchor);
 let tagTarget = null, tagPix = null;
 const groupBases = id=> [...new Set(clickableParts.filter(p=> p.id === id && partShown(p)).map(p=> baseKey(p.key)))];
+const isPhone = ()=> window.innerWidth <= 760;
+const tagsOn = ()=> isPhone() ? partTagsOnPhone : partTagsOn;
 function partTagsWanted(){
-  return partTagsOn && modelReady && currentMode === 'explore' && !!currentMuscle && !(currentPart && currentPart.id === currentMuscle) && !poseActive && window.innerWidth > 760 && !document.body.classList.contains('intro');
+  return tagsOn() && modelReady && currentMode === 'explore' && !!currentMuscle && !(currentPart && currentPart.id === currentMuscle) && !poseActive && !document.body.classList.contains('intro');
 }
 function buildPartTags(){
   partTagsEl.innerHTML = ''; partTags = [];
@@ -4036,7 +4046,7 @@ function buildPartTags(){
   _tagChecked = false; _tagViewAt = performance.now();
 }
 function updatePartTags(){
-  const sig = partTagsWanted() ? currentMuscle + '|' + hiddenParts.size + '|' + (isolateSet ? isolateSet.size : 0) + '|' + layerState.muscles : '';
+  const sig = partTagsWanted() ? currentMuscle + '|' + hiddenParts.size + '|' + (isolateSet ? isolateSet.size : 0) + '|' + layerState.muscles + '|' + isPhone() : '';
   if(sig !== _tagSig){ _tagSig = sig; buildPartTags(); }
   partTagsEl.classList.toggle('off', !partTags.length);
   if(!partTags.length) return;
@@ -4047,9 +4057,10 @@ function updatePartTags(){
   });
   /* 標籤疊在一起時依序往下推開 */
   const sorted = partTags.slice().sort((a, b)=> a.y - b.y);
-  sorted.forEach((t, i)=>{ t.ly = t.y; for(let j = 0; j < i; j++){ const o = sorted[j]; if(Math.abs(o.x - t.x) < 120 && t.ly - o.ly < 22) t.ly = o.ly + 22; } });
+  const gapY = isPhone() ? 24 : 22, gapX = isPhone() ? 90 : 120;
+  sorted.forEach((t, i)=>{ t.ly = t.y; for(let j = 0; j < i; j++){ const o = sorted[j]; if(Math.abs(o.x - t.x) < gapX && t.ly - o.ly < gapY) t.ly = o.ly + gapY; } });
   partTags.forEach(t=>{
-    const flip = t.x > w - 170;   /* 太靠右時字放在點的左邊 */
+    const flip = t.x > w - (isPhone() ? 110 : 170);   /* 太靠右時字放在點的左邊 */
     t.el.classList.toggle('flip', flip);
     t.el.style.transform = `translate(${t.x.toFixed(1)}px, ${t.ly.toFixed(1)}px) translate(${flip ? 'calc(-100% + 4px)' : '-4px'}, -50%)`;
   });
@@ -4599,7 +4610,7 @@ function renderMuscleInfo(id){
     ${lock}
     <div class="mi-tools">
       <button data-tool="isolate" class="${isolateSet ? 'on' : ''}" aria-pressed="${!!isolateSet}">${isolateSet ? '顯示全部' : (specific ? '單獨顯示這條' : '單獨顯示這個肌群')}</button>
-      ${!specific && window.innerWidth > 760 && (n=> n >= 2 && n <= 10)(groupBases(id).length) ? `<button data-tool="labels" class="${partTagsOn ? 'on' : ''}" aria-pressed="${partTagsOn}">標示各條肌肉</button>` : ''}
+      ${!specific && (n=> n >= 2 && n <= 10)(groupBases(id).length) ? `<button data-tool="labels" class="${tagsOn() ? 'on' : ''}" aria-pressed="${tagsOn()}">標示各條肌肉</button>` : ''}
       ${isolateSet ? '' : `<button data-tool="hide">${specific ? '隱藏這條，看下面' : '隱藏這個肌群，看下面'}</button>`}
       <button data-tool="card">存成圖卡</button>
     </div>
@@ -4641,7 +4652,11 @@ function renderMuscleInfo(id){
   infoEl.querySelectorAll('[data-tool]').forEach(b=> b.addEventListener('click', ()=>{
     if(b.dataset.tool === 'hide') hideCurrent();
     else if(b.dataset.tool === 'card') shareMuscleCard(b);
-    else if(b.dataset.tool === 'labels'){ partTagsOn = !partTagsOn; lsSet('muscle-labels', partTagsOn); _tagSig = ''; renderMuscleInfo(id); }
+    else if(b.dataset.tool === 'labels'){
+      if(isPhone()){ partTagsOnPhone = !partTagsOnPhone; lsSet('muscle-labels-m', partTagsOnPhone); } else { partTagsOn = !partTagsOn; lsSet('muscle-labels', partTagsOn); }
+      _tagSig = ''; renderMuscleInfo(id);
+      if(isPhone() && partTagsOnPhone) chamberEl.scrollIntoView({behavior:'smooth', block:'center'});   /* 手機：打開後捲到模型看標籤 */
+    }
     else if(isolateSet) showAllParts(); else isolateCurrent();
   }));
   infoEl.querySelectorAll('[data-stretch]').forEach(b=> b.addEventListener('click', ()=>{ setMode('move'); selectExercise(b.dataset.stretch); }));
