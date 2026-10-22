@@ -3815,6 +3815,17 @@ function protocolRole(ex, groupId, base){
   return null;
 }
 
+/* 搜尋的口語說法：一般人常說的部位名稱、俗稱 → 肌群 */
+const SEARCH_ALIAS = {
+  '屁股':'glutes', '臀部':'glutes', '翹臀':'glutes', '蜜桃臀':'glutes', '臀側':'gluteMed', '骨盆歪':'gluteMed',
+  '大腿前側':'quads', '大腿後側':'hamstrings', '大腿內側':'adductors', '鼠蹊':'hipflexor', '髂腰肌':'hipflexor',
+  '小腿肚':'calf', '蘿蔔腿':'calf', '小腿前側':'shin', '小腿外側':'fibularis', '足弓':'foot', '腳底':'foot', '腳掌':'foot',
+  '腹肌':'abs', '六塊肌':'abs', '6塊肌':'abs', '核心':'abs', '小腹':'abs', '人魚線':'obliques', '側腹':'obliques', '腰側':'obliques', '游泳圈':'obliques',
+  '胸肌':'chest', '胸口':'chest', '背肌':'lats', '倒三角':'lats', '翅膀':'lats', '上背':'rhomboids', '肩胛骨':'rhomboids', '下背':'erector', '腰痠':'erector', '腰':'erector',
+  '二頭':'biceps', '小老鼠':'biceps', '三頭':'triceps', '蝴蝶袖':'triceps', '掰掰肉':'triceps', '肩膀':'shoulders', '肩頭':'shoulders',
+  '斜方':'traps', '富貴包':'traps', '肩頸':'traps', '脖子':'neck', '頸部':'neck', '前臂':'forearmFlex', '手腕':'forearmFlex', '手肘外側':'forearmExt', '網球肘':'forearmExt',
+  '手掌':'hand', '手指':'hand', '臉':'head', '咀嚼':'head', '下巴':'head', '肋骨':'serratus', '拳擊手肌':'serratus'
+};
 /* ---- 肌肉搜尋：中文、英文或編號 ---- */
 {
   const input = document.getElementById('muscleSearch'), box = document.getElementById('searchResults');
@@ -3830,6 +3841,10 @@ function protocolRole(ex, groupId, base){
     const kindLabel = {stretch:'伸展', joint:'關節動作'};
     const moves = [...EXERCISE_LIB, ...STRETCH_DEMOS, ...JOINT_LIB].map(e=> ({type:'move', id:e.id, code:protocolCode(e.id, true), zh:e.name, en:e.en, sub:(kindLabel[e.kind] || '訓練動作') + ' · ' + e.en}));
     const nerves = NERVES.map(nv=> ({type:'nerve', id:nv.id, code:'NERVE', zh:nv.zh, en:nv.en, sub:'神經 · ' + nv.root + ' · 支配 ' + nerveMuscles(nv).length + ' 條肌肉'}));
+    /* 口語說法：查詢和俗稱互相包含就算（「屁股」「蝴蝶袖」「大腿後側」） */
+    const aliasOk = k=> norm(k).includes(n) || (k.length >= 2 && n.includes(norm(k)));   /* 單字俗稱（腰、臉）只在完全相同時才算，免得「腰大肌」也跳出下背 */
+    const aliasHits = Object.keys(SEARCH_ALIAS).filter(aliasOk);
+    const aliases = [...new Set(aliasHits.map(k=> SEARCH_ALIAS[k]))].map(id=> ({type:'group', id, code:groupCode(id), zh:muscleData[id].name, en:muscleData[id].en, sub:'肌群 · 俗稱「' + aliasHits.find(k=> SEARCH_ALIAS[k] === id) + '」'}));
     const score = e=>{
       const z = norm(e.zh), en = norm(e.en), c = norm(e.code);
       if(z.startsWith(n) || c === n) return 0;
@@ -3838,7 +3853,9 @@ function protocolRole(ex, groupId, base){
       if(en.includes(n)) return 3;
       return 9;
     };
-    return [...groups, ...muscles, ...moves, ...nerves].map(e=> [score(e), e]).filter(x=> x[0] < 9).sort((a, b)=> a[0] - b[0]).slice(0, 8).map(x=> x[1]);
+    const ranked = [...groups, ...muscles, ...moves, ...nerves].map(e=> [score(e), e]).filter(x=> x[0] < 9);
+    aliases.forEach(a=>{ if(!ranked.some(([, e])=> e.type === 'group' && e.id === a.id)) ranked.push([1.5, a]); });   /* 名稱沒對到才用俗稱補上 */
+    return ranked.sort((a, b)=> a[0] - b[0]).slice(0, 8).map(x=> x[1]);
   }
   function render(){
     const q = input.value.trim();
