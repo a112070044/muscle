@@ -547,6 +547,14 @@
   .plan-bar.now{margin-top:18px;}
   .plan-bar .plan-clock{font:600 18px var(--mono); color:var(--text); margin:0 2px;}
   .plan-bar[data-state="rest"]{border-left-color:var(--text-faint);}
+  /* 成就徽章 */
+  .badge-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(118px, 1fr)); gap:6px;}
+  .badge{display:grid; grid-template-columns:30px 1fr; grid-template-rows:auto auto; column-gap:8px; align-items:center; padding:9px 10px; border:1px dashed var(--line-hi); border-radius:10px; opacity:.55;}
+  .badge i{grid-row:1 / 3; width:30px; height:30px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line-hi); font-style:normal; font-size:14px; color:var(--text-faint);}
+  .badge b{font-size:13px; font-weight:600; line-height:1.3;}
+  .badge small{font-size:11px; color:var(--text-faint); line-height:1.35;}
+  .badge.on{opacity:1; border-style:solid; background:var(--ice-dim);}
+  .badge.on i{border-color:var(--scan); color:var(--text); background:var(--sel);}
   /* 訓練紀錄 */
   .log-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:12px 0 0;}
   .log-btn{padding:8px 14px; border-radius:8px; border:1px solid var(--scan); background:none; color:var(--text); font:600 13px var(--sans); cursor:pointer;}
@@ -1633,6 +1641,7 @@ async function loadAnatomyModels(){
     renderer.compile(scene, camera);
     modelReady = true; window.modelReadyFlag = true;
     markShadowsDirty();
+    setTimeout(checkBadges, 1500);   /* 舊進度在這台裝置上已經達成的成就 */
     if(currentMode === 'explore' && !currentMuscle) showPlaceholder();
     applyDeepLink();
     // reflections are the most expensive step, so they are built after the body is already on screen
@@ -2509,13 +2518,56 @@ function relTime(t){
   const days = Math.round((new Date(now.toDateString()) - new Date(d.toDateString())) / 864e5);
   return days === 0 ? '今天 ' + hm : days === 1 ? '昨天 ' + hm : days + ' 天前';
 }
+/* ---- 成就徽章：探索、觀看示範、訓練紀錄、課表、測驗；全部只存在這台裝置 ---- */
+const lsGet = (k, d)=>{ try{ const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; }catch(e){ return d; } };
+const lsSet = (k, v)=>{ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
+let watched = new Set(lsGet('muscle-watched', []));
+let badgeEarned = lsGet('muscle-badges', {});
+const counters = lsGet('muscle-counters', {plans:0, quizPerfect:0});
+function bumpCounter(k){ counters[k] = (counters[k] || 0) + 1; lsSet('muscle-counters', counters); checkBadges(); }
+function markWatched(id){ if(watched.has(id)) return; watched.add(id); lsSet('muscle-watched', [...watched]); checkBadges(); }
+const BADGES = [
+  {id:'first', icon:'◎', name:'第一刀', desc:'第一次點選肌肉', test:S=> S.visited >= 1},
+  {id:'half', icon:'◐', name:'半身標本', desc:'探索 14 個肌群', test:S=> S.visited >= 14},
+  {id:'full', icon:'●', name:'全身解剖', desc:'探索全部 28 個肌群', test:S=> S.visited >= muscleOrder.length},
+  {id:'watch10', icon:'▶', name:'動作觀察員', desc:'看過 10 個訓練動作示範', test:S=> S.ex >= 10},
+  {id:'watchAll', icon:'★', name:'協定全制霸', desc:'看過全部訓練動作示範', test:S=> S.ex >= EXERCISE_LIB.length},
+  {id:'stretch5', icon:'〜', name:'柔軟研究員', desc:'看過 5 個伸展示範', test:S=> S.st >= 5},
+  {id:'joint10', icon:'⟲', name:'肌動學家', desc:'看過 10 個關節動作', test:S=> S.jt >= 10},
+  {id:'log1', icon:'✓', name:'開始訓練', desc:'記錄第一次訓練', test:S=> S.logs >= 1},
+  {id:'week3', icon:'Ⅲ', name:'一週三練', desc:'7 天內有 3 天記錄訓練', test:S=> S.days >= 3},
+  {id:'plan', icon:'☰', name:'照表操課', desc:'跟著課表做完一次', test:S=> S.plans >= 1},
+  {id:'quiz', icon:'✦', name:'滿分檢定', desc:'測驗拿到滿分', test:S=> S.quizPerfect >= 1}
+];
+function badgeStats(){
+  const kinds = {ex:0, st:0, jt:0};
+  watched.forEach(id=>{ const e = protocolById(id); if(e) kinds[e.kind === 'stretch' ? 'st' : e.kind === 'joint' ? 'jt' : 'ex']++; });
+  return {visited: visitedMuscles.size, ...kinds, logs: trainLog.length, days: new Set(weekLog().map(e=> new Date(e.t).toDateString())).size, plans: counters.plans || 0, quizPerfect: counters.quizPerfect || 0};
+}
+function checkBadges(){
+  if(!modelReady) return;
+  const S = badgeStats(), fresh = BADGES.filter(b=> !badgeEarned[b.id] && b.test(S));
+  if(!fresh.length) return;
+  fresh.forEach(b=>{ badgeEarned[b.id] = Date.now(); });
+  lsSet('muscle-badges', badgeEarned);
+  showToast(fresh.length === 1 ? `解鎖成就 ${fresh[0].icon} ${fresh[0].name}：${fresh[0].desc}` : `解鎖 ${fresh.length} 個成就：${fresh.map(b=> b.name).join('、')}`);
+}
+function badgesHTML(){
+  const n = BADGES.filter(b=> badgeEarned[b.id]).length, md = t=> { const d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate(); };
+  return `
+    <section class="mi-sec">
+      <h6>成就 · ${n} / ${BADGES.length}</h6>
+      <div class="badge-grid">${BADGES.map(b=> `<div class="badge ${badgeEarned[b.id] ? 'on' : ''}" title="${b.desc}"><i aria-hidden="true">${b.icon}</i><b>${b.name}</b><small>${badgeEarned[b.id] ? md(badgeEarned[b.id]) + ' 解鎖' : b.desc}</small></div>`).join('')}</div>
+    </section>`;
+}
+
 function renderLogPanel(infoEl){
   const week = weekLog(), g = heatByGroup(), ranked = Object.entries(g).sort((a, b)=> b[1] - a[1]);
   const max = ranked.length ? ranked[0][1] : 1, fmt = v=> (Math.round(v * 10) / 10).toString();
   const missing = MAJOR_GROUPS.filter(id=> !g[id]);
   const suggest = missing.map(id=> ({id, ex:EXERCISE_LIB.find(ex=> protocolRole(ex, id, null) === 'p')})).filter(x=> x.ex);
   const recent = trainLog.slice(-12).reverse();
-  return week.length ? `
+  return (week.length ? `
     <div class="log-sum"><b>${week.length}</b> 次訓練 · <b>${ranked.length}</b> 個肌群 <span>最近 7 天</span></div>
     <div class="heat-legend" aria-hidden="true"><span>少</span><i></i><span>多</span></div>
     <div class="plan-actions"><button class="plan-reroll" id="heatShare">分享熱圖圖片</button></div>
@@ -2532,7 +2584,7 @@ function renderLogPanel(infoEl){
       <ul class="log-list">${recent.map(e=> { const ex = EXERCISE_LIB.find(x=> x.id === e.id); return `<li><span>${ex.name}</span><time>${relTime(e.t)}</time><button data-del="${e.t}" aria-label="刪除這筆紀錄">×</button></li>`; }).join('')}</ul>
       <button class="link-btn" id="logClear">清除全部紀錄</button>
     </section>` : `
-    <div class="log-empty">還沒有紀錄。到「訓練」選一個動作，按「＋ 記錄一次」，這裡就會出現本週的訓練熱圖。</div>`;
+    <div class="log-empty">還沒有紀錄。到「訓練」選一個動作，按「＋ 記錄一次」，這裡就會出現本週的訓練熱圖。</div>`) + badgesHTML();
 }
 /* ---- 分享本週熱圖：正面＋背面兩張 3D 截圖組成一張圖卡 ---- */
 function snapshotViews(){
@@ -2759,10 +2811,11 @@ function planAct(act, ex){
 function planStep(advance){
   clearPlanTimer();
   const ex = EXERCISE_LIB.find(e=> e.id === planSession.list[planSession.i]);
-  if(advance){ trainLog.push({id:ex.id, t:Date.now()}); saveLog(); planSession.done++; }
+  if(advance){ trainLog.push({id:ex.id, t:Date.now()}); saveLog(); planSession.done++; checkBadges(); }
   planSession.i++; planSession.set = 0;
   if(planSession.i < planSession.list.length){ selectExercise(planSession.list[planSession.i]); return; }
   const n = planSession.done;
+  if(n) bumpCounter('plans');
   planSession = null;
   showToast(n ? '課表完成！已記錄 ' + n + ' 個動作，看看本週熱圖' : '課表結束');
   moveTab = 'log'; renderMovePanel();
@@ -2854,6 +2907,7 @@ function selectExercise(id, keepView){
   if(moveTab !== tabOf(ex)){ moveTab = tabOf(ex); renderMovePanel(true); }
   currentExercise = id;
   userInteracted = true;
+  markWatched(id);
   document.querySelectorAll('.ex-grid button').forEach(b=> b.classList.toggle('active', b.dataset.ex === id));
   const act = document.querySelector('.ex-grid button.active');
   if(act && window.innerWidth <= 760){ const g = act.parentElement; g.scrollLeft = Math.max(0, act.offsetLeft - g.offsetLeft - 8); }
@@ -2891,7 +2945,7 @@ function selectExercise(id, keepView){
   if(inPlan){ renderPlanBar(ex); slot.scrollIntoView({block:'nearest'}); }
   const logBtn = slot.querySelector('[data-log]');
   if(logBtn) logBtn.addEventListener('click', ()=>{
-    trainLog.push({id:ex.id, t:Date.now()}); saveLog();
+    trainLog.push({id:ex.id, t:Date.now()}); saveLog(); checkBadges();
     const n = weekCount(ex.id);
     slot.querySelector('[data-log-count]').textContent = n;
     logBtn.classList.remove('done'); void logBtn.offsetWidth; logBtn.classList.add('done');
@@ -4062,6 +4116,7 @@ function selectMuscle(id, part){
   visitedMuscles.add(id);
   try{ localStorage.setItem('muscle-visited', JSON.stringify([...visitedMuscles])); }catch(e){}
   updateProgressBadge(visitedMuscles.size > seenBefore);
+  checkBadges();
   setLeaderAnchor();
   focusOnMuscle(id);
   setConsoleView('info');
@@ -4276,7 +4331,7 @@ function renderQuizResult(){
     </div>
   `;
   document.getElementById('quizRestartBtn').addEventListener('click', startQuiz);
-  if(quizScore === total) showToast('滿分通過 MUSCLE LAB 檢定');
+  if(quizScore === total){ showToast('滿分通過 MUSCLE LAB 檢定'); setTimeout(()=> bumpCounter('quizPerfect'), 3400); }
 }
 
 /* console tabs: 標本檔案 / 檢定 / 實驗協定 / 研究員 */
