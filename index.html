@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MUSCLE LAB｜人體肌肉 3D 研究室</title>
-<meta name="description" content="MUSCLE LAB 人體肌肉 3D 研究室：333 條肌肉的 3D 解剖、26 個訓練動作示範、體型調整與 AI 研究員問答。">
+<meta name="description" content="MUSCLE LAB 人體肌肉 3D 研究室：333 條肌肉的 3D 解剖、26 個訓練動作示範、26 條周邊神經的支配範圍、體型調整與 AI 研究員問答。">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MUSCLE LAB">
 <meta property="og:locale" content="zh_TW">
@@ -18,7 +18,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://a112070044.github.io/muscle/">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"MUSCLE LAB｜人體肌肉 3D 研究室","alternateName":"MUSCLE LAB","url":"https://a112070044.github.io/muscle/","inLanguage":"zh-Hant","applicationCategory":"EducationalApplication","operatingSystem":"Any (web browser)","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"image":"https://a112070044.github.io/muscle/brand/og-image.jpg","description":"333 條肌肉的 3D 解剖圖鑑：點選肌肉看位置、起止點、神經與作用；26 個訓練動作、20 個關節動作（肌動學）與 10 個伸展的 3D 示範，肌肉收縮會鼓起、伸展會變扁；還有肌肉測驗與每週訓練熱圖。"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"MUSCLE LAB｜人體肌肉 3D 研究室","alternateName":"MUSCLE LAB","url":"https://a112070044.github.io/muscle/","inLanguage":"zh-Hant","applicationCategory":"EducationalApplication","operatingSystem":"Any (web browser)","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"image":"https://a112070044.github.io/muscle/brand/og-image.jpg","description":"333 條肌肉的 3D 解剖圖鑑：點選肌肉看位置、起止點、神經與作用；26 個訓練動作、20 個關節動作（肌動學）與 10 個伸展的 3D 示範，肌肉收縮會鼓起、伸展會變扁；還有依神經瀏覽（26 條周邊神經各支配哪些肌肉）、肌肉測驗與每週訓練熱圖。"}
 </script>
 <meta name="theme-color" content="#0B0B0B" id="themeColorMeta">
 <link rel="manifest" href="manifest.webmanifest">
@@ -486,7 +486,7 @@
   @media (pointer: coarse){
     .ghost-btn{min-height:44px; min-width:44px; padding:0 12px;}
     .seg button{min-width:44px;}
-    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .quiz-options button, .plan-list button, .mi-tools button, .daily-acts button, .unhide-btn, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn{min-height:44px;}
+    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .quiz-options button, .plan-list button, .mi-tools button, .daily-acts button, .unhide-btn, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn, .nv-chip, .nv-grp button{min-height:44px;}
     .rail-search input{height:44px; font-size:16px;}
   }
   @media (max-width:760px){ .leader, .leader-label{display:none;} }
@@ -495,6 +495,29 @@
   .mdetail{display:grid; grid-template-columns:auto 1fr; gap:7px 14px; font-size:13.5px; line-height:1.65; margin:0;}
   .mdetail dt{font-size:12px; color:var(--text-faint); padding-top:2px; white-space:nowrap;}
   .mdetail dd{color:var(--text);}
+  /* 依神經瀏覽 */
+  .nowrap{white-space:nowrap;}
+  .nv-row{display:flex; flex-wrap:wrap; gap:6px;}
+  .nv-inline{margin-top:7px;}
+  .nv-chip{display:inline-flex; align-items:center; gap:7px; padding:4px 11px 4px 9px; border-radius:999px; border:1px solid var(--line-hi); background:none; color:var(--text); font:500 12.5px var(--sans); cursor:pointer; transition:border-color .15s ease;}
+  .nv-chip::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--scan); flex:none;}
+  .nv-chip small{font:400 10.5px var(--mono); color:var(--text-faint);}
+  .nv-chip:hover{border-color:var(--text);}
+  .nv-chip.on{background:var(--ice); color:var(--on-ice); border-color:var(--ice);}
+  .nv-chip.on::before{background:currentColor;}
+  .nv-chip.on small{color:inherit; opacity:.7;}
+  .nv-region{display:grid; grid-template-columns:5.6em 1fr; gap:8px; align-items:start; margin-bottom:10px;}
+  .nv-region > span{font-size:12px; color:var(--text-faint); padding-top:5px;}
+  .nv-list{display:flex; flex-direction:column; gap:12px;}
+  .nv-grp > span{display:block; font-size:12px; color:var(--text-faint); margin-bottom:6px;}
+  .nv-grp > div{display:flex; flex-wrap:wrap; gap:6px;}
+  .nv-grp button{display:inline-flex; align-items:center; gap:8px; padding:6px 11px; border:1px solid var(--line-hi); border-radius:8px; background:none; color:var(--text); font:500 13px var(--sans); text-align:left; cursor:pointer; transition:border-color .15s ease;}
+  .nv-grp button:hover{border-color:var(--text);}
+  .nv-grp .pc{font:400 10px var(--mono); letter-spacing:.06em; color:var(--text-faint);}
+  .nv-details{margin-top:18px; border-top:1px solid var(--line); padding-top:14px;}
+  .nv-details summary{cursor:pointer; font-size:13.5px; font-weight:500; color:var(--text-soft); margin-bottom:2px;}
+  .nv-details summary:hover{color:var(--text);}
+  .nv-details[open] summary{margin-bottom:12px;}
 
   /* movement mode */
   .key{display:inline-block; width:9px; height:9px; border-radius:2px; margin:0 6px 0 2px; vertical-align:0;}
@@ -681,7 +704,7 @@
 <noscript>
   <div class="noscript">
     <h1>MUSCLE LAB｜人體肌肉 3D 研究室</h1>
-    <p>這個網站需要開啟 JavaScript 才能顯示可旋轉的 3D 人體肌肉模型。開啟後可以點選 333 條肌肉，查看位置、起點、止點、神經與作用，觀看訓練動作與伸展的 3D 示範，並用測驗和每週訓練熱圖複習。</p>
+    <p>這個網站需要開啟 JavaScript 才能顯示可旋轉的 3D 人體肌肉模型。開啟後可以點選 333 條肌肉，查看位置、起點、止點、神經與作用，觀看訓練動作與伸展的 3D 示範，依神經查看支配範圍，並用測驗和每週訓練熱圖複習。</p>
     <h2>肌群</h2><p>頭臉部、頸部、斜方肌、肩部、旋轉肌袖、肱二頭肌群、肱三頭肌群、前臂屈肌群、前臂伸肌群、手部肌群、胸部、前鋸肌、腹部、腹斜肌、背闊肌、菱形肌群、豎脊肌群、臀大肌、臀中肌群、深層外旋肌群、髖屈肌群、股四頭肌、膕繩肌、內收肌群、小腿後側、小腿前側、腓骨肌群、足部肌群</p>
     <h2>訓練動作</h2><p>深蹲、羅馬尼亞硬舉、弓箭步、臀推、站姿提踵、伏地挺身、臥推、肩推、啞鈴前平舉、引體向上、俯身划船、二頭彎舉、棒式、聳肩、傳統硬舉、啞鈴側平舉、臀橋、仰臥起坐、雙槓撐體、過頭三頭伸展、錘式彎舉、直立划船、俯身反向飛鳥、仰躺抬腿、超人式、靠牆深蹲</p>
     <h2>關節動作（肌動學）</h2><p>肩關節屈曲、伸展、外展、內收、肩胛上提、肘關節屈曲與伸展、前臂旋前與旋後、腕關節屈曲與伸展、手指屈曲、軀幹屈曲與伸展、髖關節屈曲與伸展、膝關節屈曲與伸展、踝關節蹠屈與背屈</p>
@@ -1323,6 +1346,64 @@ const MUSCLE_DETAIL = {
   long_head_of_triceps_brachii:['肩胛骨盂下結節','尺骨鷹嘴','橈神經（C6–C8）','伸肘、協助肩伸展與內收'],
   medial_head_of_triceps_brachii:['肱骨後面（橈神經溝下方）','尺骨鷹嘴','橈神經（C6–C8）','伸肘（任何負荷下都會參與）']
 };
+/* 神經分佈：每條周邊神經支配哪些肌肉，從上面每條肌肉的「神經」欄位比對出來；view 是選到時轉向哪一面看最清楚 */
+const NERVE_REGIONS = [['head', '頭頸'], ['trunk', '軀幹'], ['arm', '肩與上肢'], ['leg', '骨盆與下肢']];
+const NERVES = [
+  {id:'facial', region:'head', zh:'顏面神經', en:'Facial nerve', root:'第 VII 對腦神經', re:/顏面神經/,
+    note:'負責所有的表情肌：皺眉、閉眼、微笑、吹口哨都靠它。從耳朵前方穿過腮腺後分成顳支、顴支、頰支、下頜緣支與頸支，像手掌一樣散開到整張臉。'},
+  {id:'trigeminal', region:'head', zh:'三叉神經（下頜支）', en:'Trigeminal nerve, V3', root:'第 V 對腦神經', re:/三叉神經/,
+    note:'三叉神經主要管臉部的感覺，只有下頜支帶有運動纖維，負責咬肌、顳肌等咀嚼肌，讓你咬合、磨碎食物。'},
+  {id:'accessory', region:'head', zh:'副神經', en:'Spinal accessory nerve', root:'第 XI 對腦神經', re:/副神經/, view:'back',
+    note:'只支配胸鎖乳突肌和斜方肌兩條肌肉：轉頭、聳肩、把肩胛骨往上轉都要靠它。'},
+  {id:'ansa', region:'head', zh:'頸襻', en:'Ansa cervicalis', root:'C1–C3', re:/頸襻|隨舌下神經/,
+    note:'由頸神經組成的一個小環，支配舌骨下方的帶狀肌，吞嚥、說話時把舌骨和喉頭往下拉。'},
+  {id:'dorsal', region:'trunk', zh:'脊神經後支', en:'Dorsal rami of spinal nerves', root:'各節脊神經', re:/脊神經後支|頸神經後支/, view:'back',
+    note:'支配真正的「深層背肌」，例如豎脊肌和夾肌。每一節脊神經的後支只管附近一小段，所以這些肌肉是一節一節分段控制的；斜方肌、背闊肌雖然在背上，卻是由其他神經支配。'},
+  {id:'intercostal', region:'trunk', zh:'肋間神經、肋下神經', en:'Intercostal & subcostal nerves', root:'T1–T12', re:/肋間神經|肋下神經/,
+    note:'沿著每根肋骨下緣往前繞，支配肋間肌和整片腹壁。因為是一節一節排列，腹直肌上的「格子」也是分段受到不同節段的神經支配。'},
+  {id:'longThor', region:'trunk', zh:'胸長神經', en:'Long thoracic nerve', root:'C5–C7', re:/胸長神經/,
+    note:'只支配前鋸肌，沿著胸壁側面往下走。受傷時肩胛骨內緣會像翅膀一樣翹起來，稱為「翼狀肩胛」。'},
+  {id:'thoracodorsal', region:'trunk', zh:'胸背神經', en:'Thoracodorsal nerve', root:'C6–C8', re:/胸背神經/, view:'back',
+    note:'只支配背闊肌：引體向上、划船時把手臂往下、往後拉，全靠這條神經下指令。'},
+  {id:'pectoral', region:'trunk', zh:'胸內、外側神經', en:'Medial & lateral pectoral nerves', root:'C5–T1', re:/胸內側神經|胸外側神經|胸內、外側神經/,
+    note:'兩條神經分工支配胸大肌和胸小肌。名稱取自它們在臂神經叢的起源位置，所以「胸內側神經」在胸前其實走得比較外側，是解剖學上常見的混淆點。'},
+  {id:'dorsalScap', region:'arm', zh:'肩胛背神經', en:'Dorsal scapular nerve', root:'C4–C5', re:/肩胛背神經/, view:'back',
+    note:'支配菱形肌和提肩胛肌，把肩胛骨往脊椎方向收、往上提，是挺胸、夾背的關鍵。'},
+  {id:'supraScap', region:'arm', zh:'肩胛上神經', en:'Suprascapular nerve', root:'C5–C6', re:/肩胛上神經/, view:'back',
+    note:'穿過肩胛骨上緣的切跡，支配棘上肌和棘下肌兩條旋轉肌袖，負責手臂抬起的頭一段和肩外旋。'},
+  {id:'subscap', region:'arm', zh:'肩胛下神經', en:'Subscapular nerves', root:'C5–C7', re:/肩胛下神經/, view:'back',
+    note:'分成上、下兩支，支配肩胛下肌和大圓肌，兩者都負責把手臂往內旋。'},
+  {id:'axillary', region:'arm', zh:'腋神經', en:'Axillary nerve', root:'C5–C6', re:/腋神經/,
+    note:'從腋下繞到肱骨後方，支配三角肌和小圓肌。肩關節脫臼或肱骨頸骨折時容易被牽連，三角肌會變得無力。'},
+  {id:'musculocutaneous', region:'arm', zh:'肌皮神經', en:'Musculocutaneous nerve', root:'C5–C7', re:/肌皮神經/,
+    note:'支配上臂前側的屈肘肌群：肱二頭肌、肱肌和喙肱肌，彎手肘、拿東西靠它們。'},
+  {id:'radial', region:'arm', zh:'橈神經', en:'Radial nerve', root:'C5–T1', re:/橈神經|骨間後神經/, view:'back',
+    note:'上肢的「伸肌神經」：伸手肘的肱三頭肌，到前臂背側伸手腕、伸手指的肌肉都歸它管（前臂那段叫骨間後神經）。它貼著肱骨中段的溝走，骨折時可能受傷造成「垂腕」。'},
+  {id:'median', region:'arm', zh:'正中神經', en:'Median nerve', root:'C6–T1', re:/正中神經|骨間前神經/,
+    note:'支配前臂大部分的屈肌，以及大拇指根部的魚際肌。它穿過手腕的腕隧道，在那裡被壓迫就是常聽到的「腕隧道症候群」。'},
+  {id:'ulnar', region:'arm', zh:'尺神經', en:'Ulnar nerve', root:'C8–T1', re:/尺神經/,
+    note:'負責手掌裡大部分的小肌肉（骨間肌、小指肌群、拇內收肌），讓手指做精細動作。手肘內側撞到會麻到小指的「麻筋」就是它。'},
+  {id:'femoral', region:'leg', zh:'股神經', en:'Femoral nerve', root:'L2–L4', re:/股神經/,
+    note:'從鼠蹊部進入大腿前側，支配股四頭肌、縫匠肌和髂肌：伸膝、屈髖，爬樓梯和踢球都用得到。'},
+  {id:'obturator', region:'leg', zh:'閉孔神經', en:'Obturator nerve', root:'L2–L4', re:/閉孔神經/,
+    note:'穿過骨盆上的閉孔進入大腿內側，支配內收肌群：把雙腿往內夾、騎馬時夾住馬鞍的動作。'},
+  {id:'supGlut', region:'leg', zh:'臀上神經', en:'Superior gluteal nerve', root:'L4–S1', re:/臀上神經/, view:'back',
+    note:'支配臀中肌、臀小肌和闊筋膜張肌。它們無力時單腳站，對側的骨盆會往下掉（崔德倫堡徵象），走路會左右搖晃。'},
+  {id:'infGlut', region:'leg', zh:'臀下神經', en:'Inferior gluteal nerve', root:'L5–S2', re:/臀下神經/, view:'back',
+    note:'只支配臀大肌，負責伸髖：從椅子上站起來、爬樓梯、衝刺時把身體往前推。'},
+  {id:'sacral', region:'leg', zh:'薦神經叢肌支', en:'Sacral plexus muscular branches', root:'L4–S2', re:/股方肌神經|閉孔內肌神經|梨狀肌神經/, view:'back',
+    note:'梨狀肌神經、閉孔內肌神經、股方肌神經等幾條小分支，支配臀部深層的外旋肌群，讓大腿往外轉。'},
+  {id:'sciatic', region:'leg', zh:'坐骨神經', en:'Sciatic nerve', root:'L4–S3', re:/坐骨神經/, view:'back',
+    note:'人體最粗、最長的神經，從臀部深處往下走，在大腿後側支配膕繩肌和內收大肌的後部，到膝窩上方再分成脛神經和腓總神經。'},
+  {id:'tibial', region:'leg', zh:'脛神經', en:'Tibial nerve', root:'L4–S3', re:/脛神經(?!部)|足底內側神經|足底外側神經/, view:'back',
+    note:'坐骨神經往下的分支，支配小腿後側的腓腸肌、比目魚肌和深層屈肌，到腳底再分成足底內、外側神經：踮腳、蹬地都靠它。'},
+  {id:'deepFib', region:'leg', zh:'腓深神經', en:'Deep fibular nerve', root:'L4–S1', re:/腓深神經/,
+    note:'支配小腿前側的伸肌群和腳背的小肌肉：勾腳尖、抬腳趾。這組肌肉無力時走路腳尖會拖地，稱為「垂足」。'},
+  {id:'supFib', region:'leg', zh:'腓淺神經', en:'Superficial fibular nerve', root:'L5–S1', re:/腓淺神經/,
+    note:'支配小腿外側的腓骨長肌和腓骨短肌，讓腳掌往外翻、在不平的地面上穩住腳踝。'}
+];
+const NERVE_NOTE = '神經分佈是教科書上的典型情況，實際每個人的分支可能略有不同。';
+const nerveOf = base=> MUSCLE_DETAIL[base] ? NERVES.filter(n=> n.re.test(MUSCLE_DETAIL[base][2])) : [];
 
 const muscleOrder = ['head','neck','traps','shoulders','rotator','biceps','triceps','forearmFlex','forearmExt','hand',
   'chest','serratus','abs','obliques','lats','rhomboids','erector',
@@ -1690,6 +1771,7 @@ function showAllParts(){
   hiddenParts.clear(); isolateSet = null;
   applyVisibility();
   if(currentMuscle && currentMode === 'explore') renderMuscleInfo(currentMuscle);
+  else if(currentNerve && currentMode === 'explore') renderNerveInfo(currentNerve);
 }
 function applyLayers(){
   markShadowsDirty();
@@ -3417,6 +3499,7 @@ function protocolRole(ex, groupId, base){
     /* 也能搜動作：訓練、伸展示範、關節動作 */
     const kindLabel = {stretch:'伸展', joint:'關節動作'};
     const moves = [...EXERCISE_LIB, ...STRETCH_DEMOS, ...JOINT_LIB].map(e=> ({type:'move', id:e.id, code:protocolCode(e.id, true), zh:e.name, en:e.en, sub:(kindLabel[e.kind] || '訓練動作') + ' · ' + e.en}));
+    const nerves = NERVES.map(nv=> ({type:'nerve', id:nv.id, code:'NERVE', zh:nv.zh, en:nv.en, sub:'神經 · ' + nv.root + ' · 支配 ' + nerveMuscles(nv).length + ' 條肌肉'}));
     const score = e=>{
       const z = norm(e.zh), en = norm(e.en), c = norm(e.code);
       if(z.startsWith(n) || c === n) return 0;
@@ -3425,7 +3508,7 @@ function protocolRole(ex, groupId, base){
       if(en.includes(n)) return 3;
       return 9;
     };
-    return [...groups, ...muscles, ...moves].map(e=> [score(e), e]).filter(x=> x[0] < 9).sort((a, b)=> a[0] - b[0]).slice(0, 8).map(x=> x[1]);
+    return [...groups, ...muscles, ...moves, ...nerves].map(e=> [score(e), e]).filter(x=> x[0] < 9).sort((a, b)=> a[0] - b[0]).slice(0, 8).map(x=> x[1]);
   }
   function render(){
     const q = input.value.trim();
@@ -3437,8 +3520,8 @@ function protocolRole(ex, groupId, base){
   }
   function choose(e){
     if(!e) return;
-    if(e.type === 'move'){
-      setMode('move'); selectExercise(e.id);
+    if(e.type === 'move' || e.type === 'nerve'){
+      if(e.type === 'move'){ setMode('move'); selectExercise(e.id); } else selectNerve(e.id, true);
       input.value = ''; hits = []; box.hidden = true; input.blur();
       return;
     }
@@ -3468,6 +3551,7 @@ function linkHash(){
     const e = currentExercise && protocolById(currentExercise);
     return e && poseAnim.def ? (e.kind === 'stretch' ? 's=' : e.kind === 'joint' ? 'j=' : 'p=') + e.id : '';
   }
+  if(currentMode === 'explore' && currentNerve) return 'n=' + currentNerve.id;
   if(currentMode !== 'explore' || !currentMuscle) return '';
   return currentPart && currentPart.id === currentMuscle ? 'm=' + baseKey(currentPart.key) : 'g=' + currentMuscle;
 }
@@ -3481,7 +3565,8 @@ function parseLink(hash){
   const q = new URLSearchParams(String(hash || '').replace(/^#/, ''));
   const bare = String(hash).replace(/^#/, '');
   if(bare === 'log' || bare === 'plan') return {type:'tab', tab:bare};
-  const p = q.get('p'), m = q.get('m'), g = q.get('g'), st = q.get('s'), j = q.get('j');
+  const p = q.get('p'), m = q.get('m'), g = q.get('g'), st = q.get('s'), j = q.get('j'), nv = q.get('n');
+  if(nv && NERVES.some(n=> n.id === nv)) return {type:'nerve', id:nv};
   if(j && JOINT_LIB.some(e=> e.id === j)) return {type:'protocol', id:j};
   if(p && EXERCISE_LIB.some(e=> e.id === p)) return {type:'protocol', id:p};
   if(st && STRETCH_DEMOS.some(e=> e.id === st)) return {type:'protocol', id:st};
@@ -3498,6 +3583,7 @@ function openLink(link){
     if(window.innerWidth >= 1080){ const d = document.getElementById('exDetail'); if(d) d.scrollIntoView({block:'start'}); }
     return true;
   }
+  if(link.type === 'nerve'){ selectNerve(link.id); return true; }
   if(currentMode !== 'explore') setMode('explore');
   if(link.type === 'muscle') selectMuscle(link.part.id, link.part); else selectMuscle(link.id);
   return true;
@@ -3514,9 +3600,10 @@ async function shareCurrent(){
   const h = linkHash(), onSite = /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
   const url = (onSite ? location.origin + location.pathname : SITE_URL) + (h ? '#' + h : '');
   const ex = currentMode === 'move' && currentExercise && protocolById(currentExercise);
-  const name = ex ? ex.name : (currentPart && currentPart.id === currentMuscle ? currentPart.meta.zh : currentMuscle ? muscleData[currentMuscle].name : '人體肌肉 3D 研究室');
+  const nv = !ex && currentMode === 'explore' && currentNerve;
+  const name = ex ? ex.name : nv ? nv.zh : (currentPart && currentPart.id === currentMuscle ? currentPart.meta.zh : currentMuscle ? muscleData[currentMuscle].name : '人體肌肉 3D 研究室');
   const title = name + '｜MUSCLE LAB';
-  const text = ex ? (ex.kind === 'stretch' ? '看 3D 人體示範「' + ex.name + '」，哪裡被拉長一目了然' : '看 3D 人體示範「' + ex.name + '」，哪些肌肉在發力一目了然') : '在 3D 人體上看「' + name + '」的位置、作用和訓練動作';
+  const text = ex ? (ex.kind === 'stretch' ? '看 3D 人體示範「' + ex.name + '」，哪裡被拉長一目了然' : '看 3D 人體示範「' + ex.name + '」，哪些肌肉在發力一目了然') : nv ? '在 3D 人體上看「' + name + '」支配的 ' + nerveMuscles(nv).length + ' 條肌肉' : '在 3D 人體上看「' + name + '」的位置、作用和訓練動作';
   if(navigator.share && matchMedia('(pointer: coarse)').matches){
     try{ await navigator.share({title, text, url}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
   }
@@ -3570,6 +3657,7 @@ function updateLeader(){
 ========================================================= */
 let userInteracted = false;
 let currentMuscle = null;
+let currentNerve = null;      /* 依神經瀏覽：亮起這條神經支配的所有肌肉 */
 let currentMode = 'explore';
 /* 已探索的肌群記在這台裝置上，重新整理不會歸零 */
 let visitedMuscles = new Set((()=>{ try{ return JSON.parse(localStorage.getItem('muscle-visited') || '[]'); }catch(e){ return []; } })().filter(id=> muscleData[id]));
@@ -3701,17 +3789,18 @@ const _tmpBox = new THREE.Box3(), _tmpBox2 = new THREE.Box3();
 /* ---- auto-focus camera on the clicked muscle (or the whole group) ---- */
 let focusTarget = null, focusCamDist = null;
 const ORIGIN = new THREE.Vector3(0, 0, 0);
-function focusOnMuscle(id){
-  if(!modelReady) return;
+function focusOnParts(parts){
+  if(!modelReady || !parts.length) return false;
   bodyGroup.updateMatrixWorld(true);
-  const parts = (currentPart && currentPart.id===id) ? [currentPart] : clickableParts.filter(p=>p.id===id);
-  if(!parts.length) return;
   _tmpBox.makeEmpty();
   parts.forEach(p=>{ _tmpBox2.setFromObject(p.mesh); _tmpBox.union(_tmpBox2); });
   focusTarget = _tmpBox.getCenter(new THREE.Vector3());
   const sz = _tmpBox.getSize(new THREE.Vector3()).length();
   focusCamDist = Math.max(1.5, Math.min(4.2, sz*2.2));
-  showGlowFor(id);
+  return true;
+}
+function focusOnMuscle(id){
+  if(focusOnParts((currentPart && currentPart.id===id) ? [currentPart] : clickableParts.filter(p=>p.id===id))) showGlowFor(id);
 }
 function focusWholeBody(){
   const k = shape.height / 170;   /* 身高調整後，鏡頭對準新的身體中心 */
@@ -3803,7 +3892,7 @@ function handleTap(clientX, clientY){
   if(part){
     if(currentMode === 'quiz') checkQuizAnswer(part.id);
     else selectMuscle(part.id, part);
-  } else if(currentMode === 'explore' && currentMuscle){
+  } else if(currentMode === 'explore' && (currentMuscle || currentNerve)){
     clearSelection();
   }
 }
@@ -3910,18 +3999,19 @@ document.getElementById('randomExplore').addEventListener('click', ()=>{
 const _hlColor = new THREE.Color(), _grpColor = new THREE.Color(), _ghost = new THREE.Color(TH.ghost);
 /* colours only: which muscles are lit, ghosted, or previewed */
 function paintHighlight(selectedId, previewId){
+  const nv = !selectedId && currentNerve && currentMode === 'explore' ? nerveParts(currentNerve) : null;
   clickableParts.forEach(p=>{
     const m = p.material;
     _hlColor.setHex(p.baseColor);
     let emis = 0;
-    if(selectedId && p.id === selectedId){
+    if((selectedId && p.id === selectedId) || (nv && nv.has(p))){
       if(p.meta.k !== 't') _hlColor.lerp(_grpColor.setHex(TH.accent), 0.9);
       m.emissive.setHex(TH.accent);
-      emis = (currentPart && currentPart === p) ? 0.38 : 0.13;
+      emis = (currentPart && currentPart === p) ? 0.38 : nv ? 0.2 : 0.13;
     } else if(previewId && p.id === previewId){
       m.emissive.setHex(TH.accent);
       emis = selectedId ? 0.10 : 0.16;
-    } else if(selectedId){
+    } else if(selectedId || nv){
       _hlColor.lerp(_ghost, TH.ghostMix);
       m.emissive.setHex(0x000000);
     } else {
@@ -3931,19 +4021,20 @@ function paintHighlight(selectedId, previewId){
     m.color.copy(_hlColor);
     m.emissiveIntensity = emis;
   });
-  if(boneMesh) boneMesh.material.color.setHex(BONE_COLOR).multiplyScalar(selectedId ? TH.boneDim : 1);
+  if(boneMesh) boneMesh.material.color.setHex(BONE_COLOR).multiplyScalar(selectedId || nv ? TH.boneDim : 1);
 }
 function updateHighlight(selectedId){
   paintHighlight(selectedId, null);
-  if(selectedId) showGlowFor(selectedId); else clearGlow();
-  if(selectedId && modelReady){
-    const parts = (currentPart && currentPart.id===selectedId) ? [currentPart] : clickableParts.filter(p=>p.id===selectedId);
+  const nv = !selectedId && currentNerve && currentMode === 'explore' ? [...nerveParts(currentNerve)] : null;
+  if(selectedId) showGlowFor(selectedId); else if(nv) glowParts = nv; else clearGlow();
+  if((selectedId || nv) && modelReady){
+    const parts = nv || ((currentPart && currentPart.id===selectedId) ? [currentPart] : clickableParts.filter(p=>p.id===selectedId));
     _tmpBox.makeEmpty(); parts.forEach(p=>{ _tmpBox2.setFromObject(p.mesh); _tmpBox.union(_tmpBox2); });
     const cy = (_tmpBox.min.y + _tmpBox.max.y)/2;
     if(reduceMotion){ beam.y = cy; beam.hold = true; } else sweepBeam(beam.alpha > 0.2 ? beam.y : -1.7, cy, true);
   } else { beam.hold = false; }
   const roT = document.getElementById('roTarget');
-  if(roT) roT.textContent = selectedId ? ((currentPart && currentPart.id===selectedId) ? currentPart.meta.zh : muscleData[selectedId].name) : '尚未選取';
+  if(roT) roT.textContent = selectedId ? ((currentPart && currentPart.id===selectedId) ? currentPart.meta.zh : muscleData[selectedId].name) : nv ? currentNerve.zh : '尚未選取';
 }
 /* hovering a name in the list lights that muscle group in 3D */
 function previewGroup(id){
@@ -3977,7 +4068,11 @@ function placeholderHTML(){
         ${P.jt ? `<button data-daily="jt">肌動學：${P.jt.name}</button>` : ''}
       </div>
     </div>
-    ${PLACEHOLDER_HINTS}`;
+    ${PLACEHOLDER_HINTS}
+    <details class="nv-details">
+      <summary>依神經瀏覽 · ${NERVES.length} 條周邊神經各管哪些肌肉</summary>
+      ${nerveBrowseHTML(null)}
+    </details>`;
 }
 function showPlaceholder(){
   const el = document.getElementById('muscleInfo');
@@ -3988,6 +4083,7 @@ function showPlaceholder(){
     if(k === 'muscle') selectMuscle(P.id);
     else { setMode('move'); selectExercise((k === 'ex' ? P.ex : k === 'st' ? P.st : P.jt).id); }
   }));
+  bindNerveChips(el);
 }
 const consoleEl = document.getElementById('console');
 const railEl = document.getElementById('rail');
@@ -4037,10 +4133,18 @@ function renderMuscleInfo(id){
         </div>`).join('')}</div>
       <p class="st-note">${STRETCH_TIP}</p>
     </section>` : '';
+  const detNerves = det ? nerveOf(baseKey(currentPart.key)) : [];
+  /* 整個肌群：組成它的肌肉由哪些神經支配 */
+  const groupNerves = specific ? [] : NERVES.filter(n=> nerveMuscles(n).some(m=> m.group === id));
+  const groupNerveHtml = groupNerves.length ? `
+    <section class="mi-sec">
+      <h6>神經支配 · 點一下看同一條神經管的所有肌肉</h6>
+      <div class="nv-row">${groupNerves.map(n=> nerveChip(n)).join('')}</div>
+    </section>` : '';
   const detailHtml = det ? `
     <section class="mi-sec">
       <h6>這條肌肉</h6>
-      <dl class="mdetail"><dt>起點</dt><dd>${det[0]}</dd><dt>止點</dt><dd>${det[1]}</dd><dt>神經</dt><dd>${det[2]}</dd><dt>作用</dt><dd>${det[3]}</dd></dl>
+      <dl class="mdetail"><dt>起點</dt><dd>${det[0]}</dd><dt>止點</dt><dd>${det[1]}</dd><dt>神經</dt><dd>${det[2]}${detNerves.length ? `<span class="nv-row nv-inline">${detNerves.map(n=> nerveChip(n)).join('')}</span>` : ''}</dd><dt>作用</dt><dd>${det[3]}</dd></dl>
     </section>
     <h6 class="mi-sec-label">整個${d.name}</h6>` : '';
   infoEl.innerHTML = `
@@ -4057,6 +4161,7 @@ function renderMuscleInfo(id){
     <p class="func">${d.func}</p>
     ${protoHtml}
     ${jointHtml}
+    ${groupNerveHtml}
     <section class="mi-sec">
       <h6>其他常見訓練動作</h6>
       <ul class="inline-list">${d.exercises.map(e=>'<li>'+e+'</li>').join('')}</ul>
@@ -4091,6 +4196,7 @@ function renderMuscleInfo(id){
     else if(isolateSet) showAllParts(); else isolateCurrent();
   }));
   infoEl.querySelectorAll('[data-stretch]').forEach(b=> b.addEventListener('click', ()=>{ setMode('move'); selectExercise(b.dataset.stretch); }));
+  bindNerveChips(infoEl);
   document.getElementById('factReroll').addEventListener('click', ()=>{
     document.getElementById('factText').textContent = d.facts[Math.floor(Math.random() * d.facts.length)];
   });
@@ -4136,9 +4242,13 @@ function showToast(text){
 
 /* small card over the 3D view: shown on phones and in focus mode, where the info panel is off-screen */
 function updatePeek(){
-  if(!currentMuscle || currentMode !== 'explore'){ peekEl.classList.remove('on'); return; }
-  const d = muscleData[currentMuscle], specific = currentPart && currentPart.id === currentMuscle;
-  peekEl.innerHTML = `<div><b>${specific ? currentPart.meta.zh : d.name}</b><span>${specific ? muscleCode(baseKey(currentPart.key)) + ' · ' + currentPart.meta.en : groupCode(currentMuscle) + ' · ' + d.en}</span></div><button id="peekMore">看說明</button>`;
+  if(!(currentMuscle || currentNerve) || currentMode !== 'explore'){ peekEl.classList.remove('on'); return; }
+  if(currentNerve){
+    peekEl.innerHTML = `<div><b>${currentNerve.zh}</b><span>${currentNerve.root} · 支配 ${nerveMuscles(currentNerve).length} 條肌肉</span></div><button id="peekMore">看說明</button>`;
+  } else {
+    const d = muscleData[currentMuscle], specific = currentPart && currentPart.id === currentMuscle;
+    peekEl.innerHTML = `<div><b>${specific ? currentPart.meta.zh : d.name}</b><span>${specific ? muscleCode(baseKey(currentPart.key)) + ' · ' + currentPart.meta.en : groupCode(currentMuscle) + ' · ' + d.en}</span></div><button id="peekMore">看說明</button>`;
+  }
   peekEl.classList.add('on');
   document.getElementById('peekMore').addEventListener('click', ()=> consoleEl.scrollIntoView({behavior:'smooth', block:'start'}));
 }
@@ -4154,6 +4264,7 @@ function selectMuscle(id, part){
   }
   currentMuscle = id;
   currentPart = part || null;
+  currentNerve = null;
   updateHighlight(id);
   renderMuscleInfo(id);
   const seenBefore = visitedMuscles.size;
@@ -4173,8 +4284,8 @@ function selectMuscle(id, part){
   syncHash();
 }
 function clearSelection(){
-  if(!currentMuscle) return;
-  currentMuscle = null; currentPart = null;
+  if(!currentMuscle && !currentNerve) return;
+  currentMuscle = null; currentPart = null; currentNerve = null;
   setLeaderAnchor();
   updateHighlight(null);
   showPlaceholder();
@@ -4182,6 +4293,80 @@ function clearSelection(){
   updatePeek();
   focusWholeBody();
   syncHash();
+}
+
+/* ---- 依神經瀏覽：一條神經支配哪些肌肉，在 3D 上一起亮起來 ---- */
+function nerveMuscles(nv){
+  if(!nv._muscles && modelReady) nv._muscles = labIndex().muscles.filter(m=> MUSCLE_DETAIL[m.base] && nv.re.test(MUSCLE_DETAIL[m.base][2]));
+  return nv._muscles || [];
+}
+function nerveParts(nv){
+  if(!nv._parts && modelReady){ const b = new Set(nerveMuscles(nv).map(m=> m.base)); nv._parts = new Set(clickableParts.filter(p=> b.has(baseKey(p.key)))); }
+  return nv._parts || new Set();
+}
+const nerveChip = (n, on)=> `<button class="nv-chip${on ? ' on' : ''}" data-nerve="${n.id}"${on ? ' aria-current="true"' : ''}>${n.zh}<small>${nerveMuscles(n).length}</small></button>`;
+const nerveBrowseHTML = cur=> `<div class="nv-browse">${NERVE_REGIONS.map(([r, label])=> `<div class="nv-region"><span>${label}</span><div class="nv-row">${NERVES.filter(n=> n.region === r).map(n=> nerveChip(n, n === cur)).join('')}</div></div>`).join('')}</div>`;
+function bindNerveChips(root){
+  root.querySelectorAll('[data-nerve]').forEach(b=> b.addEventListener('click', ()=> selectNerve(b.dataset.nerve, true)));
+}
+function renderNerveInfo(nv){
+  const infoEl = document.getElementById('muscleInfo');
+  const list = nerveMuscles(nv), groups = [];
+  list.forEach(m=>{ let g = groups.find(x=> x.id === m.group); if(!g) groups.push(g = {id:m.group, items:[]}); g.items.push(m); });
+  const region = (NERVE_REGIONS.find(r=> r[0] === nv.region) || [])[1];
+  infoEl.innerHTML = `
+    <button class="share-btn" data-share aria-label="分享這個頁面的連結"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.5V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4.5h9V8.5"/></svg>分享</button>
+    <span class="mi-region">NERVE · 周邊神經 · ${region}</span>
+    <h2>${nv.zh}</h2>
+    <span class="en">${nv.en} · <span class="nowrap">${nv.root}</span></span>
+    <div class="mi-tools">
+      <button data-tool="isolate" class="${isolateSet ? 'on' : ''}" aria-pressed="${!!isolateSet}">${isolateSet ? '顯示全部' : '單獨顯示這些肌肉'}</button>
+    </div>
+    <p class="func">${nv.note}</p>
+    <section class="mi-sec">
+      <h6>支配的肌肉 · ${list.length} 條</h6>
+      <div class="nv-list">${groups.map(g=> `<div class="nv-grp"><span>${muscleData[g.id].name}</span><div>${g.items.map(m=> `<button data-base="${m.base}"><span class="pc">${m.code}</span>${m.zh}</button>`).join('')}</div></div>`).join('')}</div>
+    </section>
+    <section class="mi-sec">
+      <h6>其他神經</h6>
+      ${nerveBrowseHTML(nv)}
+    </section>
+    <p class="tip">${NERVE_NOTE}</p>`;
+  infoEl.classList.remove('refresh'); void infoEl.offsetWidth; infoEl.classList.add('refresh');
+  infoEl.scrollTop = 0;
+  infoEl.querySelector('[data-share]').addEventListener('click', shareCurrent);
+  infoEl.querySelector('[data-tool]').addEventListener('click', ()=>{
+    if(isolateSet) showAllParts();
+    else { isolateSet = new Set(nerveParts(nv)); applyVisibility(); renderNerveInfo(nv); }
+  });
+  infoEl.querySelectorAll('[data-base]').forEach(b=> b.addEventListener('click', ()=>{
+    const m = labIndex().byBase[b.dataset.base];
+    if(m) selectMuscle(m.part.id, m.part);
+  }));
+  bindNerveChips(infoEl);
+}
+function selectNerve(id, scroll){
+  const nv = NERVES.find(n=> n.id === id);
+  if(!nv || !modelReady) return;
+  userInteracted = true;
+  if(currentMode !== 'explore') setMode('explore');
+  const parts = nerveParts(nv);
+  if(isolateSet || hiddenParts.size){
+    if(isolateSet && ![...parts].every(p=> isolateSet.has(p))) isolateSet = null;
+    parts.forEach(p=> hiddenParts.delete(p));
+    applyVisibility();
+  }
+  currentMuscle = null; currentPart = null; currentNerve = nv;
+  setLeaderAnchor();
+  updateHighlight(null);
+  renderNerveInfo(nv);
+  focusOnParts([...parts]);
+  goToView(nv.view || 'front');
+  setConsoleView('info');
+  updatePeek();
+  document.querySelectorAll('.legend button').forEach(b=> b.classList.remove('active'));
+  syncHash();
+  if(scroll && window.innerWidth < 1080) chamberEl.scrollIntoView({behavior:'smooth', block:'center'});
 }
 
 /* muscle list, grouped by body region */
@@ -4431,6 +4616,7 @@ function setMode(mode){
   } else {
     updateHighlight(currentMuscle);
     if(currentMuscle){ renderMuscleInfo(currentMuscle); focusOnMuscle(currentMuscle); }
+    else if(currentNerve){ renderNerveInfo(currentNerve); focusOnParts([...nerveParts(currentNerve)]); }
     else showPlaceholder();
     document.querySelectorAll('.legend button').forEach(b=> b.classList.toggle('active', b.dataset.id === currentMuscle));
     updatePeek();
@@ -4507,7 +4693,7 @@ function animate(){
   if(targetRotY !== null){
     bodyGroup.rotation.y = angleLerp(bodyGroup.rotation.y, targetRotY, 0.12);
     const diff = Math.abs(((targetRotY - bodyGroup.rotation.y + Math.PI) % (Math.PI*2) + Math.PI*2) % (Math.PI*2) - Math.PI);
-    if(diff < 0.01){ bodyGroup.rotation.y = targetRotY; targetRotY = null; if(currentMuscle && currentMode === 'explore') focusOnMuscle(currentMuscle); }
+    if(diff < 0.01){ bodyGroup.rotation.y = targetRotY; targetRotY = null; if(currentMode === 'explore'){ if(currentMuscle) focusOnMuscle(currentMuscle); else if(currentNerve) focusOnParts([...nerveParts(currentNerve)]); } }
   }
   if(targetRotX !== null){
     bodyGroup.rotation.x += (targetRotX - bodyGroup.rotation.x) * 0.15;
