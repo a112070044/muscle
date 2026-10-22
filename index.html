@@ -305,6 +305,27 @@
   .quiz-feedback.wrong{background:var(--amber-dim); border-left:2px solid var(--amber);}
   .quiz-next-btn,.quiz-restart-btn{font-size:13.5px; font-weight:600; color:var(--on-ice); background:var(--ice); border:none; border-radius:8px; padding:9px 18px; cursor:pointer; font-weight:600;}
   .quiz-result{text-align:center; padding:14px 0;}
+  .quiz-kind{margin-bottom:16px; align-self:flex-start; width:max-content;}
+  .fc-scope{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
+  .fc-scope button{padding:5px 11px; border-radius:999px; border:1px solid var(--line-hi); background:none; color:var(--text-soft); font:500 12.5px var(--sans); cursor:pointer;}
+  .fc-scope button:hover{color:var(--text);}
+  .fc-scope button[aria-pressed="true"]{background:var(--ice); border-color:var(--ice); color:var(--on-ice);}
+  .fc-progress{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .fc-progress > span{flex:1; height:4px; border-radius:2px; background:var(--line-hi); overflow:hidden;}
+  .fc-progress i{display:block; height:100%; background:var(--scan);}
+  .fc-progress small{font:400 11.5px var(--mono); color:var(--text-soft); font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .flash-card{position:relative; padding:18px 18px 16px; margin-bottom:14px; border:1px solid var(--line-hi); border-left:2px solid var(--scan); border-radius:0 12px 12px 0; background:var(--ice-dim);}
+  .flash-card h3{font-size:24px; font-weight:600; margin:4px 0 2px; line-height:1.3;}
+  .flash-card .en{display:block; font:400 12px var(--mono); color:var(--text-faint); margin-bottom:14px;}
+  .flash-card p{font-size:14px; line-height:1.75; color:var(--text-soft);}
+  .fc-q{font-size:22px; font-weight:600; line-height:1.35; margin:6px 0 8px;}
+  .fc-box{position:absolute; top:14px; right:16px; font-size:10px; letter-spacing:2px; color:var(--scan);}
+  .fc-flip{width:100%; padding:12px 18px;}
+  .fc-rate{display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;}
+  .fc-rate button{display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 8px; border:1px solid var(--line-hi); border-radius:10px; background:var(--seg-bg); color:var(--text); font:600 14px var(--sans); cursor:pointer;}
+  .fc-rate button:hover{border-color:var(--text-faint);}
+  .fc-rate button:last-child{background:var(--ice); border-color:var(--ice); color:var(--on-ice);}
+  .fc-rate small{font:400 11px var(--sans); opacity:.7;}
   .big-score{font-size:56px; font-weight:600; line-height:1.1; color:var(--ice); font-variant-numeric:tabular-nums; margin-bottom:6px;}
   .quiz-result p{color:var(--text-soft); font-size:14.5px; margin-bottom:20px;}
 
@@ -486,7 +507,7 @@
   @media (pointer: coarse){
     .ghost-btn{min-height:44px; min-width:44px; padding:0 12px;}
     .seg button{min-width:44px;}
-    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .quiz-options button, .plan-list button, .mi-tools button, .daily-acts button, .unhide-btn, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn, .nv-chip, .nv-grp button{min-height:44px;}
+    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .quiz-options button, .plan-list button, .mi-tools button, .daily-acts button, .unhide-btn, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn, .nv-chip, .nv-grp button, .fc-scope button, .fc-rate button, .quiz-kind button{min-height:44px;}
     .rail-search input{height:44px; font-size:16px;}
   }
   @media (max-width:760px){ .leader, .leader-label{display:none;} }
@@ -2608,6 +2629,7 @@ const lsSet = (k, v)=>{ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(
 let watched = new Set(lsGet('muscle-watched', []));
 let badgeEarned = lsGet('muscle-badges', {});
 const counters = lsGet('muscle-counters', {plans:0, quizPerfect:0});
+const cardBox = lsGet('muscle-cards', {});   /* 閃卡熟練度：每條肌肉 0–4 格，3 格以上算記住 */
 function bumpCounter(k){ counters[k] = (counters[k] || 0) + 1; lsSet('muscle-counters', counters); checkBadges(); }
 function markWatched(id){ if(watched.has(id)) return; watched.add(id); lsSet('muscle-watched', [...watched]); checkBadges(); }
 const BADGES = [
@@ -2621,12 +2643,13 @@ const BADGES = [
   {id:'log1', icon:'✓', name:'開始訓練', desc:'記錄第一次訓練', test:S=> S.logs >= 1},
   {id:'week3', icon:'Ⅲ', name:'一週三練', desc:'7 天內有 3 天記錄訓練', test:S=> S.days >= 3},
   {id:'plan', icon:'☰', name:'照表操課', desc:'跟著課表做完一次', test:S=> S.plans >= 1},
-  {id:'quiz', icon:'✦', name:'滿分檢定', desc:'測驗拿到滿分', test:S=> S.quizPerfect >= 1}
+  {id:'quiz', icon:'✦', name:'滿分檢定', desc:'測驗拿到滿分', test:S=> S.quizPerfect >= 1},
+  {id:'cards30', icon:'▣', name:'過目不忘', desc:'用閃卡記住 30 條肌肉', test:S=> S.cards >= 30}
 ];
 function badgeStats(){
   const kinds = {ex:0, st:0, jt:0};
   watched.forEach(id=>{ const e = protocolById(id); if(e) kinds[e.kind === 'stretch' ? 'st' : e.kind === 'joint' ? 'jt' : 'ex']++; });
-  return {visited: visitedMuscles.size, ...kinds, logs: trainLog.length, days: new Set(weekLog().map(e=> new Date(e.t).toDateString())).size, plans: counters.plans || 0, quizPerfect: counters.quizPerfect || 0};
+  return {visited: visitedMuscles.size, ...kinds, logs: trainLog.length, days: new Set(weekLog().map(e=> new Date(e.t).toDateString())).size, plans: counters.plans || 0, quizPerfect: counters.quizPerfect || 0, cards: Object.values(cardBox).filter(b=> b >= 3).length};
 }
 function checkBadges(){
   if(!modelReady) return;
@@ -4440,6 +4463,27 @@ function nerveQuestion(){
   const near = others.filter(n=> n.region === nv.region).slice(0, 2), far = others.filter(n=> !near.includes(n));
   return {type:'nerve', nv, m, options:shuffled([nv, ...near, ...far.slice(0, 3 - near.length)])};
 }
+/* 只亮一條肌肉、鏡頭拉近；肌肉在身體後側就轉到背面 */
+let spotParts = null;   /* 轉身完成後重新對焦用 */
+function spotlightMuscle(base){
+  const all = clickableParts.filter(p=> baseKey(p.key) === base), left = all.filter(p=> !/_R$/.test(p.key)), box = new THREE.Box3();
+  const parts = spotParts = left.length ? left : all;   /* 左右成對的肌肉兩側都亮，鏡頭只拉近其中一側才看得清楚 */
+  paintExercise({p:[base], s:[]});
+  parts.forEach(p=>{ if(!p.mesh.geometry.boundingBox) p.mesh.geometry.computeBoundingBox(); box.union(p.mesh.geometry.boundingBox); });
+  goToView(box.getCenter(new THREE.Vector3()).z < -0.02 ? 'back' : 'front');
+  focusOnParts(parts);
+}
+/* 檢定分頁有兩種玩法：10 題檢定、肌肉閃卡（記住上次選的） */
+let quizKind = lsGet('muscle-quiz-kind', 'test') === 'cards' ? 'cards' : 'test';
+const quizKindHTML = ()=> `<div class="seg quiz-kind">${[['test', '10 題檢定'], ['cards', '肌肉閃卡']].map(([k, label])=> `<button data-qkind="${k}" aria-pressed="${quizKind === k}">${label}</button>`).join('')}</div>`;
+function bindQuizKind(root){
+  root.querySelectorAll('[data-qkind]').forEach(b=> b.addEventListener('click', ()=>{
+    if(b.dataset.qkind === quizKind) return;
+    quizKind = b.dataset.qkind; lsSet('muscle-quiz-kind', quizKind);
+    if(quizKind === 'cards') startCards(); else { focusWholeBody(); goToView('front'); startQuiz(); }
+  }));
+}
+function startQuizMode(){ if(quizKind === 'cards') startCards(); else startQuiz(); }
 function startQuiz(){
   const finds = shuffled(muscleOrder).slice(0, 2).map(id=> ({type:'find', id}));
   const nerves = [nerveQuestion()].filter(Boolean);
@@ -4465,20 +4509,13 @@ function quizPlay(ex){
 }
 function nextQuizQuestion(){
   updateHighlight(null);
+  spotParts = null;
   if(quizIndex >= quizQueue.length){ stopExercise(); renderQuizResult(); return; }
   quizTarget = quizQueue[quizIndex];
   quizAwaitingNext = false;
   const prevNerve = quizIndex > 0 && quizQueue[quizIndex - 1].type === 'nerve';   /* 上一題神經題拉近了鏡頭 */
   if(quizTarget.type === 'find' || quizTarget.type === 'myth') { if(poseAnim.def || prevNerve){ stopExercise(); focusWholeBody(); goToView('front'); } }
-  else if(quizTarget.type === 'nerve'){
-    if(poseAnim.def) stopExercise();
-    const m = quizTarget.m, parts = clickableParts.filter(p=> baseKey(p.key) === m.base), box = new THREE.Box3();
-    paintExercise({p:[m.base], s:[]});
-    /* 肌肉在身體後側就轉到背面 */
-    parts.forEach(p=>{ if(!p.mesh.geometry.boundingBox) p.mesh.geometry.computeBoundingBox(); box.union(p.mesh.geometry.boundingBox); });
-    goToView(box.getCenter(new THREE.Vector3()).z < -0.02 ? 'back' : 'front');
-    focusOnParts(parts);
-  }
+  else if(quizTarget.type === 'nerve'){ if(poseAnim.def) stopExercise(); spotlightMuscle(quizTarget.m.base); }
   else { paintExercise(null); quizPlay(quizTarget.ex); }
   renderQuizPrompt();
 }
@@ -4516,6 +4553,7 @@ function renderQuizPrompt(){
        <div class="quiz-sub">模型正在示範，點選任一個「主要發力」的肌群（${q.ex.en}），模型或清單都可以</div>`;
   document.getElementById('muscleInfo').innerHTML = `
     <div class="quiz-panel">
+      ${quizIndex === 0 ? quizKindHTML() : ''}
       ${body}
       <button class="hint-btn" id="quizHintBtn">給我一個提示</button>
       <div class="quiz-score-line mono">目前分數：${quizScore} / ${quizIndex}</div>
@@ -4529,6 +4567,7 @@ function renderQuizPrompt(){
   document.querySelectorAll('[data-opt]').forEach(b=> b.addEventListener('click', ()=> checkQuizOption(b)));
   document.querySelectorAll('[data-tf]').forEach(b=> b.addEventListener('click', ()=> checkQuizMyth(b)));
   document.querySelectorAll('[data-nopt]').forEach(b=> b.addEventListener('click', ()=> checkQuizNerve(b)));
+  bindQuizKind(document.getElementById('muscleInfo'));
 }
 const nerveSample = (nv, skip)=>{
   const names = [...new Set(nerveMuscles(nv).filter(m=> m.base !== skip).map(m=> m.zh))];
@@ -4630,6 +4669,7 @@ function renderQuizResult(){
     : '建議先回到標本檔案和實驗協定多看看，再來挑戰一次！';
   document.getElementById('muscleInfo').innerHTML = `
     <div class="quiz-panel quiz-result">
+      ${quizKindHTML()}
       <div class="quiz-round">檢定完成</div>
       <div class="big-score">${quizScore} / ${total}</div>
       <p>${msg}</p>
@@ -4637,7 +4677,80 @@ function renderQuizResult(){
     </div>
   `;
   document.getElementById('quizRestartBtn').addEventListener('click', startQuiz);
+  bindQuizKind(document.getElementById('muscleInfo'));
   if(quizScore === total){ showToast('滿分通過 MUSCLE LAB 檢定'); setTimeout(()=> bumpCounter('quizPerfect'), 3400); }
+}
+
+/* ---- 肌肉閃卡：模型亮起一條肌肉，先回想名稱、起止點、神經與作用，再翻面自評；越不熟的越常出現 ---- */
+let cardScope = 'all', card = null, cardFlipped = false, cardRecent = [];
+const CARD_WEIGHT = [8, 4, 2, 1, 0.5];
+function cardDeck(){
+  return labIndex().muscles.filter(m=> MUSCLE_DETAIL[m.base] && !/^—/.test(MUSCLE_DETAIL[m.base][2]) && (cardScope === 'all' || muscleData[m.group].category === cardScope));
+}
+function startCards(){
+  if(poseAnim.def) stopExercise();
+  quizTarget = null; quizAwaitingNext = false; cardRecent = [];
+  nextCard();
+}
+function nextCard(){
+  const deck = cardDeck(), fresh = deck.filter(m=> !cardRecent.includes(m.base)), list = fresh.length ? fresh : deck;
+  const w = m=> CARD_WEIGHT[cardBox[m.base] || 0];
+  let r = Math.random() * list.reduce((t, m)=> t + w(m), 0);
+  card = list.find(m=> (r -= w(m)) <= 0) || list[list.length - 1];
+  cardRecent = [card.base, ...cardRecent].slice(0, Math.min(6, deck.length - 1));   /* 最近出現過的先不重複 */
+  cardFlipped = false;
+  spotlightMuscle(card.base);
+  renderCard();
+}
+function renderCard(){
+  const el = document.getElementById('muscleInfo'), deck = cardDeck(), m = card, det = MUSCLE_DETAIL[m.base], box = cardBox[m.base] || 0;
+  const known = deck.filter(x=> (cardBox[x.base] || 0) >= 3).length, g = muscleData[m.group];
+  el.innerHTML = `
+    <div class="quiz-panel card-panel">
+      ${quizKindHTML()}
+      <div class="fc-scope" role="group" aria-label="閃卡範圍">${Object.entries(categoryLabels).map(([k, label])=> `<button data-scope="${k}" aria-pressed="${cardScope === k}">${label}</button>`).join('')}</div>
+      <div class="fc-progress"><span><i style="width:${(known / deck.length * 100).toFixed(1)}%"></i></span><small>已記住 ${known} / ${deck.length}</small></div>
+      <div class="flash-card${cardFlipped ? ' flipped' : ''}">
+        <span class="fc-box" title="熟練度 ${box} / 4" aria-label="熟練度 ${box} / 4">${'●'.repeat(box)}${'○'.repeat(4 - box)}</span>
+        ${cardFlipped ? `
+          <span class="mi-region">${m.code} · ${g.name}</span>
+          <h3>${m.zh}</h3>
+          <span class="en">${m.en}</span>
+          <dl class="mdetail"><dt>起點</dt><dd>${det[0]}</dd><dt>止點</dt><dd>${det[1]}</dd><dt>神經</dt><dd>${det[2]}</dd><dt>作用</dt><dd>${det[3]}</dd></dl>`
+        : `
+          <span class="mi-region">${g.name} · ${categoryLabels[g.category]}</span>
+          <div class="fc-q">亮起來的是哪條肌肉？</div>
+          <p>先在心裡說出名稱，再想想它的起點、止點、神經和作用，然後翻面對答案。</p>`}
+      </div>
+      ${cardFlipped ? `
+        <div class="fc-rate">
+          <button data-rate="0">還不熟<small>很快再出現</small></button>
+          <button data-rate="1">有點印象<small>晚點再複習</small></button>
+          <button data-rate="2">記住了<small>少出現一點</small></button>
+        </div>
+        <button class="link-btn" id="cardOpen">在標本檔案打開這條肌肉</button>`
+      : `<button class="quiz-next-btn fc-flip" id="cardFlip">翻面看答案</button>`}
+    </div>`;
+  bindQuizKind(el);
+  el.querySelectorAll('[data-scope]').forEach(b=> b.addEventListener('click', ()=>{
+    if(cardScope === b.dataset.scope) return;
+    cardScope = b.dataset.scope; cardRecent = []; nextCard();
+  }));
+  const flip = document.getElementById('cardFlip');
+  if(flip) flip.addEventListener('click', ()=>{
+    const kbd = flip.matches(':focus-visible');   /* 用鍵盤翻面時，焦點接著放到評分按鈕 */
+    cardFlipped = true; renderCard();
+    const r = el.querySelector('[data-rate]'); if(kbd && r) r.focus({preventScroll:true});
+  });
+  el.querySelectorAll('[data-rate]').forEach(b=> b.addEventListener('click', ()=>{
+    const v = +b.dataset.rate, cur = cardBox[card.base] || 0;
+    cardBox[card.base] = v === 0 ? 0 : v === 1 ? Math.max(1, cur - 1) : Math.min(4, cur + 1);
+    lsSet('muscle-cards', cardBox);
+    checkBadges();
+    nextCard();
+  }));
+  const open = document.getElementById('cardOpen');
+  if(open) open.addEventListener('click', ()=>{ const part = card.part; setMode('explore'); selectMuscle(part.id, part); });
 }
 
 /* console tabs: 標本檔案 / 檢定 / 實驗協定 / 研究員 */
@@ -4652,7 +4765,7 @@ function setMode(mode){
   setConsoleView('info');
   if(mode === 'quiz'){
     clearGlow(); focusWholeBody(); updatePeek();
-    startQuiz();
+    startQuizMode();
   } else if(mode === 'move'){
     clearGlow(); focusWholeBody(); updatePeek();
     document.querySelectorAll('.legend button').forEach(b=> b.classList.remove('active'));
@@ -4738,7 +4851,7 @@ function animate(){
   if(targetRotY !== null){
     bodyGroup.rotation.y = angleLerp(bodyGroup.rotation.y, targetRotY, 0.12);
     const diff = Math.abs(((targetRotY - bodyGroup.rotation.y + Math.PI) % (Math.PI*2) + Math.PI*2) % (Math.PI*2) - Math.PI);
-    if(diff < 0.01){ bodyGroup.rotation.y = targetRotY; targetRotY = null; if(currentMode === 'explore'){ if(currentMuscle) focusOnMuscle(currentMuscle); else if(currentNerve) focusOnParts([...nerveParts(currentNerve)]); } }
+    if(diff < 0.01){ bodyGroup.rotation.y = targetRotY; targetRotY = null; if(currentMode === 'explore'){ if(currentMuscle) focusOnMuscle(currentMuscle); else if(currentNerve) focusOnParts([...nerveParts(currentNerve)]); } else if(currentMode === 'quiz' && spotParts) focusOnParts(spotParts); }
   }
   if(targetRotX !== null){
     bodyGroup.rotation.x += (targetRotX - bodyGroup.rotation.x) * 0.15;
