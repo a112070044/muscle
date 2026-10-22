@@ -3768,8 +3768,35 @@ function pickPart(clientX, clientY){
   const id = (pickPixel[0] << 16) | (pickPixel[1] << 8) | pickPixel[2];
   return id ? (clickableParts[id - 1] || null) : null;
 }
+/* 提示框內容：做動作時加上這條肌肉在動作裡的角色 */
+function partTipHTML(p){
+  const ex = currentMode === 'move' && poseAnim.def && currentExercise ? protocolById(currentExercise) : null;
+  let role = '';
+  if(ex){
+    const r = exerciseRole(p, ex), k = ex.kind;
+    role = ' · ' + (r === 'p' ? (k === 'stretch' ? '主要伸展' : k === 'joint' ? '主動肌' : '主要發力')
+      : r === 's' ? (k === 'stretch' ? '也會拉到' : k === 'joint' ? '協同肌' : '輔助穩定')
+      : r === 'a' ? '拮抗肌，正被拉長' : '這個動作沒有特別用到');
+  }
+  return `<b>${p.meta.zh}</b><span>${muscleCode(baseKey(p.key))} · ${ex ? muscleData[p.id].name : p.meta.en + ' · ' + muscleData[p.id].name}${role}</span>`;
+}
+function placeTip(lx, ly){
+  const w = chamberEl.clientWidth;
+  tooltipEl.style.left = Math.max(8, Math.min(lx + 14, w - 290)) + 'px';
+  tooltipEl.style.top = Math.max(8, ly + 14) + 'px';
+}
+let tapTipTimer = null;
 function handleTap(clientX, clientY){
-  if(currentMode === 'move') return;
+  if(currentMode === 'move'){
+    /* 做動作時點肌肉：顯示名稱和角色（手機沒有滑鼠停留，靠這個看） */
+    const part = pickPart(clientX, clientY);
+    if(!part){ tooltipEl.classList.remove('show'); return; }
+    const rect = canvas.getBoundingClientRect();
+    tooltipEl.innerHTML = partTipHTML(part); placeTip(clientX - rect.left, clientY - rect.top);
+    tooltipEl.classList.add('show');
+    clearTimeout(tapTipTimer); tapTipTimer = setTimeout(()=> tooltipEl.classList.remove('show'), 2800);
+    return;
+  }
   const part = pickPart(clientX, clientY);
   if(part){
     if(currentMode === 'quiz') checkQuizAnswer(part.id);
@@ -3783,12 +3810,14 @@ function handleTap(clientX, clientY){
 const tooltipEl = document.getElementById('muscleTooltip');
 let hoverPos = null, hoverDirty = false;
 canvas.addEventListener('pointermove', (e)=>{
-  if(e.pointerType !== 'mouse' || activePointers.size > 0){ tooltipEl.classList.remove('show'); return; }
+  /* 觸控：只有拖曳時才收起提示（點一下之後瀏覽器補發的移動事件不算） */
+  if(e.pointerType !== 'mouse'){ if(activePointers.size > 0 && hasDragged) tooltipEl.classList.remove('show'); return; }
+  if(activePointers.size > 0){ tooltipEl.classList.remove('show'); return; }
   const rect = canvas.getBoundingClientRect();
   hoverPos = {x:e.clientX, y:e.clientY, lx:e.clientX-rect.left, ly:e.clientY-rect.top};
   hoverDirty = true;
 });
-canvas.addEventListener('pointerleave', ()=>{ hoverPos = null; tooltipEl.classList.remove('show'); canvas.style.cursor=''; });
+canvas.addEventListener('pointerleave', (e)=>{ if(e.pointerType !== 'mouse') return; hoverPos = null; tooltipEl.classList.remove('show'); canvas.style.cursor=''; });   /* 觸控抬起手指也會觸發離開，不能收掉剛點出來的提示 */
 function updateHover(){
   if(!hoverDirty || !hoverPos || !modelReady) return;
   hoverDirty = false;
@@ -3796,9 +3825,8 @@ function updateHover(){
   if(currentMode === 'quiz'){ tooltipEl.classList.remove('show'); canvas.style.cursor = ''; return; }
   const p = pickPart(hoverPos.x, hoverPos.y);
   if(p){
-    tooltipEl.innerHTML = `<b>${p.meta.zh}</b><span>${muscleCode(baseKey(p.key))} · ${p.meta.en} · ${muscleData[p.id].name}</span>`;
-    tooltipEl.style.left = (hoverPos.lx + 14) + 'px';
-    tooltipEl.style.top = (hoverPos.ly + 14) + 'px';
+    clearTimeout(tapTipTimer);
+    tooltipEl.innerHTML = partTipHTML(p); placeTip(hoverPos.lx, hoverPos.ly);
     tooltipEl.classList.add('show');
     canvas.style.cursor = 'pointer';
   } else {
