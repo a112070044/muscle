@@ -18,7 +18,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://a112070044.github.io/muscle/">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"MUSCLE LAB｜人體肌肉 3D 研究室","alternateName":"MUSCLE LAB","url":"https://a112070044.github.io/muscle/","inLanguage":"zh-Hant","applicationCategory":"EducationalApplication","operatingSystem":"Any (web browser)","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"image":"https://a112070044.github.io/muscle/brand/og-image.jpg","description":"333 條肌肉的 3D 解剖圖鑑：點選肌肉看位置、起止點、神經與作用；32 個訓練動作、20 個關節動作（肌動學）與 10 個伸展的 3D 示範，肌肉收縮會鼓起、伸展會變扁；還有依神經瀏覽（26 條周邊神經各支配哪些肌肉）、肌肉測驗與每週訓練熱圖。"}
+{"@context":"https://schema.org","@type":"WebApplication","name":"MUSCLE LAB｜人體肌肉 3D 研究室","alternateName":"MUSCLE LAB","url":"https://a112070044.github.io/muscle/","inLanguage":"zh-Hant","applicationCategory":"EducationalApplication","operatingSystem":"Any (web browser)","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"},"image":"https://a112070044.github.io/muscle/brand/og-image.jpg","description":"333 條肌肉的 3D 解剖圖鑑：點選肌肉看位置、起止點、神經與作用；32 個訓練動作、20 個關節動作（肌動學）與 12 個伸展的 3D 示範，肌肉收縮會鼓起、伸展會變扁；還有依神經瀏覽（26 條周邊神經各支配哪些肌肉）、肌肉測驗與每週訓練熱圖。"}
 </script>
 <meta name="theme-color" content="#0B0B0B" id="themeColorMeta">
 <link rel="manifest" href="manifest.webmanifest">
@@ -2062,14 +2062,16 @@ const STRETCH_LIB = [
     how:'坐直、兩腳腳掌相對貼合並拉近身體，手扶腳踝，讓膝蓋往兩側地板放鬆下沉，感覺大腿內側被拉長；不要用手硬壓膝蓋。'},
   {id:'quadstand', name:'站姿股四頭肌伸展', en:'Standing Quad Stretch', p:['quads'], s:['hipflexor'], for:['quads'],
     how:'單腳站立（可以扶牆），另一腳往後彎，用同側手抓住腳背把腳跟拉向臀部，膝蓋朝下、兩膝靠攏，感覺大腿前側被拉長。'},
-  {id:'shinkneel', name:'跪坐脛前伸展', en:'Kneeling Shin Stretch', p:['shin'], s:['foot'], for:['shin'],
-    how:'跪坐在腳跟上、腳背貼地，雙手撐在身後，慢慢把膝蓋抬離地面一點，感覺小腿前側和腳背被拉長。'},
+  {id:'shinkneel', name:'跪坐脛前伸展', en:'Kneeling Shin Stretch', pose:'st_shinkneel', p:['shin'], s:['foot'], for:['shin'],
+    how:'跪坐在腳跟上、腳背貼地，雙手撐在身體兩側或身後，上身慢慢往後靠，感覺小腿前側和腳背被拉長；想加強時再把膝蓋稍微抬離地面。'},
   {id:'ankleinv', name:'腳踝內翻伸展', en:'Ankle Inversion Stretch', p:['fibularis'], s:['shin'], for:['fibularis'],
     how:'坐著把一腳放到另一腳的大腿上，用手握住腳掌，慢慢把腳底轉向自己（內翻），感覺小腿外側被拉長。'},
   {id:'plantar', name:'足底與腳趾伸展', en:'Plantar Fascia Stretch', p:['foot'], s:['calf'], for:['foot'],
     how:'坐著把一腳放到另一腳的大腿上，用手把腳趾往小腿方向扳，感覺腳底被拉長；也可以用腳底踩著球慢慢滾動放鬆。'},
   {id:'jaw', name:'下顎與臉部放鬆', en:'Jaw Release', p:['head'], s:['neck'], for:['head'],
-    how:'舌頭輕抵上顎、嘴巴慢慢張開到不痛的範圍，停幾秒再閉上；也可以用指腹在耳朵前方的咀嚼肌畫圈按摩。'}
+    how:'舌頭輕抵上顎、嘴巴慢慢張開到不痛的範圍，停幾秒再閉上；也可以用指腹在耳朵前方的咀嚼肌畫圈按摩。'},
+  {id:'downdog', name:'下犬式', en:'Downward Dog', pose:'st_downdog', p:['hamstrings','calf'], s:['lats','erector','shoulders'], for:['hamstrings','calf','lats'],
+    how:'從四足跪姿開始，腳趾踩地、把臀部往後上方推高，手臂和背打直成一個倒 V；膝蓋可以先微彎，再慢慢把腳跟往地面壓，感覺大腿後側和小腿被拉長。'}
 ];
 STRETCH_LIB.forEach(st=> st.kind = 'stretch');
 const STRETCH_DEMOS = STRETCH_LIB.filter(st=> st.pose);
@@ -2157,6 +2159,12 @@ Object.assign(POSES, {
   st_triceps:{A:{arm:-150, elbow:-100}, B:{arm:-172, elbow:-145}, con:'stretch', period:5, view:1.0},
   st_wristflex:{A:{arm:-88, wrist:35}, B:{arm:-90, wrist:85}, con:'stretch', period:5, view:1.2},
   st_wristext:{A:{arm:-88, pron:180, wrist:-30, grip:0.5}, B:{arm:-90, pron:180, wrist:-75, grip:0.5}, con:'stretch', period:5, view:1.2},
+  /* 跪坐脛前伸展：跪坐在腳跟上、腳背貼地，上身往後靠（手臂角度自動調整讓手掌撐地） */
+  st_shinkneel:{A:{torso:-6, thigh:-86, shank:90, foot:180, arm:10, wrist:70, pron:180}, B:{torso:-34, thigh:-84, shank:82, foot:180, arm:30, wrist:70, pron:180},
+    solve:{field:'arm', a:'palmL', b:'toeL', target:0.004, range:[-30, 90]}, contacts:['toeL','toeR','shinL','palmL:0.004','palmR:0.004'], con:'stretch', period:5, view:1.57},
+  /* 下犬式：手腳撐地成倒 V（軀幹角度自動調整讓手掌貼地），從屈膝、腳跟離地到伸直、腳跟往下壓 */
+  st_downdog:{A:{thigh:24, shank:42, foot:-10, armRel:-178, wrist:60, pron:180}, B:{thigh:30, shank:30, foot:0, armRel:-178, wrist:50, pron:180},
+    solve:{field:'torso', a:'palmL', b:'toeL', target:0.004, range:[90, 170]}, contacts:['toeL','toeR','palmL:0.004','palmR:0.004'], con:'stretch', period:5, view:1.57},
   st_cobra:{A:{thigh:90, shank:90, foot:180, arm:40, elbow:-80, pron:180, wrist:84}, B:{thigh:90, shank:90, foot:180, arm:4, elbow:-8, pron:180, wrist:84},
     solve:{field:'torso', a:'palmL', b:'pubis', target:0, range:[15, 95]}, contacts:['pubis','thighFL','palmL','palmR'], con:'stretch', period:5, view:1.57}
 });
