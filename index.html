@@ -3899,22 +3899,25 @@ function updatePartTags(){
     const bw = 200, bh = Math.max(60, Math.round(bw * h / w));
     if(!tagTarget || tagTarget.width !== bw || tagTarget.height !== bh){ if(tagTarget) tagTarget.dispose(); tagTarget = new THREE.WebGLRenderTarget(bw, bh); tagPix = new Uint8Array(bw * bh * 4); }
     renderIds(tagTarget, tagPix);
-    partTags.forEach(t=>{
-      let best = null;
-      t.parts.forEach(p=>{
-        const id = clickableParts.indexOf(p) + 1, seen = [];
-        partSamples(p).forEach(v=>{
-          _tp.copy(v); modelRoot.localToWorld(_tp); _tp.project(camera);
-          const px = Math.floor((_tp.x + 1) / 2 * bw), py = Math.floor((_tp.y + 1) / 2 * bh);
-          if(px < 0 || py < 0 || px >= bw || py >= bh) return;
-          const k = (py * bw + px) * 4;
-          if(((tagPix[k] << 16) | (tagPix[k + 1] << 8) | tagPix[k + 2]) === id) seen.push(v);
-        });
-        if(!best || seen.length > best.seen.length) best = {p, seen, n:p._samples.length};
+    const sideOf = p=> /_R$/.test(p.key) ? 'R' : 'L', total = {L:0, R:0};
+    const looks = partTags.map(t=> t.parts.map(p=>{
+      const id = clickableParts.indexOf(p) + 1, seen = [];
+      partSamples(p).forEach(v=>{
+        _tp.copy(v); modelRoot.localToWorld(_tp); _tp.project(camera);
+        const px = Math.floor((_tp.x + 1) / 2 * bw), py = Math.floor((_tp.y + 1) / 2 * bh);
+        if(px < 0 || py < 0 || px >= bw || py >= bh) return;
+        const k = (py * bw + px) * 4;
+        if(((tagPix[k] << 16) | (tagPix[k + 1] << 8) | tagPix[k + 2]) === id) seen.push(v);
       });
-      const vis = best && best.seen.length >= Math.max(3, best.n * 0.08);
-      t.el.classList.toggle('deep', !vis);
-      t.anchor = vis ? best.seen.reduce((c, v)=> c.add(v), new THREE.Vector3()).multiplyScalar(1 / best.seen.length) : partAnchor(t.part);
+      const ok = seen.length >= Math.max(3, p._samples.length * 0.08);
+      if(ok) total[sideOf(p)] += seen.length / p._samples.length;
+      return {p, seen, ok};
+    }));
+    const side = total.R > total.L ? 'R' : 'L';   /* 整組標籤盡量標在同一側（左右腿各標一半會很亂） */
+    partTags.forEach((t, i)=>{
+      const opts = looks[i].filter(o=> o.ok), pick = opts.find(o=> sideOf(o.p) === side) || opts.sort((a, b)=> b.seen.length - a.seen.length)[0];
+      t.el.classList.toggle('deep', !pick);
+      t.anchor = pick ? pick.seen.reduce((c, v)=> c.add(v), new THREE.Vector3()).multiplyScalar(1 / pick.seen.length) : partAnchor(t.parts.find(p=> sideOf(p) === side) || t.part);
     });
   }
 }
