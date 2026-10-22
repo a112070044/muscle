@@ -496,6 +496,8 @@
   .proto-list .pc{font:400 10.5px var(--mono); letter-spacing:.06em; color:var(--text-faint);}
   .proto-list b{font-weight:500; font-size:13.5px;}
   .proto-list small{display:flex; align-items:center; font-size:12px; color:var(--text-soft); white-space:nowrap;}
+  .proto-list .rel-main{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .proto-list .rel-main small{display:block; white-space:normal; line-height:1.5;}
   .proto-none{font-size:13px; color:var(--text-soft);}
 
   /* ---------- playback speed ---------- */
@@ -3133,8 +3135,10 @@ function selectExercise(id, keepView){
     ${!isStretch && EXERCISE_EXTRA[ex.id] ? `
     <section class="mi-sec"><h6>常見錯誤</h6><ul class="issue-list">${EXERCISE_EXTRA[ex.id].miss.map(m=> '<li>' + m + '</li>').join('')}</ul></section>
     <section class="mi-sec"><h6>調整難度</h6><dl class="mdetail level"><dt>變簡單</dt><dd>${EXERCISE_EXTRA[ex.id].easy}</dd><dt>變困難</dt><dd>${EXERCISE_EXTRA[ex.id].hard}</dd></dl></section>` : ''}
+    ${isStretch || isJoint ? '' : relatedHTML(ex)}
     <p class="ex-note">${isStretch ? STRETCH_TIP + '<br>' : ''}點上面的肌肉名稱，可以跳到它的說明。</p>`;
   slot.querySelector('[data-share]').addEventListener('click', shareCurrent);
+  slot.querySelectorAll('[data-rel]').forEach(b=> b.addEventListener('click', ()=> selectExercise(b.dataset.rel)));
   if(inPlan){ renderPlanBar(ex); slot.scrollIntoView({block:'nearest'}); }
   const logBtn = slot.querySelector('[data-log]');
   if(logBtn) logBtn.addEventListener('click', ()=>{
@@ -3161,6 +3165,20 @@ function selectExercise(id, keepView){
     else { const part = clickableParts.find(p=> baseKey(p.key) === it); if(part) selectMuscle(part.id, part); }
   }));
   syncHash();
+}
+/* 相似動作：主要發力的肌群重疊最多的訓練（可以互相替換），以及練完適合的伸展 */
+function relatedHTML(ex){
+  const P = primaryGroups(ex), Sx = secondaryGroups(ex), names = set=> [...set].map(g=> muscleData[g].name).join('、');
+  const sim = EXERCISE_LIB.filter(o=> o !== ex && o.pose !== ex.pose).map(o=>{
+    const P2 = primaryGroups(o), S2 = secondaryGroups(o), both = new Set([...P].filter(g=> P2.has(g)));
+    const score = both.size / new Set([...P, ...P2]).size * 3 + ([...P].filter(g=> S2.has(g)).length + [...Sx].filter(g=> P2.has(g)).length) * 0.2;
+    return {o, both, score};
+  }).filter(x=> x.both.size).sort((a, b)=> b.score - a.score).slice(0, 3);
+  const st = STRETCH_DEMOS.filter(d=> d.for.some(g=> P.has(g))).slice(0, 2);
+  if(!sim.length && !st.length) return '';
+  return `
+    <section class="mi-sec"><h6>相似動作 · 可以互相替換</h6>${sim.length ? `<div class="proto-list">${sim.map(({o, both})=> `<button data-rel="${o.id}"><span class="pc">${protocolCode(o.id)}</span><span class="rel-main"><b>${o.name}</b><small>同樣練到${names(both)}</small></span></button>`).join('')}</div>` : '<p class="proto-none">目前沒有主要肌群相同的其他動作。</p>'}</section>
+    ${st.length ? `<section class="mi-sec"><h6>練完伸展</h6><div class="proto-list">${st.map(d=> `<button data-rel="${d.id}"><span class="pc">${protocolCode(d.id)}</span><span class="rel-main"><b>${d.name}</b><small>拉長${names(new Set(d.for.filter(g=> P.has(g))))}</small></span></button>`).join('')}</div></section>` : ''}`;
 }
 function stopExercise(){
   poseAnim.def = null; poseAnim.playing = false; poseAnim.blend = 0;
