@@ -295,6 +295,8 @@
   .quiz-options button:hover:not(:disabled){border-color:var(--text-faint);}
   .quiz-options button.right{border-color:var(--scan); background:var(--sel);}
   .quiz-options button.wrong{opacity:.4; text-decoration:line-through;}
+  .quiz-myth{font-size:22px; line-height:1.45;}
+  .quiz-options.tf button{align-items:center; font-size:18px; padding:14px 12px;}
   .hint-btn{display:block; width:100%; text-align:left; font-size:13.5px; line-height:1.6; background:transparent; border:1px dashed var(--line-hi); border-radius:8px; color:var(--text-soft); padding:10px 13px; margin-bottom:14px; cursor:pointer;}
   .hint-btn:hover{border-color:var(--text); color:var(--text);}
   .quiz-score-line{font:400 12px var(--mono); color:var(--text-soft); margin-bottom:12px; font-variant-numeric:tabular-nums;}
@@ -4214,16 +4216,31 @@ let quizQueue = [], quizIndex = 0, quizScore = 0, quizTarget = null, quizAwaitin
 
 function primaryGroups(ex){ return new Set(ex.p.map(it=> muscleData[it] ? it : (labIndex().byBase[it] || {}).group).filter(Boolean)); }
 function secondaryGroups(ex){ return new Set(ex.s.map(it=> muscleData[it] ? it : (labIndex().byBase[it] || {}).group).filter(Boolean)); }
-/* 10 題：4 題「找出肌群」、2 題「這個動作主要練哪裡」、2 題「看動作猜名稱」、1 題「這個伸展拉到哪裡」、1 題「關節動作的主動肌」 */
+/* 是非題：常見的健身與肌肉迷思（答一次就公布，附上說明） */
+const MYTHS = [
+  {q:'做仰臥起坐，可以只消掉肚子的脂肪。', a:false, why:'局部減脂的效果非常有限。脂肪減少主要取決於整體的熱量收支，會全身一起減少；腹肌訓練能讓肌肉更強壯，但不會只燃燒肚子的脂肪。'},
+  {q:'隔天肌肉痠痛，才代表昨天的訓練有效。', a:false, why:'延遲性肌肉痠痛常出現在做新動作或大量離心動作之後，和肌肉成長沒有直接對應。沒有痠痛，只要重量、次數慢慢進步，訓練一樣有效。'},
+  {q:'女生練重量，很容易變得很壯碩。', a:false, why:'多數女性的睪固酮較低，增肌速度通常比較慢。練重量多半帶來更有力、更緊實的線條，「很壯碩」需要長期刻意的訓練與飲食。'},
+  {q:'深蹲時，膝蓋絕對不能超過腳尖。', a:false, why:'依每個人的腿長比例和動作，膝蓋往前超過腳尖很常見。重點是膝蓋和腳尖同方向、腳跟不離地，以及重量在自己能控制的範圍內。'},
+  {q:'運動前做很久的靜態伸展，一定能預防受傷。', a:false, why:'運動前長時間的靜態伸展，對預防受傷的幫助有限，還可能短暫降低爆發力。運動前比較建議動態熱身，靜態伸展可以放在運動後。'},
+  {q:'肌肉如果不練，就會變成脂肪。', a:false, why:'肌肉和脂肪是不同的組織，不會互相轉換。停止訓練後肌肉量會慢慢減少，如果吃得和以前一樣多，脂肪可能增加，看起來才像「變成脂肪」。'},
+  {q:'肱三頭肌大約占上臂肌肉的三分之二。', a:true, why:'上臂後側的肱三頭肌有三個頭，體積比肱二頭肌大，想讓手臂看起來更粗，三頭肌的訓練很重要。'},
+  {q:'臀大肌是人體體積最大的單一肌肉。', a:true, why:'臀大肌負責髖關節伸展，走路、爬樓梯、從椅子站起來都會用到；股四頭肌雖然更大，但它是四條肌肉組成的肌群。'},
+  {q:'心臟也是一種肌肉。', a:true, why:'心臟由心肌構成，和骨骼肌一樣會收縮，但它不受意識控制，一輩子不停地跳動。'},
+  {q:'拉筋時越痛，效果越好。', a:false, why:'伸展到有拉緊感就好。劇烈疼痛會讓肌肉反射性地收縮，反而拉不開，也可能拉傷；慢慢呼吸、停 20–30 秒比較有效。'},
+  {q:'蛋白質吃越多，肌肉就長越多。', a:false, why:'蛋白質是增肌的原料，但身體能用來合成肌肉的量有上限，超過的部分會被當成熱量使用。足夠的蛋白質加上規律訓練和睡眠，才是關鍵。'}
+];
+/* 10 題：3 題「找出肌群」、2 題「這個動作主要練哪裡」、2 題「看動作猜名稱」、1 題「這個伸展拉到哪裡」、1 題「關節動作的主動肌」、1 題是非題 */
 const shuffled = list=> list.map(v=> [Math.random(), v]).sort((a, b)=> a[0] - b[0]).map(x=> x[1]);
 function startQuiz(){
-  const finds = shuffled(muscleOrder).slice(0, 4).map(id=> ({type:'find', id}));
+  const finds = shuffled(muscleOrder).slice(0, 3).map(id=> ({type:'find', id}));
+  const myths = shuffled(MYTHS).slice(0, 1).map(m=> ({type:'myth', m}));
   const joints = shuffled(JOINT_LIB).slice(0, 1).map(ex=> ({type:'joint', ex}));
   const exs = shuffled(EXERCISE_LIB.filter(e=> primaryGroups(e).size));
   const protos = exs.slice(0, 2).map(ex=> ({type:'proto', ex}));
   const watches = exs.slice(2, 4).map(ex=> ({type:'watch', ex, options:shuffled([ex, ...shuffled(EXERCISE_LIB.filter(o=> o !== ex && o.pose !== ex.pose)).slice(0, 3)])}));
   const stretches = shuffled(STRETCH_DEMOS).slice(0, 1).map(ex=> ({type:'stretch', ex}));
-  quizQueue = shuffled([...finds, ...protos, ...watches, ...stretches, ...joints]);
+  quizQueue = shuffled([...finds, ...protos, ...watches, ...stretches, ...joints, ...myths]);
   quizIndex = 0; quizScore = 0; quizAwaitingNext = false;
   updateHighlight(null);
   document.querySelectorAll('.legend button').forEach(b=>b.classList.remove('active'));
@@ -4242,7 +4259,7 @@ function nextQuizQuestion(){
   if(quizIndex >= quizQueue.length){ stopExercise(); renderQuizResult(); return; }
   quizTarget = quizQueue[quizIndex];
   quizAwaitingNext = false;
-  if(quizTarget.type === 'find') { if(poseAnim.def){ stopExercise(); focusWholeBody(); } }
+  if(quizTarget.type === 'find' || quizTarget.type === 'myth') { if(poseAnim.def){ stopExercise(); focusWholeBody(); } }
   else { paintExercise(null); quizPlay(quizTarget.ex); }
   renderQuizPrompt();
 }
@@ -4257,6 +4274,11 @@ function renderQuizPrompt(){
        <div class="quiz-prompt">模型正在做哪個動作？</div>
        <div class="quiz-sub">看看 3D 人體的動作，從下面四個選一個</div>
        <div class="quiz-options">${q.options.map(o=> `<button data-opt="${o.id}">${o.name}<small>${o.en}</small></button>`).join('')}</div>`
+    : q.type === 'myth'
+    ? `<div class="quiz-round">${round} · 是非題 · 迷思破解</div>
+       <div class="quiz-prompt quiz-myth">${q.m.q}</div>
+       <div class="quiz-sub">你覺得這句話對嗎？只能選一次。</div>
+       <div class="quiz-options tf"><button data-tf="1">對<small>TRUE</small></button><button data-tf="0">錯<small>FALSE</small></button></div>`
     : q.type === 'joint'
     ? `<div class="quiz-round">${round} · 肌動學 · ${protocolCode(q.ex.id)}</div>
        <div class="quiz-prompt"><em>${q.ex.name}</em>的主動肌在哪裡？</div>
@@ -4277,10 +4299,22 @@ function renderQuizPrompt(){
     </div>
   `;
   document.getElementById('quizHintBtn').addEventListener('click', function(){
-    this.textContent = '提示：' + (q.type === 'find' ? muscleData[q.id].func : q.type === 'watch' ? '主要練到' + [...primaryGroups(q.ex)].map(g=> muscleData[g].name).join('、') : q.type === 'stretch' ? q.ex.how : q.type === 'joint' ? '日常例子：' + q.ex.example : q.ex.cue);
+    this.textContent = '提示：' + (q.type === 'myth' ? '想想看，身體真的能這樣運作嗎？' : q.type === 'find' ? muscleData[q.id].func : q.type === 'watch' ? '主要練到' + [...primaryGroups(q.ex)].map(g=> muscleData[g].name).join('、') : q.type === 'stretch' ? q.ex.how : q.type === 'joint' ? '日常例子：' + q.ex.example : q.ex.cue);
     this.disabled = true;
   });
   document.querySelectorAll('[data-opt]').forEach(b=> b.addEventListener('click', ()=> checkQuizOption(b)));
+  document.querySelectorAll('[data-tf]').forEach(b=> b.addEventListener('click', ()=> checkQuizMyth(b)));
+}
+function checkQuizMyth(btn){
+  if(quizAwaitingNext) return;
+  const q = quizTarget, pick = btn.dataset.tf === '1', right = pick === q.m.a;
+  document.querySelectorAll('[data-tf]').forEach(b=>{ b.disabled = true; if((b.dataset.tf === '1') === q.m.a) b.classList.add('right'); else if(b === btn) b.classList.add('wrong'); });
+  const msg = (right ? '答對了！' : '這題是「' + (q.m.a ? '對' : '錯') + '」。') + q.m.why;
+  if(right){ quizCorrect(msg); return; }
+  quizAwaitingNext = true;
+  const slot = document.getElementById('quizFeedbackSlot');
+  if(slot) slot.innerHTML = `<div class="quiz-feedback wrong">${msg}<button class="quiz-next-btn" id="quizNextBtn">下一題</button></div>`;
+  document.getElementById('quizNextBtn').addEventListener('click', ()=>{ quizIndex++; nextQuizQuestion(); });
 }
 function quizCorrect(msg){
   quizScore++;
@@ -4315,7 +4349,7 @@ function flashMuscle(id, isCorrect){
   setTimeout(()=>{ if(!quizAwaitingNext) updateHighlight(null); }, 550);
 }
 function checkQuizAnswer(id){
-  if(quizAwaitingNext || !quizTarget || quizTarget.type === 'watch') return;
+  if(quizAwaitingNext || !quizTarget || quizTarget.type === 'watch' || quizTarget.type === 'myth') return;
   const slot = document.getElementById('quizFeedbackSlot'), q = quizTarget, name = muscleData[id].name;
   const pg = q.type !== 'find' ? primaryGroups(q.ex) : null;
   const correct = q.type === 'find' ? id === q.id : pg.has(id);
