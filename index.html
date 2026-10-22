@@ -577,7 +577,7 @@
   .jt-facts{margin:16px 0 4px;}
   .chip-row.a button{border-style:dashed; color:var(--text-soft);}
   /* 課表 */
-  .plan-opts{display:grid; gap:10px; margin:14px 0 4px;}
+  .plan-opts{display:grid; gap:10px; margin:14px 0 18px;}
   .plan-row{display:grid; grid-template-columns:2.6em 1fr; align-items:start; gap:8px;}
   .plan-row > span{font-size:12.5px; color:var(--text-faint); padding-top:6px;}
   .plan-opts .chip-row button.on{background:var(--ice); color:var(--on-ice); border-color:var(--ice);}
@@ -2928,6 +2928,7 @@ function renderPlanPanel(){
       <div class="plan-row"><span>部位</span><div class="chip-row">${Object.entries(PLAN_FOCUS).map(([k, f])=> chip('focus', k, k === planPrefs.focus, f.zh)).join('')}</div></div>
       <div class="plan-row"><span>時間</span><div class="chip-row">${Object.keys(PLAN_LEN).map(m=> chip('min', m, +m === +planPrefs.min, m + ' 分鐘')).join('')}</div></div>
       <label class="plan-bw"><input type="checkbox" id="planBw" ${planPrefs.bw ? 'checked' : ''}> 只用徒手動作（不需要器材）</label>
+      <label class="plan-bw"><input type="checkbox" id="planSound" ${planSound ? 'checked' : ''}> 計時提示音（最後 3 秒和時間到）</label>
     </div>
     ${planSession ? `<div class="plan-bar"><span>課表進行中 ${planSession.i + 1} / ${planSession.list.length}</span><button data-plan-resume>繼續 →</button></div>` : ''}
     <section class="mi-sec">
@@ -2948,18 +2949,50 @@ function bindPlanPanel(infoEl){
   infoEl.querySelectorAll('[data-focus]').forEach(b=> b.addEventListener('click', ()=>{ planPrefs.focus = b.dataset.focus; rerender(); }));
   infoEl.querySelectorAll('[data-min]').forEach(b=> b.addEventListener('click', ()=>{ planPrefs.min = +b.dataset.min; rerender(); }));
   const bw = infoEl.querySelector('#planBw'); if(bw) bw.addEventListener('change', ()=>{ planPrefs.bw = bw.checked; rerender(); });
+  const snd = infoEl.querySelector('#planSound'); if(snd) snd.addEventListener('change', ()=>{ planSound = snd.checked; lsSet('muscle-sound', planSound); if(planSound){ planBeep('end'); } });
   const gen = infoEl.querySelector('#planGen'); if(gen) gen.addEventListener('click', ()=>{ buildPlan(); renderMovePanel(); });
   infoEl.querySelectorAll('[data-plan-ex]').forEach(b=> b.addEventListener('click', ()=> selectExercise(b.dataset.planEx)));
   const start = infoEl.querySelector('#planStart');
-  if(start) start.addEventListener('click', ()=>{ clearPlanTimer(); planSession = {list:currentPlan.list.map(e=> e.id), i:0, set:0, done:0}; selectExercise(planSession.list[0]); });
+  if(start) start.addEventListener('click', ()=>{ clearPlanTimer(); planSession = {list:currentPlan.list.map(e=> e.id), i:0, set:0, done:0}; planAudio(); keepAwake(true); selectExercise(planSession.list[0]); });
   const resume = infoEl.querySelector('[data-plan-resume]');
-  if(resume) resume.addEventListener('click', ()=> selectExercise(planSession.list[planSession.i]));
+  if(resume) resume.addEventListener('click', ()=>{ keepAwake(true); selectExercise(planSession.list[planSession.i]); });
 }
 /* 組數與休息：每組做完按一下，自動倒數組間休息；撐住不動的動作直接倒數撐住的秒數 */
 const PLAN_SETS = 3, HOLD_SEC = 30;
 const restSecFor = ex=> POSES[ex.pose].con === 'iso' ? 45 : (COMPOUND.has(ex.id) ? 90 : 60);
 let planTimer = null;
-function clearPlanTimer(){ if(planTimer){ clearInterval(planTimer.id); planTimer = null; } }
+const PAGE_TITLE = document.title;
+function clearPlanTimer(){ if(planTimer){ clearInterval(planTimer.id); planTimer = null; } document.title = PAGE_TITLE; }
+/* 計時提示音：最後 3 秒短嗶、時間到兩聲（iPhone 不支援震動，靠聲音提醒）；第一次在按下開始時建立，瀏覽器才允許播放 */
+let planSound = lsGet('muscle-sound', true) !== false, _audio = null;
+function planAudio(){
+  if(_audio || !planSound) return _audio;
+  try{ const AC = window.AudioContext || window.webkitAudioContext; if(AC) _audio = new AC(); }catch(e){}
+  return _audio;
+}
+function planBeep(kind){
+  const ac = planSound && planAudio();
+  if(!ac) return;
+  try{
+    if(ac.state === 'suspended') ac.resume();
+    const tones = kind === 'tick' ? [[880, 0, 0.07]] : [[660, 0, 0.14], [990, 0.17, 0.2]];
+    tones.forEach(([f, at, len])=>{
+      const o = ac.createOscillator(), g = ac.createGain(), t0 = ac.currentTime + at;
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.18, t0 + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0 + len + 0.02);
+    });
+  }catch(e){}
+}
+/* 跟著課表做的時候讓螢幕保持亮著（支援 Screen Wake Lock 的瀏覽器） */
+let _wake = null;
+async function keepAwake(on){
+  try{
+    if(on && !_wake && navigator.wakeLock && document.visibilityState === 'visible'){ _wake = await navigator.wakeLock.request('screen'); _wake.addEventListener('release', ()=>{ _wake = null; }); }
+    else if(!on && _wake){ const w = _wake; _wake = null; await w.release(); }
+  }catch(e){ _wake = null; }
+}
+document.addEventListener('visibilitychange', ()=>{ if(planSession && currentMode === 'move' && document.visibilityState === 'visible') keepAwake(true); });
 const mmss = sec=> Math.floor(sec / 60) + ':' + String(Math.max(0, Math.ceil(sec) % 60)).padStart(2, '0');
 function renderPlanBar(ex){
   const bar = document.querySelector('.plan-bar.now');
@@ -2976,14 +3009,18 @@ function renderPlanBar(ex){
 }
 function startPlanTimer(kind, sec, ex){
   clearPlanTimer();
-  planTimer = {kind, until: Date.now() + sec * 1000};
+  planTimer = {kind, until: Date.now() + sec * 1000, tick: Math.ceil(sec)};
   planTimer.id = setInterval(()=>{
     if(!planSession || planSession.list[planSession.i] !== ex.id){ clearPlanTimer(); return; }
-    const left = (planTimer.until - Date.now()) / 1000, clock = document.querySelector('.plan-bar.now .plan-clock');
+    const left = (planTimer.until - Date.now()) / 1000, clock = document.querySelector('.plan-bar.now .plan-clock'), whole = Math.ceil(left);
     if(clock) clock.textContent = mmss(left);
+    document.title = mmss(left) + (planTimer.kind === 'rest' ? ' 休息' : ' 撐住') + '｜MUSCLE LAB';   /* 切到別的分頁也看得到倒數 */
+    if(whole < planTimer.tick && whole >= 1 && whole <= 3) planBeep('tick');
+    planTimer.tick = whole;
     if(left <= 0){
       const k = planTimer.kind;
       clearPlanTimer();
+      planBeep('end');
       try{ navigator.vibrate && navigator.vibrate(k === 'rest' ? [180, 80, 180] : 250); }catch(e){}
       if(k === 'hold') finishSet(ex);
       else { showToast('休息結束，開始第 ' + (planSession.set + 1) + ' 組'); renderPlanBar(ex); }
@@ -3012,6 +3049,7 @@ function planStep(advance){
   const n = planSession.done;
   if(n) bumpCounter('plans');
   planSession = null;
+  keepAwake(false);
   showToast(n ? '課表完成！已記錄 ' + n + ' 個動作，看看本週熱圖' : '課表結束');
   moveTab = 'log'; renderMovePanel();
 }
@@ -4876,6 +4914,7 @@ function setMode(mode){
   const prev = currentMode;
   currentMode = mode;
   if(prev === 'move' || prev === 'quiz') stopExercise();
+  if(prev === 'move') keepAwake(false);   /* 離開實驗協定就不再讓螢幕保持亮著 */
   if(mode !== 'explore' && (hiddenParts.size || isolateSet)) showAllParts();   /* 做動作、測驗時要看到完整的人 */
   const badge = document.getElementById('progressBadge');
   if(badge) badge.style.visibility = mode === 'explore' ? '' : 'hidden';
