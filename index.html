@@ -223,7 +223,7 @@
   .rail-toggle{display:inline-block;}
   .rail.collapsed .legend{display:none;}
   .legend{overflow-y:auto; padding:0 8px 12px; scrollbar-width:thin; scrollbar-color:var(--line-hi) transparent;}
-  .legend-group h5{font-size:11.5px; font-weight:500; color:var(--text-faint); padding:14px 10px 6px;}
+  .legend-group h2{font-size:11.5px; font-weight:500; color:var(--text-faint); padding:14px 10px 6px;}
   .legend button{
     display:block; width:100%; text-align:left; padding:8px 10px; background:none; border:none;
     border-left:2px solid transparent; border-radius:0 6px 6px 0; cursor:pointer;
@@ -264,7 +264,7 @@
   .func{font-size:14.5px; line-height:1.85; color:var(--text-soft); margin-bottom:22px;}
   .mi-sec{margin-bottom:22px;}
   .mi-sec-label{font-size:12px; font-weight:500; color:var(--text-faint); margin-bottom:9px;}
-  .mi-sec h6{font-size:12px; font-weight:500; color:var(--text-faint); margin-bottom:9px;}
+  .mi-sec h3{font-size:12px; font-weight:500; color:var(--text-faint); margin-bottom:9px;}
   .inline-list{list-style:none; display:flex; flex-wrap:wrap; gap:6px;}
   .inline-list li{font-size:13px; padding:5px 11px; border:1px solid var(--line-hi); border-radius:6px; color:var(--text);}
   .issue-list{list-style:none; font-size:14px; color:var(--text-soft); line-height:1.75;}
@@ -844,7 +844,7 @@ setTimeout(function(){
 </div>
 
 <div class="stage" id="stage">
-  <div class="chamber" id="chamber">
+  <main class="chamber" id="chamber" aria-label="3D 人體標本">
     <canvas id="canvas3d" role="img" aria-label="可旋轉的 3D 人體肌肉模型；也可以用左側的肌群清單或搜尋框選擇肌肉"></canvas>
     <svg class="leader off" id="leaderSvg" aria-hidden="true"><line id="leaderLine"/><circle id="leaderDot" r="4"/></svg>
     <div class="leader-label off" id="leaderLabel" aria-hidden="true"></div>
@@ -856,7 +856,7 @@ setTimeout(function(){
     <button class="unhide-btn" id="unhideBtn" hidden></button>
     <div class="muscle-tooltip" id="muscleTooltip"></div>
     <div class="model-loading" id="modelLoading"><span class="spin"></span>載入解剖模型中…</div>
-  </div>
+  </main>
 
   <header class="topbar">
     <div class="brand"><span class="brand-mark" role="img" aria-label="ML"></span><h1>MUSCLE LAB</h1><span class="brand-sub">ANATOMY × FITNESS</span></div>
@@ -868,7 +868,7 @@ setTimeout(function(){
     </div>
   </header>
 
-  <div class="toolbar" id="toolbar" role="toolbar" aria-label="檢視控制">
+  <div class="toolbar" id="toolbar" role="region" aria-label="檢視控制">
     <div class="seg" role="group" aria-label="圖層">
       <button class="lt-btn active" data-layer="muscles">肌肉</button>
       <button class="lt-btn active" data-layer="bones">骨骼</button>
@@ -2753,7 +2753,7 @@ function badgesHTML(){
   const n = BADGES.filter(b=> badgeEarned[b.id]).length, md = t=> { const d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate(); };
   return `
     <section class="mi-sec">
-      <h6>成就 · ${n} / ${BADGES.length}</h6>
+      <h3>成就 · ${n} / ${BADGES.length}</h3>
       <div class="badge-grid">${BADGES.map(b=> `<div class="badge ${badgeEarned[b.id] ? 'on' : ''}" title="${b.desc}"><i aria-hidden="true">${b.icon}</i><b>${b.name}</b><small>${badgeEarned[b.id] ? md(badgeEarned[b.id]) + ' 解鎖' : b.desc}</small></div>`).join('')}</div>
     </section>`;
 }
@@ -2769,15 +2769,15 @@ function renderLogPanel(infoEl){
     <div class="heat-legend" aria-hidden="true"><span>少</span><i></i><span>多</span></div>
     <div class="plan-actions"><button class="plan-reroll" id="heatShare">分享熱圖圖片</button></div>
     <section class="mi-sec">
-      <h6>練最多的部位</h6>
+      <h3>練最多的部位</h3>
       <div class="heat-bars">${ranked.slice(0, 8).map(([id, v])=> `<button data-heat-go="${id}"><span>${muscleData[id].name}</span><i><b style="width:${(v / max * 100).toFixed(0)}%"></b></i><small>${fmt(v)}</small></button>`).join('')}</div>
     </section>
     ${missing.length ? `<section class="mi-sec">
-      <h6>這週還沒練到</h6>
+      <h3>這週還沒練到</h3>
       <div class="proto-list">${suggest.map(({id, ex})=> `<button data-proto="${ex.id}"><span class="pc">${muscleData[id].name}</span><b>${ex.name}</b><small>${protocolCode(ex.id)}</small></button>`).join('')}</div>
     </section>` : '<p class="tip">這週主要肌群都練到了，記得安排休息日讓肌肉恢復。</p>'}
     <section class="mi-sec">
-      <h6>最近的紀錄</h6>
+      <h3>最近的紀錄</h3>
       <ul class="log-list">${recent.map(e=> { const ex = EXERCISE_LIB.find(x=> x.id === e.id); return `<li><span>${ex.name}</span><time>${relTime(e.t)}</time><button data-del="${e.t}" aria-label="刪除這筆紀錄">×</button></li>`; }).join('')}</ul>
       <button class="link-btn" id="logClear">清除全部紀錄</button>
     </section>` : `
@@ -2806,7 +2806,7 @@ function calendarHTML(){
   for(let w = 0; w < WEEKS; w++){ const d = new Date(start + w * 7 * DAY + DAY / 2); months.push(w === 0 || d.getDate() <= 7 ? (d.getMonth() + 1) + '月' : ''); }
   return `
     <section class="mi-sec">
-      <h6>訓練日曆 · 最近 12 週</h6>
+      <h3>訓練日曆 · 最近 12 週</h3>
       <div class="cal-sum"><span>本週練了 <b>${thisWeek}</b> 天</span><span>連續 <b>${streak}</b> 週有訓練</span><span>累計 <b>${Object.keys(counts).length}</b> 天</span></div>
       <div class="cal">
         <div class="cal-months" aria-hidden="true">${months.map(m=> `<span>${m}</span>`).join('')}</div>
@@ -2820,7 +2820,7 @@ function calendarHTML(){
 const BACKUP_KEYS = ['muscle-log','muscle-plan','muscle-ex-filter','muscle-watched','muscle-badges','muscle-counters','muscle-visited','muscle-cards','muscle-quiz-kind','muscle-theme','muscle-shape','muscle-sound','muscle-labels'];
 const backupHTML = ()=> `
     <section class="mi-sec">
-      <h6>備份與還原</h6>
+      <h3>備份與還原</h3>
       <p class="st-note">訓練紀錄、成就和閃卡進度都只存在這台裝置的瀏覽器。換手機或清除瀏覽器資料前，先下載一份備份檔，之後在任何裝置匯入就能還原。</p>
       <div class="plan-actions"><button class="plan-reroll" id="backupSave">下載備份檔</button><button class="plan-reroll" id="backupLoad">匯入備份檔</button><input type="file" id="backupFile" accept=".json,application/json" hidden></div>
     </section>`;
@@ -3009,13 +3009,13 @@ function renderPlanPanel(){
     </div>
     ${planSession ? `<div class="plan-bar"><span>課表進行中 ${planSession.i + 1} / ${planSession.list.length}</span><button data-plan-resume>繼續 →</button></div>` : ''}
     <section class="mi-sec">
-      <h6>課表 · ${PLAN_FOCUS[P.focus].zh} · ${P.list.length} 個動作</h6>
+      <h3>課表 · ${PLAN_FOCUS[P.focus].zh} · ${P.list.length} 個動作</h3>
       ${P.list.length ? `<ol class="plan-list">${P.list.map((ex, i)=> `<li><button data-plan-ex="${ex.id}"><span class="pi">${i + 1}</span><b>${ex.name}<small>${protocolCode(ex.id)}</small></b><em>${planDose(ex)}</em></button></li>`).join('')}</ol>
       ${P.list.length < PLAN_LEN[planPrefs.min] ? `<p class="proto-none">符合條件的動作只有 ${P.list.length} 個${planPrefs.bw ? '（徒手動作比較少，關掉「只用徒手」會有更多選擇）' : ''}。</p>` : ''}
       <p class="st-note">組間休息 60–90 秒；重量選最後兩下有點吃力、但姿勢不跑掉的程度。新手先從比較少的組數開始。</p>`
       : '<p class="proto-none">這個條件下沒有合適的動作，試試關掉「只用徒手」。</p>'}
     </section>
-    ${P.stretches.length ? `<section class="mi-sec"><h6>練完伸展</h6><div class="proto-list">${P.stretches.map(st=> `<button data-plan-ex="${st.id}"><span class="pc">${protocolCode(st.id)}</span><b>${st.name}</b><small>20–30 秒 × 2</small></button>`).join('')}</div></section>` : ''}
+    ${P.stretches.length ? `<section class="mi-sec"><h3>練完伸展</h3><div class="proto-list">${P.stretches.map(st=> `<button data-plan-ex="${st.id}"><span class="pc">${protocolCode(st.id)}</span><b>${st.name}</b><small>20–30 秒 × 2</small></button>`).join('')}</div></section>` : ''}
     <div class="plan-actions">
       ${P.list.length ? '<button class="plan-start" id="planStart">▶ 跟著課表開始</button>' : ''}
       <button class="plan-reroll" id="planGen">換一組</button>
@@ -3179,7 +3179,7 @@ function renderMovePanel(noSelect){
     <h2>選一個關節動作</h2>
     ${tabs}
     <p class="func">每個關節動作由哪些肌肉完成：<i class="key key-p"></i>主動肌（主要負責）　<i class="key key-s"></i>協同肌（幫忙）。另一側的拮抗肌會放鬆、被拉長。</p>
-    ${regions.map(r=> `<h6 class="jt-region">${r}</h6><div class="ex-grid">${JOINT_LIB.filter(j=> j.region === r).map(gridBtn).join('')}</div>`).join('')}
+    ${regions.map(r=> `<h3 class="jt-region">${r}</h3><div class="ex-grid">${JOINT_LIB.filter(j=> j.region === r).map(gridBtn).join('')}</div>`).join('')}
     <div id="exDetail"></div>` : `
     <span class="mi-region">動作連動</span>
     <h2>${st ? '選一個伸展動作' : '選一個訓練動作'}</h2>
@@ -3243,13 +3243,13 @@ function selectExercise(id, keepView){
     ${isStretch || isJoint ? '' : `<div class="log-row"><button class="log-btn" data-log>＋ 記錄一次</button><span class="log-note">本週 <b data-log-count>${weekCount(ex.id)}</b> 次 · <button class="link-btn" data-log-view>看訓練熱圖</button></span></div>`}
     <div class="ex-ctrl"><button id="exPlay">${poseAnim.playing ? '暫停' : '播放'}</button><span class="speed" role="group" aria-label="播放速度">${[0.5, 1].map(v=> `<button data-speed="${v}" class="${(poseAnim.speed || 1) === v ? 'on' : ''}" aria-pressed="${(poseAnim.speed || 1) === v}">${v}×</button>`).join('')}</span><label class="ex-scrub"><span>拖動看任一瞬間</span><input type="range" id="exScrub" min="0" max="1000" step="1" value="0" aria-label="動作進度"></label><span>模型動作為簡化示意，不是標準姿勢教學</span></div>
     ${isJoint ? `<dl class="mdetail jt-facts"><dt>關節</dt><dd>${ex.region}</dd><dt>運動平面</dt><dd>${ex.plane}</dd><dt>正常活動度</dt><dd>${ex.rom}</dd><dt>日常例子</dt><dd>${ex.example}</dd></dl>` : ''}
-    <section class="mi-sec"><h6><i class="key key-p"></i>${isStretch ? '主要伸展' : isJoint ? '主動肌 · 主要負責' : '主要發力'}</h6>${chips(ex.p, 'p')}</section>
-    ${ex.s.length ? `<section class="mi-sec"><h6><i class="key key-s"></i>${isStretch ? '也會拉到' : isJoint ? '協同肌 · 幫忙' : '輔助穩定'}</h6>${chips(ex.s, 's')}</section>` : ''}
-    ${isJoint ? `<section class="mi-sec"><h6>拮抗肌 · 在另一側放鬆、被拉長（模型上維持原色、會變扁的那些）</h6>${chips(ex.ant, 'a')}</section>` : ''}
+    <section class="mi-sec"><h3><i class="key key-p"></i>${isStretch ? '主要伸展' : isJoint ? '主動肌 · 主要負責' : '主要發力'}</h3>${chips(ex.p, 'p')}</section>
+    ${ex.s.length ? `<section class="mi-sec"><h3><i class="key key-s"></i>${isStretch ? '也會拉到' : isJoint ? '協同肌 · 幫忙' : '輔助穩定'}</h3>${chips(ex.s, 's')}</section>` : ''}
+    ${isJoint ? `<section class="mi-sec"><h3>拮抗肌 · 在另一側放鬆、被拉長（模型上維持原色、會變扁的那些）</h3>${chips(ex.ant, 'a')}</section>` : ''}
     ${isJoint ? '' : `<p class="tip">${isStretch ? ex.how : ex.cue}</p>`}
     ${!isStretch && EXERCISE_EXTRA[ex.id] ? `
-    <section class="mi-sec"><h6>常見錯誤</h6><ul class="issue-list">${EXERCISE_EXTRA[ex.id].miss.map(m=> '<li>' + m + '</li>').join('')}</ul></section>
-    <section class="mi-sec"><h6>調整難度</h6><dl class="mdetail level"><dt>變簡單</dt><dd>${EXERCISE_EXTRA[ex.id].easy}</dd><dt>變困難</dt><dd>${EXERCISE_EXTRA[ex.id].hard}</dd></dl></section>` : ''}
+    <section class="mi-sec"><h3>常見錯誤</h3><ul class="issue-list">${EXERCISE_EXTRA[ex.id].miss.map(m=> '<li>' + m + '</li>').join('')}</ul></section>
+    <section class="mi-sec"><h3>調整難度</h3><dl class="mdetail level"><dt>變簡單</dt><dd>${EXERCISE_EXTRA[ex.id].easy}</dd><dt>變困難</dt><dd>${EXERCISE_EXTRA[ex.id].hard}</dd></dl></section>` : ''}
     ${isStretch || isJoint ? '' : relatedHTML(ex)}
     <p class="ex-note">${isStretch ? STRETCH_TIP + '<br>' : ''}點上面的肌肉名稱，可以跳到它的說明。</p>`;
   slot.querySelector('[data-share]').addEventListener('click', shareCurrent);
@@ -3299,8 +3299,8 @@ function relatedHTML(ex){
   const st = STRETCH_DEMOS.filter(d=> d.for.some(g=> P.has(g))).slice(0, 2);
   if(!sim.length && !st.length) return '';
   return `
-    <section class="mi-sec"><h6>相似動作 · 可以互相替換</h6>${sim.length ? `<div class="proto-list">${sim.map(({o, both})=> `<button data-rel="${o.id}"><span class="pc">${protocolCode(o.id)}</span><span class="rel-main"><b>${o.name}</b><small>同樣練到${names(both)}</small></span></button>`).join('')}</div>` : '<p class="proto-none">目前沒有主要肌群相同的其他動作。</p>'}</section>
-    ${st.length ? `<section class="mi-sec"><h6>練完伸展</h6><div class="proto-list">${st.map(d=> `<button data-rel="${d.id}"><span class="pc">${protocolCode(d.id)}</span><span class="rel-main"><b>${d.name}</b><small>拉長${names(new Set(d.for.filter(g=> P.has(g))))}</small></span></button>`).join('')}</div></section>` : ''}`;
+    <section class="mi-sec"><h3>相似動作 · 可以互相替換</h3>${sim.length ? `<div class="proto-list">${sim.map(({o, both})=> `<button data-rel="${o.id}"><span class="pc">${protocolCode(o.id)}</span><span class="rel-main"><b>${o.name}</b><small>同樣練到${names(both)}</small></span></button>`).join('')}</div>` : '<p class="proto-none">目前沒有主要肌群相同的其他動作。</p>'}</section>
+    ${st.length ? `<section class="mi-sec"><h3>練完伸展</h3><div class="proto-list">${st.map(d=> `<button data-rel="${d.id}"><span class="pc">${protocolCode(d.id)}</span><span class="rel-main"><b>${d.name}</b><small>拉長${names(new Set(d.for.filter(g=> P.has(g))))}</small></span></button>`).join('')}</div></section>` : ''}`;
 }
 function stopExercise(){
   poseAnim.def = null; poseAnim.playing = false; poseAnim.blend = 0;
@@ -4450,7 +4450,7 @@ function renderMuscleInfo(id){
   const jointActs = JOINT_LIB.map(j=> ({j, role:protocolRole(j, id, specific ? baseKey(currentPart.key) : null)})).filter(x=> x.role).sort((a, b)=> (a.role === 'p' ? 0 : 1) - (b.role === 'p' ? 0 : 1));
   const jointHtml = jointActs.length ? `
     <section class="mi-sec">
-      <h6>肌動學 · 負責的關節動作</h6>
+      <h3>肌動學 · 負責的關節動作</h3>
       <div class="proto-list">${jointActs.map(({j, role})=> `<button data-proto="${j.id}"><span class="pc">${protocolCode(j.id)}</span><b>${j.name}</b><small><i class="key key-${role}"></i>${role === 'p' ? '主動肌' : '協同肌'}</small></button>`).join('')}</div>
     </section>` : '';
   /* 拮抗肌：這裡當主動肌的關節動作，另一側負責「踩煞車」、會被拉長的肌肉 */
@@ -4458,12 +4458,12 @@ function renderMuscleInfo(id){
   const antRows = jointActs.filter(x=> x.role === 'p' && x.j.ant && x.j.ant.length).map(({j})=> ({j, ants:j.ant.filter(antName)})).filter(r=> r.ants.length);
   const antHtml = antRows.length ? `
     <section class="mi-sec">
-      <h6>拮抗肌 · 動作方向相反、在另一側被拉長的肌肉</h6>
+      <h3>拮抗肌 · 動作方向相反、在另一側被拉長的肌肉</h3>
       <div class="ant-list">${antRows.map(({j, ants})=> `<div class="ant-row"><span>${j.name}</span><div class="nv-row">${ants.map(it=> `<button class="nv-chip ant" data-ant="${it}">${antName(it)}</button>`).join('')}</div></div>`).join('')}</div>
     </section>` : '';
   const protoHtml = `
     <section class="mi-sec">
-      <h6>實驗協定 · 訓練${specific ? '這條肌肉' : '這個肌群'}的動作</h6>
+      <h3>實驗協定 · 訓練${specific ? '這條肌肉' : '這個肌群'}的動作</h3>
       ${protos.length ? `<div class="proto-list">${protos.map(({ex, role})=> `<button data-proto="${ex.id}"><span class="pc">${protocolCode(ex.id)}</span><b>${ex.name}</b><small><i class="key key-${role}"></i>${role === 'p' ? '主要發力' : '輔助穩定'}</small></button>`).join('')}</div>`
         : `<p class="proto-none">目前的 ${EXERCISE_LIB.length} 項實驗協定沒有直接訓練到這裡，可以參考下面的常見訓練動作。</p>`}
     </section>`;
@@ -4471,7 +4471,7 @@ function renderMuscleInfo(id){
   const stretches = STRETCH_LIB.filter(st=> st.for.includes(id)).sort((a, b)=> (b.pose ? 1 : 0) - (a.pose ? 1 : 0));
   const stretchHtml = stretches.length ? `
     <section class="mi-sec">
-      <h6>伸展 · 放鬆這裡</h6>
+      <h3>伸展 · 放鬆這裡</h3>
       <div class="stretch-list">${stretches.map(st=> `
         <div class="st-card">
           <div class="st-top"><span><b>${st.name}</b><small>${st.en}</small></span>${st.pose ? `<button data-stretch="${st.id}"><span class="pc">${protocolCode(st.id, true)}</span>看示範</button>` : ''}</div>
@@ -4484,15 +4484,15 @@ function renderMuscleInfo(id){
   const groupNerves = specific ? [] : NERVES.filter(n=> nerveMuscles(n).some(m=> m.group === id));
   const groupNerveHtml = groupNerves.length ? `
     <section class="mi-sec">
-      <h6>神經支配 · 點一下看同一條神經管的所有肌肉</h6>
+      <h3>神經支配 · 點一下看同一條神經管的所有肌肉</h3>
       <div class="nv-row">${groupNerves.map(n=> nerveChip(n)).join('')}</div>
     </section>` : '';
   const detailHtml = det ? `
     <section class="mi-sec">
-      <h6>這條肌肉</h6>
+      <h3>這條肌肉</h3>
       <dl class="mdetail"><dt>起點</dt><dd>${det[0]}</dd><dt>止點</dt><dd>${det[1]}</dd><dt>神經</dt><dd>${det[2]}${detNerves.length ? `<span class="nv-row nv-inline">${detNerves.map(n=> nerveChip(n)).join('')}</span>` : ''}</dd><dt>作用</dt><dd>${det[3]}</dd></dl>
     </section>
-    <h6 class="mi-sec-label">整個${d.name}</h6>` : '';
+    <h3 class="mi-sec-label">整個${d.name}</h3>` : '';
   infoEl.innerHTML = `
     <button class="share-btn" data-share aria-label="分享這個頁面的連結"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.5V2.5M5 5.5l3-3 3 3"/><path d="M3.5 8.5v4.5h9V8.5"/></svg>分享</button>
     <span class="mi-region">${groupCode(id)} · ${categoryLabels[d.category]}</span>
@@ -4511,17 +4511,17 @@ function renderMuscleInfo(id){
     ${antHtml}
     ${groupNerveHtml}
     <section class="mi-sec">
-      <h6>其他常見訓練動作</h6>
+      <h3>其他常見訓練動作</h3>
       <ul class="inline-list">${d.exercises.map(e=>'<li>'+e+'</li>').join('')}</ul>
     </section>
     ${stretchHtml}
     <section class="mi-sec">
-      <h6>常見不適原因</h6>
+      <h3>常見不適原因</h3>
       <ul class="issue-list">${d.issues.map(i=>'<li>'+i+'</li>').join('')}</ul>
     </section>
     <p class="tip">${d.tip}</p>
     <section class="mi-sec">
-      <h6>問研究員</h6>
+      <h3>問研究員</h3>
       <div class="ask-row">
         <button data-ask="訓練">怎麼練</button>
         <button data-ask="疼痛">為什麼會痠痛</button>
@@ -4530,7 +4530,7 @@ function renderMuscleInfo(id){
       <div class="ai-answer" id="inlineAnswer"></div>
     </section>
     <section class="mi-sec fact">
-      <h6>冷知識</h6>
+      <h3>冷知識</h3>
       <p id="factText">${d.facts[factIdx]}</p>
       <button class="link-btn" id="factReroll">換一個</button>
     </section>
@@ -4677,11 +4677,11 @@ function renderNerveInfo(nv){
     </div>
     <p class="func">${nv.note}</p>
     <section class="mi-sec">
-      <h6>支配的肌肉 · ${list.length} 條</h6>
+      <h3>支配的肌肉 · ${list.length} 條</h3>
       <div class="nv-list">${groups.map(g=> `<div class="nv-grp"><span>${muscleData[g.id].name}</span><div>${g.items.map(m=> `<button data-base="${m.base}"><span class="pc">${m.code}</span>${m.zh}</button>`).join('')}</div></div>`).join('')}</div>
     </section>
     <section class="mi-sec">
-      <h6>其他神經</h6>
+      <h3>其他神經</h3>
       ${nerveBrowseHTML(nv)}
     </section>
     <p class="tip">${NERVE_NOTE}</p>`;
@@ -4729,7 +4729,7 @@ function renderLegend(){
   ['upper','core','lower'].forEach(cat=>{
     const wrap = document.createElement('div');
     wrap.className = 'legend-group';
-    wrap.innerHTML = `<h5>${categoryLabels[cat]}</h5>`;
+    wrap.innerHTML = `<h2>${categoryLabels[cat]}</h2>`;
     muscleOrder.filter(id=> muscleData[id].category === cat).forEach(id=>{
       const btn = document.createElement('button');
       btn.dataset.id = id;
