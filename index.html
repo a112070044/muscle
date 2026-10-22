@@ -4429,17 +4429,27 @@ const MYTHS = [
   {q:'拉筋時越痛，效果越好。', a:false, why:'伸展到有拉緊感就好。劇烈疼痛會讓肌肉反射性地收縮，反而拉不開，也可能拉傷；慢慢呼吸、停 20–30 秒比較有效。'},
   {q:'蛋白質吃越多，肌肉就長越多。', a:false, why:'蛋白質是增肌的原料，但身體能用來合成肌肉的量有上限，超過的部分會被當成熱量使用。足夠的蛋白質加上規律訓練和睡眠，才是關鍵。'}
 ];
-/* 10 題：3 題「找出肌群」、2 題「這個動作主要練哪裡」、2 題「看動作猜名稱」、1 題「這個伸展拉到哪裡」、1 題「關節動作的主動肌」、1 題是非題 */
+/* 10 題：2 題「找出肌群」、2 題「這個動作主要練哪裡」、2 題「看動作猜名稱」、1 題「這個伸展拉到哪裡」、1 題「關節動作的主動肌」、1 題「神經支配」、1 題是非題 */
 const shuffled = list=> list.map(v=> [Math.random(), v]).sort((a, b)=> a[0] - b[0]).map(x=> x[1]);
+/* 神經題：亮起一條只由單一神經支配的肌肉，從四條神經裡選（干擾選項優先挑同一區域的神經） */
+function nerveQuestion(){
+  const pool = NERVES.map(nv=> ({nv, ms:nerveMuscles(nv).filter(m=> nerveOf(m.base).length === 1)})).filter(x=> x.ms.length);
+  if(!pool.length) return null;
+  const {nv, ms} = pool[Math.floor(Math.random() * pool.length)], m = ms[Math.floor(Math.random() * ms.length)];
+  const others = shuffled(NERVES.filter(n=> n !== nv && nerveMuscles(n).length));
+  const near = others.filter(n=> n.region === nv.region).slice(0, 2), far = others.filter(n=> !near.includes(n));
+  return {type:'nerve', nv, m, options:shuffled([nv, ...near, ...far.slice(0, 3 - near.length)])};
+}
 function startQuiz(){
-  const finds = shuffled(muscleOrder).slice(0, 3).map(id=> ({type:'find', id}));
+  const finds = shuffled(muscleOrder).slice(0, 2).map(id=> ({type:'find', id}));
+  const nerves = [nerveQuestion()].filter(Boolean);
   const myths = shuffled(MYTHS).slice(0, 1).map(m=> ({type:'myth', m}));
   const joints = shuffled(JOINT_LIB).slice(0, 1).map(ex=> ({type:'joint', ex}));
   const exs = shuffled(EXERCISE_LIB.filter(e=> primaryGroups(e).size));
   const protos = exs.slice(0, 2).map(ex=> ({type:'proto', ex}));
   const watches = exs.slice(2, 4).map(ex=> ({type:'watch', ex, options:shuffled([ex, ...shuffled(EXERCISE_LIB.filter(o=> o !== ex && o.pose !== ex.pose)).slice(0, 3)])}));
   const stretches = shuffled(STRETCH_DEMOS).slice(0, 1).map(ex=> ({type:'stretch', ex}));
-  quizQueue = shuffled([...finds, ...protos, ...watches, ...stretches, ...joints, ...myths]);
+  quizQueue = shuffled([...finds, ...protos, ...watches, ...stretches, ...joints, ...nerves, ...myths]);
   quizIndex = 0; quizScore = 0; quizAwaitingNext = false;
   updateHighlight(null);
   document.querySelectorAll('.legend button').forEach(b=>b.classList.remove('active'));
@@ -4458,7 +4468,17 @@ function nextQuizQuestion(){
   if(quizIndex >= quizQueue.length){ stopExercise(); renderQuizResult(); return; }
   quizTarget = quizQueue[quizIndex];
   quizAwaitingNext = false;
-  if(quizTarget.type === 'find' || quizTarget.type === 'myth') { if(poseAnim.def){ stopExercise(); focusWholeBody(); } }
+  const prevNerve = quizIndex > 0 && quizQueue[quizIndex - 1].type === 'nerve';   /* 上一題神經題拉近了鏡頭 */
+  if(quizTarget.type === 'find' || quizTarget.type === 'myth') { if(poseAnim.def || prevNerve){ stopExercise(); focusWholeBody(); goToView('front'); } }
+  else if(quizTarget.type === 'nerve'){
+    if(poseAnim.def) stopExercise();
+    const m = quizTarget.m, parts = clickableParts.filter(p=> baseKey(p.key) === m.base), box = new THREE.Box3();
+    paintExercise({p:[m.base], s:[]});
+    /* 肌肉在身體後側就轉到背面 */
+    parts.forEach(p=>{ if(!p.mesh.geometry.boundingBox) p.mesh.geometry.computeBoundingBox(); box.union(p.mesh.geometry.boundingBox); });
+    goToView(box.getCenter(new THREE.Vector3()).z < -0.02 ? 'back' : 'front');
+    focusOnParts(parts);
+  }
   else { paintExercise(null); quizPlay(quizTarget.ex); }
   renderQuizPrompt();
 }
@@ -4473,6 +4493,11 @@ function renderQuizPrompt(){
        <div class="quiz-prompt">模型正在做哪個動作？</div>
        <div class="quiz-sub">看看 3D 人體的動作，從下面四個選一個</div>
        <div class="quiz-options">${q.options.map(o=> `<button data-opt="${o.id}">${o.name}<small>${o.en}</small></button>`).join('')}</div>`
+    : q.type === 'nerve'
+    ? `<div class="quiz-round">${round} · 神經支配</div>
+       <div class="quiz-prompt">亮起來的<em>${q.m.zh}</em>由哪條神經支配？</div>
+       <div class="quiz-sub">${q.m.code} · ${q.m.en}，從下面四條神經選一個</div>
+       <div class="quiz-options">${q.options.map(n=> `<button data-nopt="${n.id}">${n.zh}<small>${n.en}</small></button>`).join('')}</div>`
     : q.type === 'myth'
     ? `<div class="quiz-round">${round} · 是非題 · 迷思破解</div>
        <div class="quiz-prompt quiz-myth">${q.m.q}</div>
@@ -4498,11 +4523,31 @@ function renderQuizPrompt(){
     </div>
   `;
   document.getElementById('quizHintBtn').addEventListener('click', function(){
-    this.textContent = '提示：' + (q.type === 'myth' ? '想想看，身體真的能這樣運作嗎？' : q.type === 'find' ? muscleData[q.id].func : q.type === 'watch' ? '主要練到' + [...primaryGroups(q.ex)].map(g=> muscleData[g].name).join('、') : q.type === 'stretch' ? q.ex.how : q.type === 'joint' ? '日常例子：' + q.ex.example : q.ex.cue);
+    this.textContent = '提示：' + (q.type === 'myth' ? '想想看，身體真的能這樣運作嗎？' : q.type === 'nerve' ? '這條神經來自脊髓的 ' + q.nv.root + (/^第/.test(q.nv.root) ? '' : ' 節段') : q.type === 'find' ? muscleData[q.id].func : q.type === 'watch' ? '主要練到' + [...primaryGroups(q.ex)].map(g=> muscleData[g].name).join('、') : q.type === 'stretch' ? q.ex.how : q.type === 'joint' ? '日常例子：' + q.ex.example : q.ex.cue);
     this.disabled = true;
   });
   document.querySelectorAll('[data-opt]').forEach(b=> b.addEventListener('click', ()=> checkQuizOption(b)));
   document.querySelectorAll('[data-tf]').forEach(b=> b.addEventListener('click', ()=> checkQuizMyth(b)));
+  document.querySelectorAll('[data-nopt]').forEach(b=> b.addEventListener('click', ()=> checkQuizNerve(b)));
+}
+const nerveSample = (nv, skip)=>{
+  const names = [...new Set(nerveMuscles(nv).filter(m=> m.base !== skip).map(m=> m.zh))];
+  return names.slice(0, 5).join('、') + (names.length > 5 ? `等 ${names.length} 條` : '');
+};
+function checkQuizNerve(btn){
+  if(quizAwaitingNext || btn.disabled) return;
+  const q = quizTarget, pick = NERVES.find(n=> n.id === btn.dataset.nopt);
+  if(pick === q.nv){
+    btn.classList.add('right');
+    document.querySelectorAll('[data-nopt]').forEach(b=> b.disabled = true);
+    paintExercise({p:nerveMuscles(q.nv).map(m=> m.base), s:[]});   /* 揭曉：這條神經管的肌肉全部亮起來 */
+    const rest = nerveSample(q.nv, q.m.base);
+    quizCorrect(`答對了！${q.m.zh}由${q.nv.zh}（${q.nv.root}）支配。` + (rest ? `${q.nv.zh}還支配：${rest}。` : `${q.nv.zh}只支配這一條肌肉。`));
+  } else {
+    btn.classList.add('wrong'); btn.disabled = true;
+    const slot = document.getElementById('quizFeedbackSlot');
+    if(slot) slot.innerHTML = `<div class="quiz-feedback wrong">不是${pick.zh}喔，它支配的是${nerveSample(pick)}。再想想看！</div>`;
+  }
 }
 function checkQuizMyth(btn){
   if(quizAwaitingNext) return;
@@ -4548,7 +4593,7 @@ function flashMuscle(id, isCorrect){
   setTimeout(()=>{ if(!quizAwaitingNext) updateHighlight(null); }, 550);
 }
 function checkQuizAnswer(id){
-  if(quizAwaitingNext || !quizTarget || quizTarget.type === 'watch' || quizTarget.type === 'myth') return;
+  if(quizAwaitingNext || !quizTarget || quizTarget.type === 'watch' || quizTarget.type === 'myth' || quizTarget.type === 'nerve') return;
   const slot = document.getElementById('quizFeedbackSlot'), q = quizTarget, name = muscleData[id].name;
   const pg = q.type !== 'find' ? primaryGroups(q.ex) : null;
   const correct = q.type === 'find' ? id === q.id : pg.has(id);
