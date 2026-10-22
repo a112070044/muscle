@@ -2914,6 +2914,87 @@ async function makeHeatCard(){
   g.fillStyle = C.faint; g.font = font(500, 20); g.textAlign = 'right'; g.fillText('a112070044.github.io/muscle', W - 60, 96); g.textAlign = 'left';
   return cv;
 }
+/* ---- 肌肉圖卡：目前的 3D 畫面＋名稱、起止點、神經、作用，做成一張可以分享的直式圖片 ---- */
+function snapshotCurrent(){
+  const v = camera.view, saved = v && v.enabled ? {...v} : null;
+  camera.clearViewOffset(); updateCamera();   /* 拿掉側欄造成的偏移，讓對焦的肌肉在畫面正中央 */
+  renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
+  const c = document.createElement('canvas'); c.width = canvas.width; c.height = canvas.height;
+  c.getContext('2d').drawImage(canvas, 0, 0);
+  if(saved) camera.setViewOffset(saved.fullWidth, saved.fullHeight, saved.offsetX, saved.offsetY, saved.width, saved.height);
+  updateCamera(); markShadowsDirty(); updateShadowIfNeeded(); renderer.render(scene, camera);
+  return c;
+}
+function wrapText(g, text, maxW, maxLines){
+  const lines = []; let line = '';
+  for(const ch of String(text)){
+    const t = line + ch;
+    if(g.measureText(t).width > maxW && line){ lines.push(line); line = ch; } else line = t;
+  }
+  if(line) lines.push(line);
+  if(lines.length > maxLines){ lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].slice(0, -1) + '…'; }
+  return lines;
+}
+async function makeMuscleCard(){
+  const light = document.documentElement.dataset.theme === 'light';
+  const C = light ? {bg:'#ECEBE7', grid:'rgba(17,17,17,.05)', text:'#111111', soft:'#4B4A46', faint:'#6E6C67', line:'rgba(17,17,17,.14)'} : {bg:'#0B0B0B', grid:'rgba(255,255,255,.035)', text:'#E6E6E6', soft:'#9A9A9A', faint:'#6E6E6E', line:'rgba(255,255,255,.14)'};
+  const W = 1080, H = 1440, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d'), font = (w, px)=> `${w} ${px}px "Inter","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif`;
+  g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+  g.strokeStyle = C.grid; g.lineWidth = 1;
+  for(let x = 0; x <= W; x += 54){ g.beginPath(); g.moveTo(x + .5, 0); g.lineTo(x + .5, H); g.stroke(); }
+  for(let y = 0; y <= H; y += 54){ g.beginPath(); g.moveTo(0, y + .5); g.lineTo(W, y + .5); g.stroke(); }
+  const logo = await loadImg('brand/ml-mark.png');
+  if(logo){ g.save(); if(light) g.filter = 'invert(1)'; g.drawImage(logo, 60, 52, 76, 76 * logo.height / logo.width); g.restore(); }
+  g.fillStyle = C.text; g.font = font(700, 40); g.fillText('MUSCLE LAB', 156, 96);
+  g.fillStyle = C.soft; g.font = font(500, 24); g.fillText('肌肉圖卡 · MUSCLE CARD', 158, 132);
+  /* 3D 畫面：從畫面中央裁出 */
+  const shot = snapshotCurrent(), bw = 960, bh = 660;
+  let sh = shot.height * 0.92, sw = sh * bw / bh;
+  if(sw > shot.width){ sw = shot.width; sh = sw * bh / bw; }
+  g.drawImage(shot, (shot.width - sw) / 2, (shot.height - sh) / 2, sw, sh, 60, 170, bw, bh);
+  g.strokeStyle = C.line; g.strokeRect(60.5, 170.5, bw, bh);
+  const id = currentMuscle, d = muscleData[id], specific = currentPart && currentPart.id === id;
+  const base = specific ? baseKey(currentPart.key) : null, det = base ? MUSCLE_DETAIL[base] : null;
+  const name = specific ? currentPart.meta.zh : d.name, en = specific ? currentPart.meta.en : d.en, code = specific ? muscleCode(base) : groupCode(id);
+  let y = 920;
+  g.fillStyle = '#B91C1C'; g.fillRect(60, y - 44, 6, 52);
+  g.fillStyle = C.text; g.font = font(700, 58); g.fillText(name, 84, y);
+  y += 46; g.fillStyle = C.soft; g.font = font(500, 26); g.fillText(en, 84, y);
+  g.fillStyle = C.faint; g.font = font(500, 22); g.textAlign = 'right'; g.fillText(code + (specific ? ' · ' + d.name : ''), W - 60, y); g.textAlign = 'left';
+  y += 34; g.fillStyle = C.line; g.fillRect(60, y, W - 120, 1); y += 52;
+  const rows = det ? [['起點', det[0]], ['止點', det[1]], ['神經', det[2]], ['作用', det[3]]]
+    : [['作用', d.func], ['組成', [...new Set(clickableParts.filter(p=> p.id === id).map(p=> p.meta.zh))].join('、')]];
+  rows.forEach(([label, text])=>{
+    g.fillStyle = C.faint; g.font = font(500, 24); g.fillText(label, 60, y);
+    g.fillStyle = C.text; g.font = font(500, 28);
+    const lines = wrapText(g, text, W - 120 - 110, det ? 2 : 4);
+    lines.forEach((ln, i)=> g.fillText(ln, 170, y + i * 42));
+    y += lines.length * 42 + 22;
+  });
+  g.fillStyle = C.faint; g.font = font(500, 22);
+  g.fillText('a112070044.github.io/muscle/#' + linkHash(), 60, H - 56);
+  g.textAlign = 'right'; g.fillText('3D 人體肌肉研究室', W - 60, H - 56); g.textAlign = 'left';
+  return cv;
+}
+async function shareMuscleCard(btn){
+  const label = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = '產生圖卡中…'; }
+  try{
+    const cv = await makeMuscleCard(), name = (currentPart && currentPart.id === currentMuscle) ? currentPart.meta.zh : muscleData[currentMuscle].name;
+    const blob = await new Promise(r=> cv.toBlob(r, 'image/png'));
+    const slug = (currentPart && currentPart.id === currentMuscle) ? baseKey(currentPart.key) : currentMuscle;   /* 檔名用英文代號，中文檔名在部分瀏覽器會變成 download */
+    const file = new File([blob], 'muscle-lab-' + slug + '.png', {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]}) && matchMedia('(pointer: coarse)').matches){
+      try{ await navigator.share({files:[file], title:name + '｜MUSCLE LAB', text:'在 3D 人體上看「' + name + '」'}); return; }catch(e){ if(e && e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=> URL.revokeObjectURL(a.href), 4000);
+    showToast('已下載「' + name + '」的圖卡');
+  } catch(e){ console.warn(e); showToast('圖卡產生失敗，請再試一次'); }
+  finally{ if(btn){ btn.disabled = false; btn.textContent = label; } }
+}
 async function shareHeatCard(btn){
   if(btn){ btn.disabled = true; btn.textContent = '產生圖片中…'; }
   try{
@@ -4503,6 +4584,7 @@ function renderMuscleInfo(id){
       <button data-tool="isolate" class="${isolateSet ? 'on' : ''}" aria-pressed="${!!isolateSet}">${isolateSet ? '顯示全部' : (specific ? '單獨顯示這條' : '單獨顯示這個肌群')}</button>
       ${!specific && window.innerWidth > 760 && (n=> n >= 2 && n <= 10)(groupBases(id).length) ? `<button data-tool="labels" class="${partTagsOn ? 'on' : ''}" aria-pressed="${partTagsOn}">標示各條肌肉</button>` : ''}
       ${isolateSet ? '' : `<button data-tool="hide">${specific ? '隱藏這條，看下面' : '隱藏這個肌群，看下面'}</button>`}
+      <button data-tool="card">存成圖卡</button>
     </div>
     ${detailHtml}
     <p class="func">${d.func}</p>
@@ -4541,6 +4623,7 @@ function renderMuscleInfo(id){
   infoEl.querySelector('[data-share]').addEventListener('click', shareCurrent);
   infoEl.querySelectorAll('[data-tool]').forEach(b=> b.addEventListener('click', ()=>{
     if(b.dataset.tool === 'hide') hideCurrent();
+    else if(b.dataset.tool === 'card') shareMuscleCard(b);
     else if(b.dataset.tool === 'labels'){ partTagsOn = !partTagsOn; lsSet('muscle-labels', partTagsOn); _tagSig = ''; renderMuscleInfo(id); }
     else if(isolateSet) showAllParts(); else isolateCurrent();
   }));
