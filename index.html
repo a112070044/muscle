@@ -3858,6 +3858,19 @@ function goToView(name){
 document.querySelectorAll('.view-presets button[data-view]').forEach(btn=>{
   btn.addEventListener('click', ()=> goToView(btn.dataset.view));
 });
+/* ---- 分頁的鍵盤操作：左右方向鍵切換、Home／End 到頭尾（WAI-ARIA tabs） ---- */
+document.addEventListener('keydown', e=>{
+  const t = e.target;
+  if(!t || t.getAttribute('role') !== 'tab' || !['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+  const list = [...t.parentElement.querySelectorAll('[role="tab"]')], i = list.indexOf(t);
+  const j = e.key === 'Home' ? 0 : e.key === 'End' ? list.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + list.length) % list.length;
+  const mtab = list[j].dataset.mtab, mode = list[j].dataset.mode, tabAttr = list[j].dataset.tab;
+  list[j].click();
+  e.preventDefault();
+  /* 分頁重新繪製後，把焦點放回新的分頁按鈕 */
+  const again = mtab ? document.querySelector(`[data-mtab="${mtab}"]`) : mode ? document.querySelector(`.mode-switch [data-mode="${mode}"]`) : document.querySelector(`.mode-switch [data-tab="${tabAttr}"]`);
+  if(again) again.focus();
+});
 /* ---- 鍵盤快捷鍵（電腦）：← → 旋轉、1–4 正背左右、+ − 縮放、F 專注、R 重設、空白鍵 暫停動作、? 說明 ---- */
 const KEY_HELP = '快捷鍵：← → 旋轉　1 正面　2 背面　3 左側　4 右側　+ − 縮放　F 專注檢視　R 重設視角　空白鍵 暫停／播放動作';
 document.addEventListener('keydown', e=>{
@@ -3865,6 +3878,7 @@ document.addEventListener('keydown', e=>{
   const t = e.target, tag = t && t.tagName;
   if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
   if(document.body.classList.contains('intro') || tour.i >= 0) return;
+  if(t && t.getAttribute && t.getAttribute('role') === 'tab') return;   /* 分頁上的方向鍵用來切換分頁 */
   const k = e.key;
   if(k === 'ArrowLeft' || k === 'ArrowRight'){
     userInteracted = true;
