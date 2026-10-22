@@ -552,6 +552,22 @@
   .ant-row{display:grid; grid-template-columns:7.5em 1fr; gap:8px; align-items:start;}
   .ant-row > span{font-size:12.5px; color:var(--text-soft); padding-top:6px;}
   @media (max-width:560px){ .ant-row{grid-template-columns:1fr; gap:6px;} .ant-row > span{padding-top:0;} }
+  .cal-sum{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:13px; color:var(--text-soft); margin-bottom:12px;}
+  .cal-sum b{font:600 16px var(--sans); color:var(--text); font-variant-numeric:tabular-nums;}
+  .cal{display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto; gap:4px 6px; max-width:330px;}
+  .cal-months{grid-column:2; display:grid; grid-template-columns:repeat(12, 1fr); gap:3px; font-size:10px; color:var(--text-faint); white-space:nowrap;}
+  .cal-days{grid-row:2; display:grid; grid-template-rows:repeat(7, 1fr); gap:3px; font-size:10px; color:var(--text-faint); line-height:1;}
+  .cal-days span{display:flex; align-items:center;}
+  .cal-grid{grid-row:2; grid-column:2; display:grid; grid-template-rows:repeat(7, 1fr); grid-auto-flow:column; grid-auto-columns:1fr; gap:3px;}
+  .cal-grid i, .cal-legend i{display:block; aspect-ratio:1; border-radius:2px; background:var(--line);}
+  .cal-grid i.l1, .cal-legend i.l1{background:color-mix(in srgb, var(--scan) 35%, var(--line));}
+  .cal-grid i.l2, .cal-legend i.l2{background:color-mix(in srgb, var(--scan) 65%, var(--line));}
+  .cal-grid i.l3, .cal-legend i.l3{background:var(--scan);}
+  .cal-grid i.fut{background:none;}
+  .cal-grid i.today{outline:1px solid var(--text-soft); outline-offset:1px;}
+  .cal-legend{display:flex; align-items:center; gap:4px; margin-top:10px; font-size:11.5px; color:var(--text-faint);}
+  .cal-legend span:first-child{margin-right:4px;} .cal-legend span:last-child{margin-left:4px;}
+  .cal-legend i{width:11px; height:11px;}
   .nv-details{margin-top:18px; border-top:1px solid var(--line); padding-top:14px;}
   .nv-details summary{cursor:pointer; font-size:13.5px; font-weight:500; color:var(--text-soft); margin-bottom:2px;}
   .nv-details summary:hover{color:var(--text);}
@@ -2756,7 +2772,40 @@ function renderLogPanel(infoEl){
       <ul class="log-list">${recent.map(e=> { const ex = EXERCISE_LIB.find(x=> x.id === e.id); return `<li><span>${ex.name}</span><time>${relTime(e.t)}</time><button data-del="${e.t}" aria-label="刪除這筆紀錄">×</button></li>`; }).join('')}</ul>
       <button class="link-btn" id="logClear">清除全部紀錄</button>
     </section>` : `
-    <div class="log-empty">還沒有紀錄。到「訓練」選一個動作，按「＋ 記錄一次」，這裡就會出現本週的訓練熱圖。</div>`) + badgesHTML() + backupHTML();
+    <div class="log-empty">還沒有紀錄。到「訓練」選一個動作，按「＋ 記錄一次」，這裡就會出現本週的訓練熱圖。</div>`) + calendarHTML() + badgesHTML() + backupHTML();
+}
+/* ---- 訓練日曆：最近 12 週每天練了幾次（像打卡月曆），加上本週天數與連續有練的週數 ---- */
+function calendarHTML(){
+  if(!trainLog.length) return '';
+  const DAY = 864e5, WEEKS = 12, midnight = t=>{ const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const today = midnight(Date.now()), dow = (new Date(today).getDay() + 6) % 7;   /* 週一是一週的第一天 */
+  const counts = {};
+  trainLog.forEach(e=>{ const k = midnight(e.t); counts[k] = (counts[k] || 0) + 1; });
+  const weekStart = today - dow * DAY, start = weekStart - (WEEKS - 1) * 7 * DAY;
+  const daysIn = (a, b)=> Object.keys(counts).filter(k=> k >= a && k < b).length;
+  const thisWeek = daysIn(weekStart, weekStart + 7 * DAY);
+  let streak = 0;   /* 連續有練的週數：本週還沒練不算中斷，從上週開始往回數 */
+  for(let w = thisWeek ? 0 : 1; w < 520; w++){ const a = weekStart - w * 7 * DAY; if(daysIn(a, a + 7 * DAY)) streak++; else break; }
+  const lv = n=> n >= 4 ? 3 : n >= 2 ? 2 : n ? 1 : 0, md = t=>{ const d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate(); };
+  let cells = '';
+  for(let i = 0; i < WEEKS * 7; i++){
+    const t = start + i * DAY;   /* 跨日光節約時間時也落在同一天 */
+    const k = midnight(t + DAY / 2), n = counts[k] || 0, future = k > today;
+    cells += `<i class="${future ? 'fut' : 'l' + lv(n)}${k === today ? ' today' : ''}"${future ? '' : ` title="${md(k)}：${n ? n + ' 次訓練' : '沒有紀錄'}"`}></i>`;
+  }
+  const months = [];
+  for(let w = 0; w < WEEKS; w++){ const d = new Date(start + w * 7 * DAY + DAY / 2); months.push(w === 0 || d.getDate() <= 7 ? (d.getMonth() + 1) + '月' : ''); }
+  return `
+    <section class="mi-sec">
+      <h6>訓練日曆 · 最近 12 週</h6>
+      <div class="cal-sum"><span>本週練了 <b>${thisWeek}</b> 天</span><span>連續 <b>${streak}</b> 週有訓練</span><span>累計 <b>${Object.keys(counts).length}</b> 天</span></div>
+      <div class="cal">
+        <div class="cal-months" aria-hidden="true">${months.map(m=> `<span>${m}</span>`).join('')}</div>
+        <div class="cal-days" aria-hidden="true"><span>一</span><span></span><span>三</span><span></span><span>五</span><span></span><span>日</span></div>
+        <div class="cal-grid" role="img" aria-label="最近 12 週有 ${daysIn(start, today + DAY)} 天有訓練紀錄">${cells}</div>
+      </div>
+      <div class="cal-legend" aria-hidden="true"><span>少</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><span>多</span></div>
+    </section>`;
 }
 /* ---- 備份與還原：紀錄、成就、閃卡等進度都只存在這台裝置，可以下載成檔案再到別台裝置匯入（不含「我的頭」照片） ---- */
 const BACKUP_KEYS = ['muscle-log','muscle-plan','muscle-ex-filter','muscle-watched','muscle-badges','muscle-counters','muscle-visited','muscle-cards','muscle-quiz-kind','muscle-theme','muscle-shape','muscle-sound','muscle-labels'];
