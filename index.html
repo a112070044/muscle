@@ -672,6 +672,8 @@
   .heat-bars i b{display:block; height:100%; background:var(--scan); border-radius:3px;}
   .heat-bars small{font:500 12px var(--mono); color:var(--text-soft); text-align:right;}
   .rec-bars button{grid-template-columns:7.5em 1fr 5.6em;}
+  .plan-rec{margin:-4px 0 12px; font-size:13px; line-height:1.7; color:var(--text-soft);}
+  .plan-rec .link-btn{margin:0 0 0 6px;}
   .log-view{width:max-content; max-width:100%; margin:4px 0 14px;}
   .log-view + .heat-legend + .tip{margin-top:14px;}
   .log-list{list-style:none; display:grid; gap:2px;}
@@ -2790,7 +2792,7 @@ function recoveryMap(keyOf){
       const left = REC_H[r] - h;
       if(left <= 0) return;
       const o = out.get(k) || {f:0, eta:0};
-      o.f = Math.min(1, o.f + left / REC_H[r] * (r === 'p' ? 1 : 0.6)); o.eta = Math.max(o.eta, left);
+      o.f = Math.min(1, o.f + left / REC_H[r] * (r === 'p' ? 1 : 0.5)); o.eta = Math.max(o.eta, left);
       out.set(k, o);
     });
   });
@@ -3170,7 +3172,7 @@ function bindLogPanel(infoEl){
   });
 }
 
-/* ---- 今天練什麼：依目標部位、時間、器材產生課表，優先安排這週練得少的肌群 ---- */
+/* ---- 今天練什麼：依目標部位、時間、器材產生課表，優先安排這週練得少、而且已經恢復的肌群 ---- */
 const PLAN_FOCUS = {
   full:{zh:'全身', groups:['chest','lats','rhomboids','shoulders','quads','hamstrings','glutes','abs','biceps','triceps','calf','erector']},
   upper:{zh:'上半身', groups:['chest','lats','rhomboids','shoulders','biceps','triceps','traps']},
@@ -3197,6 +3199,7 @@ const saveMyPlan = ()=> lsSet('muscle-myplan', myPlan);
 function startPlanSession(list){ clearPlanTimer(); planSession = {list:list.slice(), i:0, set:0, done:0}; planAudio(); keepAwake(true); selectExercise(planSession.list[0]); }
 function buildPlan(){
   const F = PLAN_FOCUS[planPrefs.focus], n = PLAN_LEN[planPrefs.min], heat = heatByGroup(), covered = {}, picks = [];
+  const rec = recoveryMap(p=> p.id), fat = g=> rec.has(g) ? rec.get(g).f : 0;
   const pool = EXERCISE_LIB.filter(ex=> !planPrefs.bw || BODYWEIGHT.has(ex.id));
   for(let k = 0; k < n; k++){
     let best = null;
@@ -3204,8 +3207,8 @@ function buildPlan(){
       if(picks.includes(ex)) return;
       const pg = [...primaryGroups(ex)].filter(g=> F.groups.includes(g));
       if(!pg.length) return;
-      /* 這週練得少、這份課表還沒練到的肌群分數高；多關節動作優先；再加一點隨機，每次換一組都不太一樣 */
-      let score = pg.reduce((t, g)=> t + 1 / (1 + (heat[g] || 0) * 0.5) / (1 + (covered[g] || 0) * 1.5), 0);
+      /* 這週練得少、這份課表還沒練到、已經恢復的肌群分數高；多關節動作優先；再加一點隨機，每次換一組都不太一樣 */
+      let score = pg.reduce((t, g)=> t + (1 - 0.85 * fat(g)) / (1 + (heat[g] || 0) * 0.5) / (1 + (covered[g] || 0) * 1.5), 0);
       score *= (COMPOUND.has(ex.id) ? 1.25 : 1) * (0.75 + Math.random() * 0.5);
       if(!best || score > best[0]) best = [score, ex, pg];
     });
@@ -3219,7 +3222,8 @@ function buildPlan(){
     const st = STRETCH_DEMOS.find(x=> x.for.includes(g) && !stretches.includes(x));
     if(st && stretches.length < 2) stretches.push(st);
   });
-  currentPlan = {focus:planPrefs.focus, list:picks, stretches};
+  const tired = F.groups.filter(g=> fat(g) > 0.5);   /* 還明顯在恢復（大約一天內主要發力過）的肌群，課表上方會提醒 */
+  currentPlan = {focus:planPrefs.focus, list:picks, stretches, tired, mostlyTired:tired.length >= F.groups.length * 0.6};
   return currentPlan;
 }
 function savePlanPrefs(){ try{ localStorage.setItem('muscle-plan', JSON.stringify(planPrefs)); }catch(e){} }
@@ -3242,6 +3246,7 @@ function renderPlanPanel(){
     </section>
     <section class="mi-sec">
       <h3>課表 · ${PLAN_FOCUS[P.focus].zh} · ${P.list.length} 個動作</h3>
+      ${P.tired.length ? `<p class="plan-rec">${P.mostlyTired ? `${PLAN_FOCUS[P.focus].zh}的肌群大多還在恢復，可以換個部位，或今天休息、做些伸展。` : `已盡量避開還在恢復的肌群：${P.tired.map(g=> muscleData[g].name).join('、')}。`}<button class="link-btn" data-rec-view>看恢復狀態</button></p>` : ''}
       ${P.list.length ? `<ol class="plan-list">${P.list.map((ex, i)=> `<li><button data-plan-ex="${ex.id}"><span class="pi">${i + 1}</span><b>${ex.name}<small>${protocolCode(ex.id)}</small></b><em>${planDose(ex)}</em></button></li>`).join('')}</ol>
       ${P.list.length < PLAN_LEN[planPrefs.min] ? `<p class="proto-none">符合條件的動作只有 ${P.list.length} 個${planPrefs.bw ? '（徒手動作比較少，關掉「只用徒手」會有更多選擇）' : ''}。</p>` : ''}
       <p class="st-note">組間休息 60–90 秒；重量選最後兩下有點吃力、但姿勢不跑掉的程度。新手先從比較少的組數開始。</p>`
@@ -3260,6 +3265,7 @@ function bindPlanPanel(infoEl){
   const bw = infoEl.querySelector('#planBw'); if(bw) bw.addEventListener('change', ()=>{ planPrefs.bw = bw.checked; rerender(); });
   const snd = infoEl.querySelector('#planSound'); if(snd) snd.addEventListener('change', ()=>{ planSound = snd.checked; lsSet('muscle-sound', planSound); if(planSound){ planBeep('end'); } });
   const gen = infoEl.querySelector('#planGen'); if(gen) gen.addEventListener('click', ()=>{ buildPlan(); renderMovePanel(); });
+  const rv = infoEl.querySelector('[data-rec-view]'); if(rv) rv.addEventListener('click', ()=>{ logView = 'rec'; lsSet('muscle-log-view', logView); moveTab = 'log'; renderMovePanel(); });
   infoEl.querySelectorAll('[data-plan-ex]').forEach(b=> b.addEventListener('click', ()=> selectExercise(b.dataset.planEx)));
   const start = infoEl.querySelector('#planStart');
   if(start) start.addEventListener('click', ()=> startPlanSession(currentPlan.list.map(e=> e.id)));
