@@ -535,6 +535,10 @@
   .mdetail{display:grid; grid-template-columns:auto 1fr; gap:7px 14px; font-size:13.5px; line-height:1.65; margin:0;}
   .mdetail dt{font-size:12px; color:var(--text-faint); padding-top:2px; white-space:nowrap;}
   .mdetail dd{color:var(--text);}
+  .term{display:inline; margin:0; padding:0; border:none; background:none; font:inherit; color:inherit; line-height:inherit; cursor:help; text-decoration:underline dotted; text-decoration-color:var(--text-faint); text-decoration-thickness:1.5px; text-underline-offset:3px;}
+  .term:hover, .term[aria-expanded="true"]{text-decoration-color:var(--scan); text-decoration-style:solid;}
+  .term-pop{position:fixed; z-index:900; width:max-content; max-width:min(300px, calc(100vw - 24px)); padding:10px 13px; background:var(--panel-solid); border:1px solid var(--line-hi); border-radius:8px; box-shadow:var(--shadow); font-size:13px; line-height:1.7; color:var(--text-soft);}
+  .term-pop b{display:block; margin-bottom:2px; font-size:13.5px; color:var(--text);}
   /* 依神經瀏覽 */
   .nowrap{white-space:nowrap;}
   .nv-row{display:flex; flex-wrap:wrap; gap:6px;}
@@ -4740,6 +4744,88 @@ function setConsoleView(view){
   });
 }
 
+/* ---- 解剖名詞小辭典：起點、止點、作用裡的專有名詞加上虛線，點一下看白話解釋 ---- */
+const GLOSSARY = {
+  '內側':'靠近身體中線的那一側。', '外側':'離身體中線比較遠的那一側。',
+  '遠端':'四肢上離軀幹比較遠的那一端，例如手、腳那頭。',
+  '屈曲':'關節彎起來、兩端骨頭的夾角變小，例如彎手肘。', '伸展':'和屈曲相反，把關節打直、夾角變大（這裡指關節動作，不是拉筋）。',
+  '外展':'肢體往外、離開身體中線，例如手臂往側邊舉。', '內收':'肢體往內、靠近身體中線，例如側舉的手臂放下夾回身體。',
+  '內旋':'沿著骨頭的長軸往身體內側轉。', '外旋':'沿著骨頭的長軸往身體外側轉。',
+  '旋前':'前臂轉動讓掌心朝下。', '旋後':'前臂轉動讓掌心朝上，像轉開瓶蓋的動作。',
+  '背屈':'腳背往小腿的方向勾起來。', '蹠屈':'腳尖往下踩，也就是踮腳尖的方向。',
+  '內翻':'腳掌往內翻，腳底朝向另一隻腳。', '外翻':'腳掌往外翻，腳底朝外。',
+  '上提':'往上抬，例如聳肩時肩胛骨上提。', '下壓':'往下拉，和上提相反。',
+  '水平內收':'手臂抬到肩膀高度時往身體前方合攏，像夾胸、擁抱。', '水平外展':'手臂抬到肩膀高度時往後打開，像反向飛鳥。',
+  '肌腱':'把肌肉接到骨頭上的堅韌纖維索。', '腱膜':'扁平、片狀的肌腱，像一層膜把肌肉接到骨頭或其他構造上。',
+  '韌帶':'連接骨頭和骨頭的纖維組織，負責穩定關節。', '筋膜':'包覆肌肉、把各種構造連在一起的結締組織膜。',
+  '粗隆':'骨頭表面粗糙、隆起的一塊，常是肌腱附著的地方。', '結節':'骨頭上的小隆起，常是肌肉或韌帶附著的地方。',
+  '轉子':'股骨上端的大突起，例如臀部外側摸得到的大轉子，很多髖部肌肉接在這裡。',
+  '髁':'骨頭末端圓圓的關節面突起，例如股骨髁。', '上髁':'髁上方的小突起；前臂很多肌肉從肱骨的內、外上髁出發。',
+  '棘突':'脊椎骨往後突出的部分，背中間摸到一顆一顆的就是。', '橫突':'脊椎骨往左右兩側伸出的突起。',
+  '嵴':'骨頭上長條、隆起的邊緣，例如髂嵴就是骨盆的上緣。', '支持帶':'手腕、腳踝處像束帶的筋膜，把肌腱固定在原位。',
+  '腱鞘':'包住肌腱的管狀套子，裡面有潤滑液，讓肌腱滑得順。', '骨間膜':'連接前臂兩根骨（橈骨、尺骨）或小腿兩根骨（脛骨、腓骨）的薄膜。',
+  '白線':'腹部正中央、由兩側腹肌腱膜交織成的直條纖維帶。', '項韌帶':'後頸正中的強韌韌帶，從枕骨延伸到頸椎的棘突。',
+  '胸腰筋膜':'下背部一大片厚筋膜，背闊肌等肌肉附著在上面。', '髂脛束':'大腿外側一條很長的厚筋膜帶，從骨盆延伸到脛骨外側。',
+  '鵝足':'縫匠肌、股薄肌、半腱肌三條肌腱在脛骨內側上端的共同附著處。', '跟腱':'小腿後側肌肉接到跟骨的肌腱，人體最粗壯的肌腱。',
+  '喙突':'肩胛骨往前突出、像鳥嘴的突起，胸小肌和肱二頭肌短頭附著在這裡。', '鷹嘴':'尺骨上端的突起，就是手肘尖。',
+  '肩峰':'肩胛骨最外上方的骨突，肩膀最高點摸到的就是。', '乳突':'耳朵後下方、顳骨往下的突起。'
+};
+const GLOSS_RE = new RegExp(Object.keys(GLOSSARY).sort((a, b)=> b.length - a.length).join('|'), 'g');
+/* 每個名詞只標第一次出現；後面接著「肌」「長」「拇」等字的是肌肉名稱（像內收長肌），不標 */
+function glossify(root){
+  hideTerm();
+  const used = new Set();
+  root.querySelectorAll('.mdetail.anat dd').forEach(dd=>{
+    const walker = document.createTreeWalker(dd, NodeFilter.SHOW_TEXT), nodes = [];
+    while(walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node=>{
+      if(node.parentElement.closest('button')) return;
+      const text = node.nodeValue;
+      let last = 0, m, frag = null;
+      GLOSS_RE.lastIndex = 0;
+      while((m = GLOSS_RE.exec(text))){
+        const t = m[0];
+        if(used.has(t) || /^[肌長短大小拇趾指]/.test(text.slice(m.index + t.length))) continue;
+        used.add(t);
+        frag = frag || document.createDocumentFragment();
+        frag.append(text.slice(last, m.index));
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'term'; b.dataset.term = t; b.textContent = t; b.setAttribute('aria-expanded', 'false');
+        frag.append(b);
+        last = m.index + t.length;
+      }
+      if(frag){ frag.append(text.slice(last)); node.replaceWith(frag); }
+    });
+  });
+}
+let termPop = null;
+function hideTerm(){
+  if(!termPop) return;
+  termPop.remove(); termPop = null;
+  document.querySelectorAll('.term[aria-expanded="true"]').forEach(b=>{ b.setAttribute('aria-expanded', 'false'); b.removeAttribute('aria-describedby'); });
+}
+function showTerm(btn){
+  hideTerm();
+  const t = btn.dataset.term;
+  termPop = document.createElement('div');
+  termPop.className = 'term-pop'; termPop.id = 'termPop'; termPop.setAttribute('role', 'tooltip');
+  termPop.innerHTML = `<b>${t}</b>${GLOSSARY[t]}`;
+  document.body.appendChild(termPop);
+  btn.setAttribute('aria-expanded', 'true'); btn.setAttribute('aria-describedby', 'termPop');
+  /* 放在名詞下方，超出畫面就改放上方，左右夾在畫面內 */
+  const r = btn.getBoundingClientRect(), w = termPop.offsetWidth, h = termPop.offsetHeight;
+  const x = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2));
+  const y = r.bottom + 8 + h > innerHeight - 8 ? r.top - h - 8 : r.bottom + 8;
+  termPop.style.left = x + 'px'; termPop.style.top = Math.max(8, y) + 'px';
+}
+document.addEventListener('click', e=>{
+  const b = e.target.closest && e.target.closest('.term');
+  if(b){ if(b.getAttribute('aria-expanded') === 'true') hideTerm(); else showTerm(b); return; }
+  if(termPop && !e.target.closest('.term-pop')) hideTerm();
+});
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && termPop){ hideTerm(); e.stopPropagation(); } }, true);   /* 先關說明框，不要同時離開專注檢視 */
+addEventListener('resize', hideTerm);
+document.addEventListener('scroll', hideTerm, true);
 function renderMuscleInfo(id){
   const d = muscleData[id];
   const infoEl = document.getElementById('muscleInfo');
@@ -4794,7 +4880,7 @@ function renderMuscleInfo(id){
   const detailHtml = det ? `
     <section class="mi-sec">
       <h3>這條肌肉</h3>
-      <dl class="mdetail"><dt>起點</dt><dd>${det[0]}</dd><dt>止點</dt><dd>${det[1]}</dd><dt>神經</dt><dd>${det[2]}${detNerves.length ? `<span class="nv-row nv-inline">${detNerves.map(n=> nerveChip(n)).join('')}</span>` : ''}</dd><dt>作用</dt><dd>${det[3]}</dd></dl>
+      <dl class="mdetail anat"><dt>起點</dt><dd>${det[0]}</dd><dt>止點</dt><dd>${det[1]}</dd><dt>神經</dt><dd>${det[2]}${detNerves.length ? `<span class="nv-row nv-inline">${detNerves.map(n=> nerveChip(n)).join('')}</span>` : ''}</dd><dt>作用</dt><dd>${det[3]}</dd></dl>
     </section>
     <h3 class="mi-sec-label">整個${d.name}</h3>` : '';
   infoEl.innerHTML = `
@@ -4840,6 +4926,7 @@ function renderMuscleInfo(id){
       <button class="link-btn" id="factReroll">換一個</button>
     </section>
   `;
+  glossify(infoEl);
   infoEl.classList.remove('refresh'); void infoEl.offsetWidth; infoEl.classList.add('refresh');
   infoEl.scrollTop = 0;
   infoEl.querySelectorAll('[data-proto]').forEach(b=> b.addEventListener('click', ()=>{ setMode('move'); selectExercise(b.dataset.proto); }));
@@ -5404,7 +5491,7 @@ function renderCard(){
           <span class="mi-region">${m.code} · ${g.name}</span>
           <h3>${m.zh}</h3>
           <span class="en">${m.en}</span>
-          <dl class="mdetail"><dt>起點</dt><dd>${det[0]}</dd><dt>止點</dt><dd>${det[1]}</dd><dt>神經</dt><dd>${det[2]}</dd><dt>作用</dt><dd>${det[3]}</dd></dl>`
+          <dl class="mdetail anat"><dt>起點</dt><dd>${det[0]}</dd><dt>止點</dt><dd>${det[1]}</dd><dt>神經</dt><dd>${det[2]}</dd><dt>作用</dt><dd>${det[3]}</dd></dl>`
         : `
           <span class="mi-region">${g.name} · ${categoryLabels[g.category]}</span>
           <div class="fc-q">亮起來的是哪條肌肉？</div>
@@ -5419,6 +5506,7 @@ function renderCard(){
         <button class="link-btn" id="cardOpen">在標本檔案打開這條肌肉</button>`
       : `<button class="quiz-next-btn fc-flip" id="cardFlip">翻面看答案</button>`}
     </div>`;
+  glossify(el);
   bindQuizKind(el);
   el.querySelectorAll('[data-scope]').forEach(b=> b.addEventListener('click', ()=>{
     if(cardScope === b.dataset.scope) return;
