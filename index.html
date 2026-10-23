@@ -526,7 +526,7 @@
   @media (pointer: coarse){
     .ghost-btn{min-height:44px; min-width:44px; padding:0 12px;}
     .seg button{min-width:44px;}
-    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .log-list button, .quiz-options button, .plan-list button, .mi-tools button, .daily-acts button, .unhide-btn, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn, .nv-chip, .nv-grp button, .fc-scope button, .fc-rate button, .quiz-kind button, .ex-scrub input, .log-in input{min-height:44px;}
+    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .pb-list button, .log-list button, .quiz-options button, .plan-list button, .mi-tools button, .daily-acts button, .unhide-btn, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn, .nv-chip, .nv-grp button, .fc-scope button, .fc-rate button, .quiz-kind button, .ex-scrub input, .log-in input{min-height:44px;}
     .rail-search input{height:44px; font-size:16px;}
   }
   @media (max-width:760px){ .leader, .leader-label{display:none;} }
@@ -675,6 +675,12 @@
   .log-list li{display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
   .log-list time{font:400 11.5px var(--mono); color:var(--text-faint);}
   .log-list li small{margin-left:8px; font:500 12px var(--mono); color:var(--text-soft);}
+  .log-list .pr{margin-left:6px; padding:1px 5px; border-radius:4px; background:var(--sel); color:var(--scan); font:600 10.5px var(--mono); font-style:normal; letter-spacing:.04em;}
+  .pb-list{display:grid; gap:2px;}
+  .pb-list button{display:grid; grid-template-columns:1fr auto; grid-template-rows:auto auto; column-gap:10px; align-items:center; padding:7px 8px; border:none; border-bottom:1px solid var(--line); border-radius:0; background:none; color:var(--text); font:inherit; font-size:13.5px; text-align:left; cursor:pointer;}
+  .pb-list button:hover{background:var(--hover);}
+  .pb-list b{grid-row:1 / 3; grid-column:2; font:600 13px var(--mono);}
+  .pb-list small{font:400 11.5px var(--mono); color:var(--text-faint);}
   .log-in{display:flex; align-items:center; gap:6px; flex-basis:100%;}
   .log-in label{display:flex; align-items:center; gap:5px; font-size:12.5px; color:var(--text-faint);}
   .log-in input{width:76px; padding:7px 9px; border:1px solid var(--line-hi); border-radius:8px; background:var(--seg-bg); color:var(--text); font:500 14px var(--mono); -moz-appearance:textfield;}
@@ -2714,12 +2720,32 @@ function fmtSet(e){
   if(e.r) return e.r + unit;
   return '';
 }
+/* 估計 1RM（Epley：重量 ×（1 + 次數 ÷ 30）），次數超過 15 下就不準了，所以封頂 */
+const e1rm = e=> e.w && e.r && !isHold(e.id) ? Math.round(e.w * (1 + Math.min(e.r, 15) / 30) * 2) / 2 : 0;
+/* 比較兩組的分數：有負重一定勝過徒手；負重比估計 1RM（沒填次數就比重量），徒手比次數，撐住的動作比秒數 */
+function setScore(e){
+  if(isHold(e.id)) return (e.w || 0) * 1e4 + (e.r || 0);
+  if(e.w) return 1e4 + (e1rm(e) || e.w);
+  return e.r || 0;
+}
+const bestSet = list=> list.reduce((b, e)=> setScore(e) > setScore(b) ? e : b, list[0]);
+/* 破紀錄的那幾筆：分數比同一個動作之前所有紀錄都高（第一次記錄不算） */
+function prEntries(){
+  const top = {}, out = new Set();
+  trainLog.forEach(e=>{
+    if(!e.w && !e.r) return;
+    const v = setScore(e);
+    if(e.id in top && v > top[e.id]) out.add(e);
+    if(!(e.id in top) || v > top[e.id]) top[e.id] = v;
+  });
+  return out;
+}
 /* 上次、最佳與重量趨勢（最近 12 筆有填重量的紀錄） */
 function setHistoryHTML(id){
   const all = trainLog.filter(e=> e.id === id && (e.w || e.r));
   if(!all.length) return '';
   const last = all[all.length - 1], hold = isHold(id);
-  const best = all.reduce((b, e)=> (e.w || 0) > (b.w || 0) || ((e.w || 0) === (b.w || 0) && (e.r || 0) > (b.r || 0)) ? e : b, all[0]);
+  const best = bestSet(all);
   const ws = all.filter(e=> e.w).slice(-12).map(e=> e.w);
   let spark = '';
   if(ws.length >= 2){
@@ -2727,7 +2753,7 @@ function setHistoryHTML(id){
     const pts = ws.map((v, i)=> (i / (ws.length - 1) * (W - 6) + 3).toFixed(1) + ',' + y(v).toFixed(1));
     spark = `<svg class="spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="重量趨勢：從 ${ws[0]} 到 ${ws[ws.length - 1]} 公斤"><polyline points="${pts.join(' ')}"/><circle cx="${pts[pts.length - 1].split(',')[0]}" cy="${pts[pts.length - 1].split(',')[1]}" r="2.6"/></svg>`;
   }
-  return `<div class="log-last"><span>上次 <b>${fmtSet(last)}</b> · ${relTime(last.t)}</span>${all.length > 1 ? `<span>最佳 <b>${fmtSet(best)}</b></span>` : ''}${spark}</div>`;
+  return `<div class="log-last"><span>上次 <b>${fmtSet(last)}</b> · ${relTime(last.t)}</span>${all.length > 1 ? `<span>最佳 <b>${fmtSet(best)}</b></span>` : ''}${e1rm(best) ? `<span title="用最佳那組的重量和次數推算，只能當參考">估計 1RM <b>${e1rm(best)} kg</b></span>` : ''}${spark}</div>`;
 }
 /* 每一筆紀錄：主要發力的肌肉 +1，輔助穩定 +0.5 */
 function heatByPart(){
@@ -2816,7 +2842,7 @@ function renderLogPanel(infoEl){
   const max = ranked.length ? ranked[0][1] : 1, fmt = v=> (Math.round(v * 10) / 10).toString();
   const missing = MAJOR_GROUPS.filter(id=> !g[id]);
   const suggest = missing.map(id=> ({id, ex:EXERCISE_LIB.find(ex=> protocolRole(ex, id, null) === 'p')})).filter(x=> x.ex);
-  const recent = trainLog.slice(-12).reverse();
+  const recent = trainLog.slice(-12).reverse(), prs = prEntries();
   return (week.length ? `
     <div class="log-sum"><b>${week.length}</b> 次訓練 · <b>${ranked.length}</b> 個肌群 <span>最近 7 天</span></div>
     <div class="heat-legend" aria-hidden="true"><span>少</span><i></i><span>多</span></div>
@@ -2831,10 +2857,23 @@ function renderLogPanel(infoEl){
     </section>` : '<p class="tip">這週主要肌群都練到了，記得安排休息日讓肌肉恢復。</p>'}
     <section class="mi-sec">
       <h3>最近的紀錄</h3>
-      <ul class="log-list">${recent.map(e=> { const ex = EXERCISE_LIB.find(x=> x.id === e.id); return `<li><span>${ex.name}${fmtSet(e) ? `<small>${fmtSet(e)}</small>` : ''}</span><time>${relTime(e.t)}</time><button data-del="${e.t}" aria-label="刪除這筆紀錄">×</button></li>`; }).join('')}</ul>
+      <ul class="log-list">${recent.map(e=> { const ex = EXERCISE_LIB.find(x=> x.id === e.id); return `<li><span>${ex.name}${fmtSet(e) ? `<small>${fmtSet(e)}</small>` : ''}${prs.has(e) ? '<em class="pr" title="這次刷新了個人最佳">PR</em>' : ''}</span><time>${relTime(e.t)}</time><button data-del="${e.t}" aria-label="刪除這筆紀錄">×</button></li>`; }).join('')}</ul>
       <button class="link-btn" id="logClear">清除全部紀錄</button>
     </section>` : `
-    <div class="log-empty">還沒有紀錄。到「訓練」選一個動作，按「＋ 記錄一次」，這裡就會出現本週的訓練熱圖。</div>`) + calendarHTML() + badgesHTML() + backupHTML();
+    <div class="log-empty">還沒有紀錄。到「訓練」選一個動作，按「＋ 記錄一次」，這裡就會出現本週的訓練熱圖。</div>`) + bestsHTML() + calendarHTML() + badgesHTML() + backupHTML();
+}
+/* ---- 個人最佳：每個填過數字的動作各取最好的一組，最近練過的排前面 ---- */
+function bestsHTML(){
+  const by = {};
+  trainLog.forEach(e=>{ if(e.w || e.r) (by[e.id] = by[e.id] || []).push(e); });
+  const rows = Object.entries(by).map(([id, list])=> ({id, best:bestSet(list), last:list[list.length - 1].t})).sort((a, b)=> b.last - a.last).slice(0, 10);
+  if(!rows.length) return '';
+  const md = t=> { const d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate(); };
+  return `
+    <section class="mi-sec">
+      <h3>個人最佳</h3>
+      <div class="pb-list">${rows.map(({id, best})=> `<button data-proto="${id}"><span>${EXERCISE_LIB.find(x=> x.id === id).name}</span><b>${fmtSet(best)}</b><small>${e1rm(best) ? '1RM≈' + e1rm(best) + ' · ' : ''}${md(best.t)}</small></button>`).join('')}</div>
+    </section>`;
 }
 /* ---- 訓練日曆：最近 12 週每天練了幾次（像打卡月曆），加上本週天數與連續有練的週數 ---- */
 function calendarHTML(){
@@ -3416,12 +3455,13 @@ function selectExercise(id, keepView){
     const entry = {id:ex.id, t:Date.now()}, w = num(wIn, 500), r = Math.round(num(rIn, isHold(ex.id) ? 600 : 100));
     if(w) entry.w = w;
     if(r) entry.r = r;
+    const before = trainLog.filter(e=> e.id === ex.id && (e.w || e.r)), pr = (w || r) && before.length && setScore(entry) > setScore(bestSet(before));
     trainLog.push(entry); saveLog(); checkBadges();
     const n = weekCount(ex.id);
     slot.querySelector('[data-log-count]').textContent = n;
     slot.querySelector('[data-log-hist]').innerHTML = setHistoryHTML(ex.id);
     logBtn.classList.remove('done'); void logBtn.offsetWidth; logBtn.classList.add('done');
-    showToast('已記錄：' + ex.name + (fmtSet(entry) ? ' ' + fmtSet(entry) : '') + '（本週第 ' + n + ' 次）');
+    showToast(pr ? '新的個人紀錄！' + ex.name + ' ' + fmtSet(entry) + (e1rm(entry) ? '，估計 1RM ' + e1rm(entry) + ' kg' : '') : '已記錄：' + ex.name + (fmtSet(entry) ? ' ' + fmtSet(entry) : '') + '（本週第 ' + n + ' 次）');
   });
   const mpBtn = slot.querySelector('[data-myplan]');
   if(mpBtn) mpBtn.addEventListener('click', ()=>{
