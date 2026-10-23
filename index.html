@@ -526,7 +526,7 @@
   @media (pointer: coarse){
     .ghost-btn{min-height:44px; min-width:44px; padding:0 12px;}
     .seg button{min-width:44px;}
-    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .pb-list button, .log-list button, .quiz-options button, .plan-list button, .mi-tools button, .daily-acts button, .unhide-btn, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn, .nv-chip, .nv-grp button, .fc-scope button, .fc-rate button, .quiz-kind button, .ex-scrub input, .log-in input{min-height:44px;}
+    .seg button, .mode-switch button, .legend button, .chip-row button, .ex-grid button, .sp-presets button, .fp-btn, .ask-row button, .quick-asks button, .proto-list button, .speed button, .move-tabs button, .st-top button, .log-btn, .heat-bars button, .pb-list button, .log-list button, .quiz-options button, .plan-list button, .mi-tools button, .daily-acts button, .unhide-btn, .plan-start, .plan-reroll, .plan-bar > button, .search-results button, .hint-btn, .quiz-next-btn, .quiz-restart-btn, .nv-chip, .nv-grp button, .fc-scope button, .fc-rate button, .quiz-kind button, .log-view button, .ex-scrub input, .log-in input{min-height:44px;}
     .rail-search input{height:44px; font-size:16px;}
   }
   @media (max-width:760px){ .leader, .leader-label{display:none;} }
@@ -671,6 +671,9 @@
   .heat-bars i{height:6px; border-radius:3px; background:var(--seg-bg); overflow:hidden;}
   .heat-bars i b{display:block; height:100%; background:var(--scan); border-radius:3px;}
   .heat-bars small{font:500 12px var(--mono); color:var(--text-soft); text-align:right;}
+  .rec-bars button{grid-template-columns:7.5em 1fr 5.6em;}
+  .log-view{width:max-content; max-width:100%; margin:4px 0 14px;}
+  .log-view + .heat-legend + .tip{margin-top:14px;}
   .log-list{list-style:none; display:grid; gap:2px;}
   .log-list li{display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
   .log-list time{font:400 11.5px var(--mono); color:var(--text-faint);}
@@ -2773,8 +2776,29 @@ function heatByGroup(){
   });
   return g;
 }
+/* ---- 恢復狀態：主要發力的肌群約 48 小時恢復，輔助穩定約 24 小時（粗估，實際還要看強度、睡眠和個人狀況） ---- */
+const REC_H = {p:48, s:24};
+/* 回傳 key → {f: 疲勞 0–1, eta: 還要幾小時恢復}；keyOf 決定用單條肌肉還是整個肌群當 key */
+function recoveryMap(keyOf){
+  const now = Date.now(), out = new Map();
+  trainLog.forEach(e=>{
+    const h = (now - e.t) / 36e5;
+    if(h < 0 || h >= REC_H.p) return;
+    const ex = EXERCISE_LIB.find(x=> x.id === e.id), roles = new Map();
+    clickableParts.forEach(p=>{ const r = exerciseRole(p, ex), k = keyOf(p); if((r === 'p' || r === 's') && roles.get(k) !== 'p') roles.set(k, r); });
+    roles.forEach((r, k)=>{
+      const left = REC_H[r] - h;
+      if(left <= 0) return;
+      const o = out.get(k) || {f:0, eta:0};
+      o.f = Math.min(1, o.f + left / REC_H[r] * (r === 'p' ? 1 : 0.6)); o.eta = Math.max(o.eta, left);
+      out.set(k, o);
+    });
+  });
+  return out;
+}
 function paintHeat(){
-  const heat = heatByPart(), top = Math.max(3, ...heat.values()), A = new THREE.Color(TH.accent);
+  const rec = logView === 'rec';
+  const heat = rec ? new Map([...recoveryMap(p=> p)].map(([p, o])=> [p, o.f])) : heatByPart(), top = rec ? 1 : Math.max(3, ...heat.values()), A = new THREE.Color(TH.accent);
   glowParts = [];
   setBulgeParts(null);
   clickableParts.forEach(p=>{
@@ -2795,6 +2819,7 @@ function relTime(t){
 /* ---- 成就徽章：探索、觀看示範、訓練紀錄、課表、測驗；全部只存在這台裝置 ---- */
 const lsGet = (k, d)=>{ try{ const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; }catch(e){ return d; } };
 const lsSet = (k, v)=>{ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
+let logView = lsGet('muscle-log-view', 'heat') === 'rec' ? 'rec' : 'heat';   /* 紀錄分頁的模型：本週訓練量或恢復狀態 */
 let watched = new Set(lsGet('muscle-watched', []));
 let badgeEarned = lsGet('muscle-badges', {});
 const counters = lsGet('muscle-counters', {plans:0, quizPerfect:0});
@@ -2842,10 +2867,12 @@ function renderLogPanel(infoEl){
   const max = ranked.length ? ranked[0][1] : 1, fmt = v=> (Math.round(v * 10) / 10).toString();
   const missing = MAJOR_GROUPS.filter(id=> !g[id]);
   const suggest = missing.map(id=> ({id, ex:EXERCISE_LIB.find(ex=> protocolRole(ex, id, null) === 'p')})).filter(x=> x.ex);
-  const recent = trainLog.slice(-12).reverse(), prs = prEntries();
+  const recent = trainLog.slice(-12).reverse(), prs = prEntries(), rec = logView === 'rec';
+  const viewSeg = `<div class="seg log-view" role="group" aria-label="模型顯示">${[['heat', '本週訓練量'], ['rec', '恢復狀態']].map(([k, label])=> `<button data-lv="${k}" aria-pressed="${logView === k}">${label}</button>`).join('')}</div>`;
   return (week.length ? `
     <div class="log-sum"><b>${week.length}</b> 次訓練 · <b>${ranked.length}</b> 個肌群 <span>最近 7 天</span></div>
-    <div class="heat-legend" aria-hidden="true"><span>少</span><i></i><span>多</span></div>
+    ${viewSeg}
+    ${rec ? recoveryHTML() : `<div class="heat-legend" aria-hidden="true"><span>少</span><i></i><span>多</span></div>
     <div class="plan-actions"><button class="plan-reroll" id="heatShare">分享熱圖圖片</button></div>
     <section class="mi-sec">
       <h3>練最多的部位</h3>
@@ -2854,13 +2881,30 @@ function renderLogPanel(infoEl){
     ${missing.length ? `<section class="mi-sec">
       <h3>這週還沒練到</h3>
       <div class="proto-list">${suggest.map(({id, ex})=> `<button data-proto="${ex.id}"><span class="pc">${muscleData[id].name}</span><b>${ex.name}</b><small>${protocolCode(ex.id)}</small></button>`).join('')}</div>
-    </section>` : '<p class="tip">這週主要肌群都練到了，記得安排休息日讓肌肉恢復。</p>'}
+    </section>` : '<p class="tip">這週主要肌群都練到了，記得安排休息日讓肌肉恢復。</p>'}`}
     <section class="mi-sec">
       <h3>最近的紀錄</h3>
       <ul class="log-list">${recent.map(e=> { const ex = EXERCISE_LIB.find(x=> x.id === e.id); return `<li><span>${ex.name}${fmtSet(e) ? `<small>${fmtSet(e)}</small>` : ''}${prs.has(e) ? '<em class="pr" title="這次刷新了個人最佳">PR</em>' : ''}</span><time>${relTime(e.t)}</time><button data-del="${e.t}" aria-label="刪除這筆紀錄">×</button></li>`; }).join('')}</ul>
       <button class="link-btn" id="logClear">清除全部紀錄</button>
     </section>` : `
     <div class="log-empty">還沒有紀錄。到「訓練」選一個動作，按「＋ 記錄一次」，這裡就會出現本週的訓練熱圖。</div>`) + bestsHTML() + calendarHTML() + badgesHTML() + backupHTML();
+}
+/* 恢復狀態的清單：還在恢復的肌群（含預估時間），和已經恢復、可以練的主要肌群 */
+function recoveryHTML(){
+  const rg = [...recoveryMap(p=> p.id)].sort((a, b)=> b[1].f - a[1].f);
+  const eta = h=> h < 1 ? '不到 1 小時' : '約 ' + Math.ceil(h) + ' 小時';
+  const ready = MAJOR_GROUPS.filter(id=> !rg.some(([k])=> k === id)).map(id=> ({id, ex:EXERCISE_LIB.find(ex=> protocolRole(ex, id, null) === 'p')})).filter(x=> x.ex);
+  return `
+    <div class="heat-legend" aria-hidden="true"><span>已恢復</span><i></i><span>剛練完</span></div>
+    <p class="tip">依最近 48 小時的紀錄粗估：主要發力的肌群大約 48 小時恢復，輔助穩定大約 24 小時。實際還要看強度、睡眠和個人狀況，還痠痛就多休息。</p>
+    ${rg.length ? `<section class="mi-sec">
+      <h3>還在恢復</h3>
+      <div class="heat-bars rec-bars">${rg.map(([id, o])=> `<button data-heat-go="${id}"><span>${muscleData[id].name}</span><i><b style="width:${Math.max(4, o.f * 100).toFixed(0)}%"></b></i><small>${eta(o.eta)}</small></button>`).join('')}</div>
+    </section>` : '<p class="tip">最近 48 小時沒有訓練紀錄，全身都恢復好了。</p>'}
+    ${ready.length ? `<section class="mi-sec">
+      <h3>恢復好了，可以練</h3>
+      <div class="proto-list">${ready.map(({id, ex})=> `<button data-proto="${ex.id}"><span class="pc">${muscleData[id].name}</span><b>${ex.name}</b><small>${protocolCode(ex.id)}</small></button>`).join('')}</div>
+    </section>` : '<p class="tip">主要肌群都還在恢復，今天適合休息，或到「伸展」做些放鬆。</p>'}`;
 }
 /* ---- 個人最佳：每個填過數字的動作各取最好的一組，最近練過的排前面 ---- */
 function bestsHTML(){
@@ -2909,7 +2953,7 @@ function calendarHTML(){
     </section>`;
 }
 /* ---- 備份與還原：紀錄、成就、閃卡等進度都只存在這台裝置，可以下載成檔案再到別台裝置匯入（不含「我的頭」照片） ---- */
-const BACKUP_KEYS = ['muscle-log','muscle-plan','muscle-myplan','muscle-ex-filter','muscle-watched','muscle-badges','muscle-counters','muscle-visited','muscle-cards','muscle-quiz-kind','muscle-theme','muscle-shape','muscle-sound','muscle-labels','muscle-labels-m'];
+const BACKUP_KEYS = ['muscle-log','muscle-plan','muscle-myplan','muscle-ex-filter','muscle-watched','muscle-badges','muscle-counters','muscle-visited','muscle-cards','muscle-quiz-kind','muscle-theme','muscle-shape','muscle-sound','muscle-labels','muscle-labels-m','muscle-log-view'];
 const backupHTML = ()=> `
     <section class="mi-sec">
       <h3>備份與還原</h3>
@@ -3104,6 +3148,10 @@ async function shareHeatCard(btn){
   finally{ if(btn){ btn.disabled = false; btn.textContent = '分享熱圖圖片'; } }
 }
 function bindLogPanel(infoEl){
+  infoEl.querySelectorAll('[data-lv]').forEach(b=> b.addEventListener('click', ()=>{
+    if(b.dataset.lv === logView) return;
+    logView = b.dataset.lv; lsSet('muscle-log-view', logView); renderMovePanel(true);
+  }));
   const hs = infoEl.querySelector('#heatShare'); if(hs) hs.addEventListener('click', ()=> shareHeatCard(hs));
   const bf = infoEl.querySelector('#backupFile');
   infoEl.querySelector('#backupSave').addEventListener('click', saveBackup);
@@ -3348,9 +3396,9 @@ function renderMovePanel(noSelect){
     poseAnim.def = null; poseAnim.playing = false;
     infoEl.innerHTML = `
       <span class="mi-region">動作連動</span>
-      <h2>本週訓練熱圖</h2>
+      <h2>${logView === 'rec' && weekLog().length ? '肌肉恢復狀態' : '本週訓練熱圖'}</h2>
       ${tabs}
-      <p class="func">在訓練動作裡按「記錄一次」，模型會依最近 7 天的訓練量替肌肉染色，越紅代表練得越多（主要發力算 1、輔助穩定算 0.5）。紀錄只存在這台裝置。</p>
+      <p class="func">${logView === 'rec' && weekLog().length ? '模型依最近的訓練紀錄估計每塊肌肉還要多久恢復，越紅代表越需要休息。' : '在訓練動作裡按「記錄一次」，模型會依最近 7 天的訓練量替肌肉染色，越紅代表練得越多（主要發力算 1、輔助穩定算 0.5）。'}紀錄只存在這台裝置。</p>
       ${renderLogPanel(infoEl)}`;
     infoEl.classList.remove('refresh'); void infoEl.offsetWidth; infoEl.classList.add('refresh');
     infoEl.scrollTop = 0;
