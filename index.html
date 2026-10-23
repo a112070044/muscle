@@ -2712,7 +2712,7 @@ function exerciseLabel(item){
 const LOG_KEY = 'muscle-log', WEEK_MS = 7 * 864e5;
 let trainLog = [];
 try{ trainLog = (JSON.parse(localStorage.getItem(LOG_KEY) || '[]') || []).filter(e=> e && typeof e.t === 'number' && EXERCISE_LIB.some(x=> x.id === e.id))
-  .map(e=> Object.assign({id:e.id, t:e.t}, +e.w > 0 ? {w:+e.w} : {}, +e.r > 0 ? {r:+e.r} : {})); }catch(e){ trainLog = []; }   /* 只留下需要的欄位，重量、次數必須是正數 */
+  .map(e=> Object.assign({id:e.id, t:e.t}, +e.w > 0 ? {w:+e.w} : {}, +e.r > 0 ? {r:+e.r} : {})).sort((a, b)=> a.t - b.t); }catch(e){ trainLog = []; }   /* 只留下需要的欄位，重量、次數必須是正數；依時間排好，破紀錄和「上次」才判斷得對 */
 function saveLog(){ try{ localStorage.setItem(LOG_KEY, JSON.stringify(trainLog.slice(-500))); }catch(e){} }
 const weekLog = ()=> trainLog.filter(e=> Date.now() - e.t < WEEK_MS);
 const weekCount = id=> weekLog().filter(e=> e.id === id).length;
@@ -2960,17 +2960,33 @@ const backupHTML = ()=> `
     <section class="mi-sec">
       <h3>備份與還原</h3>
       <p class="st-note">訓練紀錄、成就和閃卡進度都只存在這台裝置的瀏覽器。換手機或清除瀏覽器資料前，先下載一份備份檔，之後在任何裝置匯入就能還原。</p>
-      <div class="plan-actions"><button class="plan-reroll" id="backupSave">下載備份檔</button><button class="plan-reroll" id="backupLoad">匯入備份檔</button><input type="file" id="backupFile" accept=".json,application/json" hidden></div>
+      <div class="plan-actions"><button class="plan-reroll" id="backupSave">下載備份檔</button><button class="plan-reroll" id="backupLoad">匯入備份檔</button><input type="file" id="backupFile" accept=".json,application/json" hidden>${trainLog.length ? '<button class="plan-reroll" id="logCsv">匯出紀錄 CSV</button>' : ''}</div>
+      ${trainLog.length ? '<p class="st-note">CSV 可以用 Excel、Numbers 或 Google 試算表打開，自己畫圖或做統計。</p>' : ''}
     </section>`;
+const pad2 = n=> String(n).padStart(2, '0');
+const dateStamp = d=> d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());
+function downloadBlob(blob, name){
+  const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 4000);
+}
 function saveBackup(){
   const data = {};
   BACKUP_KEYS.forEach(k=>{ try{ const v = localStorage.getItem(k); if(v != null) data[k] = v; }catch(e){} });
-  const d = new Date(), stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
-  const url = URL.createObjectURL(new Blob([JSON.stringify({app:'muscle-lab', v:1, at:d.toISOString(), data}, null, 1)], {type:'application/json'}));
-  const a = document.createElement('a'); a.href = url; a.download = 'muscle-lab-backup-' + stamp + '.json';
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=> URL.revokeObjectURL(url), 4000);
+  const d = new Date();
+  downloadBlob(new Blob([JSON.stringify({app:'muscle-lab', v:1, at:d.toISOString(), data}, null, 1)], {type:'application/json'}), 'muscle-lab-backup-' + dateStamp(d) + '.json');
   showToast('已下載備份檔，換裝置時在這裡按「匯入備份檔」');
+}
+/* 訓練紀錄匯出成 CSV：一筆一列，開頭加 BOM，Excel 打開中文才不會變亂碼 */
+function saveLogCsv(){
+  const cell = v=> /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+  const rows = [['日期', '時間', '動作', '英文名稱', '重量 (kg)', '次數', '秒數', '估計 1RM (kg)']];
+  trainLog.forEach(e=>{
+    const ex = EXERCISE_LIB.find(x=> x.id === e.id), d = new Date(e.t), hold = isHold(e.id);
+    rows.push([d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()), pad2(d.getHours()) + ':' + pad2(d.getMinutes()), ex.name, ex.en, e.w || '', !hold && e.r || '', hold && e.r || '', e1rm(e) || '']);
+  });
+  downloadBlob(new Blob(['\ufeff' + rows.map(r=> r.map(cell).join(',')).join('\r\n') + '\r\n'], {type:'text/csv;charset=utf-8'}), 'muscle-lab-log-' + dateStamp(new Date()) + '.csv');
+  showToast('已下載 ' + trainLog.length + ' 筆訓練紀錄（CSV）');
 }
 function loadBackup(file){
   if(!file) return;
@@ -3157,6 +3173,7 @@ function bindLogPanel(infoEl){
   const hs = infoEl.querySelector('#heatShare'); if(hs) hs.addEventListener('click', ()=> shareHeatCard(hs));
   const bf = infoEl.querySelector('#backupFile');
   infoEl.querySelector('#backupSave').addEventListener('click', saveBackup);
+  const csv = infoEl.querySelector('#logCsv'); if(csv) csv.addEventListener('click', saveLogCsv);
   infoEl.querySelector('#backupLoad').addEventListener('click', ()=> bf.click());
   bf.addEventListener('change', ()=>{ loadBackup(bf.files[0]); bf.value = ''; });   /* 清空，才能再選同一個檔案 */
   infoEl.querySelectorAll('[data-heat-go]').forEach(b=> b.addEventListener('click', ()=>{ setMode('explore'); selectMuscle(b.dataset.heatGo); }));
